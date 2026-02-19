@@ -14,7 +14,7 @@ const popularServices = [
     category: "บริการทั่วไป",
     title: "ล้างแอร์",
     price: "ค่าบริการประมาณ 500.00 - 1,000.00 ฿",
-    image: "https://images.unsplash.com/photo-1621905251918-48416bd8575a?q=80&w=500&auto=format&fit=crop",
+    image: "https://cdn.ananda.co.th/blog/thegenc/wp-content/uploads/2022/03/aw_insert-01-5-614x400.jpg",
   },
   {
     id: 3,
