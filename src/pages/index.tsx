@@ -7,7 +7,7 @@ export default function Home() {
   const fetchTestApi = async () => {
     try {
       const response = await axios.get(
-        "https://homeservice-server.vercel.app/test",
+        "https://homeservices-server.vercel.app/test",
       );
       settext(response.data.message);
     } catch (error) {
