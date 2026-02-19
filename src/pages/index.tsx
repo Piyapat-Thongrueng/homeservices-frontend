@@ -7,8 +7,8 @@ export default function Home() {
     <div>
       <Navbar />
       <HeroSection />
-    </div>
       <LandingPageFooterContent />
       <Footer />
+    </div>
   );
 }
