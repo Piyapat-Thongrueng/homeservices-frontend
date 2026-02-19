@@ -32,10 +32,10 @@ export default function HomeServices() {
         
         {/* หัวข้อกลางหน้าจอ */}
         <div className="mb-12 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+          <h2 className="text-3xl md:text-3xl font-bold text-gray-900">
             บริการยอดฮิตของเรา
           </h2>
-          <div className="mt-2 h-1.5 w-20 bg-blue-500 mx-auto rounded-full"></div>
+         
         </div>
 
         {/* ส่วนแสดงผลการ์ดบริการ */}
