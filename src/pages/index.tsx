@@ -1,5 +1,7 @@
 import axios from "axios";
 import { useState } from "react";
+import Footer from "@/components/common/Footer";
+import LandingPageFooterContent from "@/components/common/LandingPageFooterContent";
 
 export default function Home() {
   const [text, settext] = useState("");
@@ -45,6 +47,8 @@ export default function Home() {
           <span className="spinner"></span>
         </button>
       </div>
+      <LandingPageFooterContent />
+      <Footer />
     </>
   );
 }
