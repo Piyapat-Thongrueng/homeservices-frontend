@@ -1,28 +1,15 @@
-import axios from "axios";
-import { useState } from "react";
+import Navbar from "@/components/common/Navbar";
+import HeroSection from "@/components/herosection/HeroSection";
 import Footer from "@/components/common/Footer";
 import LandingPageFooterContent from "@/components/common/LandingPageFooterContent";
 import ServiceListFooterContent from "@/components/common/ServiceListFooterContent";
-
 export default function Home() {
-  const [text, settext] = useState("");
-
-  const fetchTestApi = async () => {
-    try {
-      const response = await axios.get(
-        "https://homeservices-server.vercel.app/test",
-      );
-      settext(response.data.message);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
   return (
-    <>
-      <LandingPageFooterContent/>
-      <ServiceListFooterContent />
+    <div>
+      <Navbar />
+      <HeroSection />
+      <LandingPageFooterContent />
       <Footer />
-    </>
+    </div>
   );
 }
