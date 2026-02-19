@@ -13,7 +13,6 @@ export default function Document() {
         />
       </Head>
       <body className="antialiased">
-        <HomeServices/>
         <Main />
         <NextScript />
         

@@ -3,7 +3,7 @@ const HeroSection = () => {
     <div className="flex flex-col md:flex-row w-full bg-blue-100 px-5 md:px-16 lg:px-35 overflow-hidden">
       {/* LEFT: Text Content */}
       <div className="flex flex-col justify-center gap-5 pt-10 md:py-16 md:w-1/2">
-        <h1 className="font-semibold text-[40px] md:text-[50px] text-blue-700 leading-tight">
+        <h1 className="font-semibold font-prompt text-[40px] md:text-[50px] text-blue-700 leading-tight">
           เรื่องบ้าน...ให้เราช่วยดูแลคุณ
         </h1>
         <p className="font-prompt text-[24px] md:text-[30px] font-semibold text-black">
