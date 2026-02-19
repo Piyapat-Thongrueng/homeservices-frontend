@@ -4,7 +4,7 @@ export default function LandingPageFooterContent() {
       <div className="w-full bg-blue-600 overflow-hidden">
         
         {/* Inner container to constrain max width on huge screens */}
-        <div className="flex flex-col lg:flex-row w-full mx-auto ">
+        <div className="flex flex-col lg:flex-row w-full mx-auto">
           
           {/* Left Section - Image */}
           {/* Uses w-full on mobile, 39% width on desktop. min-h ensures it shows up on mobile */}
@@ -23,7 +23,7 @@ export default function LandingPageFooterContent() {
           <div className="relative flex-1 bg-blue-600 px-6 py-10 lg:px-16 lg:py-0 flex flex-col justify-center">
             
             {/* Content Wrapper (z-10 to sit above the background icon) */}
-            <div className="relative  flex flex-col gap-4 lg:gap-8 text-utility-white">
+            <div className="relative z-10 flex flex-col gap-4 lg:gap-8 text-utility-white">
               
               {/* Headline */}
               <h2 className="font-semibold text-3xl lg:text-4xl xl:text-5xl leading-tight font-prompt">
@@ -54,7 +54,7 @@ export default function LandingPageFooterContent() {
             {/* House Icon Background Graphic */}
             {/* Positioned absolute relative to the blue content area */}
             <div 
-              className="absolute right-0 bottom-0 pointer-events-none opacity-60"
+              className="absolute right-0 bottom-0 pointer-events-none opacity-60 z-0"
               style={{
                 height: '130%',
                 aspectRatio: '1/1',
