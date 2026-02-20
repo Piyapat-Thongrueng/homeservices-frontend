@@ -1,4 +1,6 @@
 const HeroSection = () => {
+
+
   return (
     <div className="w-full bg-blue-100 overflow-hidden">
       <div className="max-w-screen-2xl mx-auto px-5 sm:px-6 md:px-16 lg:px-24 flex flex-col md:flex-row">
@@ -15,7 +17,9 @@ const HeroSection = () => {
             และช่างมืออาชีพ
           </p>
           <div>
-            <button className="btn-primary font-medium py-4 text-2xl px-10 cursor-pointer">
+            <button
+              className="btn-primary font-medium py-4 text-2xl px-10 cursor-pointer"
+            >
               เช็คราคาบริการ
             </button>
           </div>
