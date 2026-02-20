@@ -8,11 +8,6 @@ const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-50 bg-white backdrop-blur-md shadow-sm border-b border-gray-100">
-      {/*
-        เพิ่ม max-w-screen-2xl = จำกัดความกว้างสูงสุดที่ 1536px
-        mx-auto = จัดกึ่งกลางเสมอ
-        ลบ xl:px-45 ออก เพราะ max-w จัดการให้แล้ว
-      */}
       <div className="w-full max-w-screen-2xl mx-auto px-5 sm:px-6 md:px-16 lg:px-24">
         <div className="flex items-center justify-between py-5">
           <div className="flex items-center gap-15">
