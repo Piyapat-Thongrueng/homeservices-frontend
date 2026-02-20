@@ -26,13 +26,13 @@ export default function Footer() {
             <div className="flex flex-col gap-2 text-gray-800 min-w-0 shrink-0">
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-gray-500 shrink-0" />
-                <a href="tel:080-540-6357" className="body-2 font-normal hover:text-blue-600 transition-colors break-all">
+                <a href="tel:080-540-6357" className="body-2 font-normal hover:text-blue-600 transition-colors break-all cursor-pointer">
                   080-540-6357
                 </a>
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-gray-500 shrink-0" />
-                <a href="mailto:contact@homeservices.co" className="body-2 font-normal hover:text-blue-600 transition-colors break-all">
+                <a href="mailto:contact@homeservices.co" className="body-2 font-normal hover:text-blue-600 transition-colors break-all cursor-pointer">
                   contact@homeservices.co
                 </a>
               </div>
@@ -49,13 +49,13 @@ export default function Footer() {
             <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-6 order-1 md:order-2 min-w-0">
               <a
                 href="#"
-                className="body-3 hover:text-blue-600 transition-colors"
+                className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
               >
                 เงื่อนไขและข้อตกลงการใช้งานเว็บไซต์
               </a>
               <a
                 href="#"
-                className="body-3 hover:text-blue-600 transition-colors"
+                className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
               >
                 นโยบายความเป็นส่วนตัว
               </a>

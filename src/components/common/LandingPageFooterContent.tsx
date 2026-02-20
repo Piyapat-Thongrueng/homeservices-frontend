@@ -44,7 +44,7 @@ export default function LandingPageFooterContent() {
                 </span>
                 <a
                   href="mailto:job@homeservices.co"
-                  className="hover:text-blue-200 transition-colors break-all"
+                  className="hover:text-blue-200 transition-colors break-all cursor-pointer"
                 >
                   job@homeservices.co
                 </a>

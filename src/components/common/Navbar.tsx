@@ -13,13 +13,13 @@ const Navbar = () => {
             />
             <a
               href="#services"
-              className="headline-5 font-medium text-black hover:text-blue-600 transition-colors"
+              className="headline-5 font-medium text-black hover:text-blue-600 transition-colors cursor-pointer"
             >
               บริการของเรา
             </a>
           </div>
           <div className="flex items-center">
-            <button className="border border-blue-600 text-blue-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-600 hover:text-white transition-all duration-200">
+            <button className="border border-blue-600 text-blue-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-600 hover:text-white transition-all duration-200 cursor-pointer">
               เข้าสู่ระบบ
             </button>
           </div>

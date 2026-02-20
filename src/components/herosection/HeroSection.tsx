@@ -14,7 +14,7 @@ const HeroSection = () => {
           และช่างมืออาชีพ
         </p>
         <div>
-          <button className="btn-primary px-10">เช็คราคาบริการ</button>
+          <button className="btn-primary px-10 cursor-pointer">เช็คราคาบริการ</button>
         </div>
       </div>
       {/* RIGHT: Image */}
