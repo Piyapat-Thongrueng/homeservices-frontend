@@ -6,6 +6,7 @@ interface serviceListProps {
   description: string;
   price: number;
   category_name: string;
+  category_name_th: string;
   image: string;
 }
 
@@ -15,7 +16,7 @@ interface HomeServicesProps {
 
 export default function HomeServices({ serviceLists }: HomeServicesProps) {
   return (
-    <div className="min-h-screen bg-gray-50 py-16 text-gray-900 font-sans">
+    <div className="min-h-screen  bg-gray-50 py-16 text-gray-900 font-prompt">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* หัวข้อกลางหน้าจอ */}
         <div className="mb-12 text-center">
@@ -41,7 +42,7 @@ export default function HomeServices({ serviceLists }: HomeServicesProps) {
 
               <div className="p-6 flex flex-col flex-grow">
                 <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full w-max mb-3">
-                  {service.category_name}
+                  {service.category_name_th}
                 </span>
 
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
