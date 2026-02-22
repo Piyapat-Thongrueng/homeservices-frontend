@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
-import { fetchCategories } from "../../services/serviceListsApi/serviceApi";
-import { Category } from "../../types/serviceListTypes/type";
+import { fetchCategories } from "@/services/serviceListsApi/serviceApi";
+import { Category } from "@/types/serviceListTypes/type";
 
 interface CategoryDropdownProps {
   selectedId: number | null;
@@ -21,18 +21,21 @@ export default function CategoryDropdown({
   const ref = useRef<HTMLDivElement>(null);
 
   // ดึง categories ตอน mount ครั้งแรก (ไม่ต้องรอกดปุ่มค้นหา)
+  const fetchCategoriesData = async () => {
+    try {
+      const data = await fetchCategories();
+      console.log("Fetched categories in dropdown:", data);
+      setCategories(data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await fetchCategories();
-        setCategories(data);
-      } catch {
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    fetchCategoriesData();
   }, []);
 
   // ปิด dropdown เมื่อ click นอก
@@ -52,7 +55,7 @@ export default function CategoryDropdown({
       {/* Trigger */}
       <div
         className="flex flex-col gap-1 pr-3 border-r border-gray-200 sm:px-4 md:px-5 cursor-pointer"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen((prev) => !prev)}
       >
         <span className="text-[12px] text-gray-700 whitespace-nowrap">
           หมวดหมู่บริการ

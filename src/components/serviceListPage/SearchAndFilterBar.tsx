@@ -3,15 +3,12 @@ import { Search } from "lucide-react";
 import CategoryDropdown from "./CategoryDropdown";
 import PriceRangeDropdown from "./PriceRangeDropdown";
 import SortDropdown from "./SortDropdown";
-import { fetchServices } from "../../services/serviceListsApi/serviceApi";
-import {
-  Service,
-  ServiceFilterParams,
-} from "../../types/serviceListTypes/type";
+import { fetchServices } from "@/services/serviceListsApi/serviceApi";
+import {Service, ServiceFilterParams,} from "@/types/serviceListTypes/type";
 
 interface SearchAndFilterBarProps {
-  onResults: (services: Service[]) => void;
-  onLoading: (loading: boolean) => void;
+  onResults: (services: Service[]) => void; // callback ที่ parent (ServiceListPage) ส่งมาให้ เมื่อค้นหาเสร็จจะเรียก onResults(data) เพื่อส่งผลลัพธ์ขึ้นไปให้ parent แสดงผล
+  onLoading: (loading: boolean) => void; // callback บอก parent ว่ากำลังโหลดอยู่ไหม parent จะใช้ค่านี้แสดง/ซ่อน loading spinner
 }
 
 export default function SearchAndFilterBar({
@@ -19,17 +16,17 @@ export default function SearchAndFilterBar({
   onLoading,
 }: SearchAndFilterBarProps) {
   // --- filter state ---
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState(""); 
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [categoryLabel, setCategoryLabel] = useState("บริการทั้งหมด");
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(2000);
-  const [sortLabel, setSortLabel] = useState("บริการแนะนำ");
+  const [sortLabel, setSortLabel] = useState("ตามตัวอักษร (A→Z)");
   const [sortParams, setSortParams] = useState<
-    Pick<ServiceFilterParams, "filter" | "sort_by" | "order">
-  >({ filter: "recommended" });
+    Pick<ServiceFilterParams, "filter" | "sort_by" | "order"> // เก็บ params จริงที่จะส่งไป backend แยกออกมาจาก sortLabel เพราะ backend ต้องการ params
+  >({ sort_by: "name", order: "ASC" }); // ค่า default เริ่มต้นเป็น A→Z (sort_by: "name", order: "ASC")
 
-  // --- กดปุ่มค้นหา → ส่ง request ---
+  // ฟังก์ชันนี้จะถูกเรียกเมื่อผู้ใช้คลิกปุ่มค้นหา หรือกด Enter ในช่องค้นหา มันจะรวบรวมค่าต่างๆ จาก state แล้วส่งไปให้ fetchServices เพื่อดึงข้อมูลจาก backend และส่งผลลัพธ์กลับไปให้ parent ผ่าน onResults
   const handleSearch = async () => {
     onLoading(true);
     try {
@@ -51,7 +48,7 @@ export default function SearchAndFilterBar({
   };
 
   return (
-    <div className="w-full px-4 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:py-6 sm:gap-0 sm:px-6 md:px-10 lg:px-14 shadow-lg sticky top-0 z-10 bg-white">
+    <div className="w-full px-4 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:py-6 sm:gap-0 sm:px-6 md:px-10 lg:px-14 shadow-lg sticky top-0 z-10 bg-white overflow-hidden">
       {/* Search Input */}
       <div className="flex gap-3 items-center sm:flex-1 sm:min-w-0 sm:pr-4 overflow-hidden">
         <div className="flex-1 flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-3 min-w-0">
