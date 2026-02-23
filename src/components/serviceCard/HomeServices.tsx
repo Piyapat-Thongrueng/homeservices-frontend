@@ -1,5 +1,5 @@
 import { ArrowRight, Tag } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 import { getCategoryColor } from "@/components/serviceCard/CategoryColors";
 
 interface ServiceListProps {
@@ -33,8 +33,8 @@ export default function HomeServices({
     mode === "landing" ? serviceLists.slice(0, 3) : serviceLists;
 
   return (
-    <div className="w-full bg-gray-50 py-16 text-gray-900 font-prompt">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full bg-gray-50 py-16 text-gray-900 font-prompt overflow-hidden">
+      <div className="max-w-6xl mx-auto px-4 sm:px-10 lg:px-18">
         {/* หัวข้อ */}
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold text-gray-900">

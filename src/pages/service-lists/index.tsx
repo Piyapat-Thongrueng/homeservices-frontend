@@ -46,7 +46,7 @@ const ServiceListPage = () => {
   };
 
   return (
-    <div className="w-full min-h-screen">
+    <div>
       <Navbar />
       <Banner />
       <SearchAndFilterBar onResults={setServiceLists} onLoading={setLoading} />
