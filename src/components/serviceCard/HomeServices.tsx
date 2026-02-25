@@ -6,7 +6,9 @@ interface ServiceListProps {
   id: number;
   name: string;
   description: string;
-  price: number;
+  price: number | null;
+  min_price: number | null;
+  max_price: number | null;
   category_name: string;
   category_name_th: string;
   category_id: number;
@@ -89,7 +91,10 @@ export default function HomeServices({
                     <div className="flex items-center gap-2 text-gray-500 mb-6 grow">
                       <Tag className="w-4 h-4 text-blue-500 shrink-0" />
                       <p className="text-sm">
-                        {service.price.toLocaleString()} ฿
+                        {service.min_price?.toLocaleString()
+                          ? service.min_price.toLocaleString()
+                          : service.price?.toLocaleString()}
+                        ฿
                       </p>
                     </div>
 

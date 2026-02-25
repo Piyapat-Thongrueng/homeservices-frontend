@@ -12,7 +12,7 @@ export default function Document() {
           rel="stylesheet"
         />
       </Head>
-      <body className="antialiased">
+      <body className="antialiased font-prompt">
         <Main />
         <NextScript />
         
