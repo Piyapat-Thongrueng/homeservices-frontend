@@ -1,27 +1,30 @@
 import { useState } from "react";
 import { Menu } from "lucide-react";
 import { X } from "lucide-react";
+import Link from "next/link";
 
 // Navbar.tsx
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50 bg-white backdrop-blur-md shadow-sm border-b border-gray-100">
+    <nav className="bg-white backdrop-blur-md shadow-sm border-b border-gray-100">
       <div className="w-full max-w-screen-2xl mx-auto px-5 sm:px-6 md:px-16 lg:px-24">
         <div className="flex items-center justify-between py-5">
           <div className="flex items-center gap-15">
-            <img
-              src="/web-logo.svg"
-              alt="HomeServices Logo"
-              className="w-50 h-auto object-contain"
-            />
-            <a
-              href="#services"
+            <Link href="/">
+              <img
+                src="/web-logo.svg"
+                alt="HomeServices Logo"
+                className="w-50 h-auto object-contain"
+              />
+            </Link>
+            <Link
+              href="/service-lists"
               className="hidden md:inline headline-4 font-medium text-black hover:text-blue-600 transition-colors"
             >
               บริการของเรา
-            </a>
+            </Link>
           </div>
 
           <div className="hidden md:flex items-center">

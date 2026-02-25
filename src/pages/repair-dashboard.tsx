@@ -14,15 +14,21 @@ type OrderForCard = {
   details: string[];
 };
 
-function normalizeOrder(o: Record<string, unknown>): OrderForCard {
-  const s = String(o.status ?? '').toLowerCase();
+// ปรับ Type ให้รองรับ any เพื่อแก้ปัญหา Type Error จากภาพ oof.PNG
+function normalizeOrder(o: any): OrderForCard {
+  const s = String(o.status ?? '').toLowerCase().trim();
   let status: OrderForCard['status'] = 'รอดำเนินการ';
-  if (s === 'completed' || s === 'done') status = 'ดำเนินการสำเร็จ';
-  else if (s === 'in_progress' || s === 'processing') status = 'กำลังดำเนินการ';
+  
+  // รองรับสถานะภาษาไทยจากฐานข้อมูล
+  if (s === 'completed' || s === 'done' || s === 'ดำเนินการสำเร็จ') {
+    status = 'ดำเนินการสำเร็จ';
+  } else if (s === 'in_progress' || s === 'processing' || s === 'กำลังดำเนินการ') {
+    status = 'กำลังดำเนินการ';
+  }
 
   const rawDetails = o.details ?? o.items ?? o.description ?? o.repair_items;
   const details = Array.isArray(rawDetails)
-    ? rawDetails.map((d: unknown) => (typeof d === 'string' ? d : String(d)))
+    ? rawDetails.map((d: any) => (typeof d === 'string' ? d : String(d)))
     : rawDetails != null && typeof rawDetails === 'string'
       ? [rawDetails]
       : [];
@@ -40,17 +46,20 @@ function normalizeOrder(o: Record<string, unknown>): OrderForCard {
 export default function RepairDashboard() {
   const [currentTab, setCurrentTab] = useState<'profile' | 'orders' | 'history'>('orders');
   
-  // 1. สร้างตัวแปร State มารองรับข้อมูลที่จะดึงมาจาก Database
   const [orders, setOrders] = useState<OrderForCard[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 2. เรียกผ่าน API route ของ Next.js (proxy ไป backend) เพื่อหลีกเลี่ยง CORS
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const fetchOrders = async () => {
       try {
-        const response = await axios.get('http://localhost:4000/api/orders/my-orders/1');
+        const loggedInUserId = localStorage.getItem('user_id');
+        const userId = loggedInUserId ? loggedInUserId : '2';
+
+        const response = await axios.get(`http://localhost:4000/api/orders/my-orders/${userId}`);
         const raw = response?.data;
         const list = Array.isArray(raw) ? raw : raw?.data ?? raw?.orders ?? [];
+        
         setOrders(list.map(normalizeOrder));
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -62,7 +71,6 @@ export default function RepairDashboard() {
     fetchOrders();
   }, []);
 
-  // 3. แยกข้อมูลเป็น "รอดำเนินการ" และ "ประวัติ (เสร็จแล้ว)"
   const pendingOrders = orders.filter((o) => o.status !== 'ดำเนินการสำเร็จ');
   const historyOrders = orders.filter((o) => o.status === 'ดำเนินการสำเร็จ');
 

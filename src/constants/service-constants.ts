@@ -1,0 +1,67 @@
+/**
+ * Service Detail Constants
+ * 
+ * This file contains all constants used across service detail pages,
+ * including storage keys, default values, and configuration.
+ */
+
+import type { ServiceItem } from "@/components/servicedetail/types";
+
+// ============================================================================
+// LocalStorage Keys
+// ============================================================================
+
+/** Key for storing all service items with quantities */
+export const ALL_ITEMS_STORAGE_KEY = "allServiceItems";
+
+/** Key for storing selected service items */
+export const SERVICE_ITEMS_STORAGE_KEY = "serviceItems";
+
+/** Key for storing service information form data */
+export const SERVICE_INFO_STORAGE_KEY = "serviceInfo";
+
+/** Key for storing payment data */
+export const PAYMENT_DATA_STORAGE_KEY = "paymentData";
+
+// ============================================================================
+// Default Service Items
+// ============================================================================
+
+/** Default list of service items available for selection */
+export const DEFAULT_SERVICE_ITEMS: ServiceItem[] = [
+  {
+    id: 1,
+    description: "9,000 - 18,000 BTU, แบบติดผนัง",
+    price: 800.0,
+    quantity: 0,
+  },
+  {
+    id: 2,
+    description: "9,000 - 18,000 BTU, แบบติดผนัง",
+    price: 800.0,
+    quantity: 0,
+  },
+  {
+    id: 3,
+    description: "9,000 - 18,000 BTU, แบบติดผนัง",
+    price: 800.0,
+    quantity: 0,
+  },
+  {
+    id: 4,
+    description: "9,000 - 18,000 BTU, แบบติดผนัง",
+    price: 800.0,
+    quantity: 0,
+  },
+];
+
+// ============================================================================
+// Promotion Codes
+// ============================================================================
+
+/** Valid promotion codes and their discount amounts */
+export const VALID_PROMOTION_CODES: { [key: string]: number } = {
+  "HOME0202": 50,
+  "WELCOME10": 10,
+  "SAVE20": 20,
+};

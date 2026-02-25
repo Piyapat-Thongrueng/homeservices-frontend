@@ -199,7 +199,7 @@
 @layer components {
   .btn-primary {
     /* Use your custom blue-600 and typography */
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 cursor-pointer;
     @apply bg-blue-600 text-utility-white font-semibold;
     font-family: "Prompt", sans-serif;
 
@@ -226,7 +226,7 @@
   /* --- Secondary Style --- */
   .btn-secondary {
     /* Layout & Base Styles */
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 outline-none;
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-all duration-200 outline-none cursor-pointer;
     @apply border border-blue-600 bg-utility-white text-blue-600 font-semibold;
     font-family: "Prompt", sans-serif;
 
