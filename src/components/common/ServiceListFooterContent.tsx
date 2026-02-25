@@ -7,7 +7,7 @@ export default function ServiceListFooterContent() {
         <div className="flex flex-col lg:flex-row w-full mx-auto ">
           
           {/* Content Section - Centered */}
-          <div className="relative flex-1 bg-blue-600 px-6 py-10 lg:px-16 lg:py-0 h-[284px] flex flex-col justify-center items-center text-center overflow-hidden">
+          <div className="relative flex-1 bg-blue-600 px-6 py-10 lg:px-16 lg:py-0 h-71 flex flex-col justify-center items-center text-center overflow-hidden">
             
             {/* Content Wrapper (z-10 to sit above the background icon) */}
             <div className="relative z-10 flex flex-col gap-4 lg:gap-6 text-utility-white max-w-4xl">  

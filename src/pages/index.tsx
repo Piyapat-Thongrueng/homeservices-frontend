@@ -69,7 +69,16 @@ export default function Home() {
     <div>
       <Navbar />
       <HeroSection />
-      <HomeServices />
+      {loading ? (
+        <div className="flex justify-center items-center py-20 bg-gray-50">
+          <p className="text-gray-400">กำลังโหลดบริการยอดนิยม...</p>
+        </div>
+      ) : (
+        <HomeServices
+          serviceLists={popularServices}
+          mode="landing"
+        />
+      )}
       <LandingPageFooterContent />
       <Footer />
     </div>
