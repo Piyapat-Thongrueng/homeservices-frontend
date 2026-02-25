@@ -1,16 +1,10 @@
 import { useEffect, useState, useRef } from "react"
-import { useRouter } from "next/router"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/contexts/AuthContext"
+import NotificationBell from "@/components/NotificationBell"
 
-type Notification = {
-  id: string
-  user_id: string
-  title: string
-  message: string
-  is_read: boolean
-  created_at: string
-}
+
 
 export default function Navbar() {
 
@@ -29,170 +23,7 @@ export default function Navbar() {
   // profile dropdown
   const [open, setOpen] = useState(false)
 
-  // notification dropdown
-  const [notifOpen, setNotifOpen] = useState(false)
-
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const notifRef = useRef<HTMLDivElement>(null)
-  const channelRef = useRef<any>(null)
-
-
-  // =====================
-  // LOAD NOTIFICATIONS WHEN USER CHANGE
-  // =====================
-
-  useEffect(() => {
-
-    if (!user) {
-
-      // cleanup realtime
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-      }
-
-      setNotifications([])
-      setUnreadCount(0)
-
-      return
-    }
-
-    loadNotifications(user.id)
-
-    setupRealtime(user.id)
-
-    return () => {
-
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-      }
-
-    }
-
-  }, [user])
-
-
-  // =====================
-  // LOAD NOTIFICATIONS
-  // =====================
-
-  const loadNotifications = async (userId: string) => {
-
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(20)
-
-    if (error || !data) return
-
-    setNotifications(data)
-
-    const unread = data.filter(n => !n.is_read).length
-
-    setUnreadCount(unread)
-
-  }
-
-
-  // =====================
-  // REALTIME
-  // =====================
-
-  const setupRealtime = (userId: string) => {
-
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current)
-      channelRef.current = null
-    }
-
-    const channel = supabase
-      .channel(`notifications-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${userId}`
-        },
-        (payload) => {
-
-          const newNotif = payload.new as Notification
-
-          setNotifications(prev => {
-
-            const exists =
-              prev.find(n => n.id === newNotif.id)
-
-            if (exists) return prev
-
-            return [newNotif, ...prev]
-
-          })
-
-          setUnreadCount(prev => prev + 1)
-
-        }
-      )
-      .subscribe()
-
-    channelRef.current = channel
-
-  }
-
-
-  // =====================
-  // MARK READ
-  // =====================
-
-  const markAsRead = async (id: string) => {
-
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("id", id)
-
-    setNotifications(prev =>
-      prev.map(n =>
-        n.id === id
-          ? { ...n, is_read: true }
-          : n
-      )
-    )
-
-    setUnreadCount(prev =>
-      Math.max(prev - 1, 0)
-    )
-
-  }
-
-
-  const markAllRead = async () => {
-
-    if (!user) return
-
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false)
-
-    setNotifications(prev =>
-      prev.map(n => ({
-        ...n,
-        is_read: true,
-      }))
-    )
-
-    setUnreadCount(0)
-
-  }
 
 
   // =====================
@@ -202,11 +33,6 @@ export default function Navbar() {
   const handleLogout = async () => {
 
     await supabase.auth.signOut()
-
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current)
-      channelRef.current = null
-    }
 
     setOpen(false)
 
@@ -235,15 +61,6 @@ export default function Navbar() {
         )
       ) {
         setOpen(false)
-      }
-
-      if (
-        notifRef.current &&
-        !notifRef.current.contains(
-          event.target as Node
-        )
-      ) {
-        setNotifOpen(false)
       }
 
     }
@@ -328,86 +145,7 @@ export default function Navbar() {
               <>
 
                 {/* NOTIFICATION */}
-                <div
-                  ref={notifRef}
-                  className="relative"
-                >
-
-                  <button
-                    onClick={() =>
-                      setNotifOpen(!notifOpen)
-                    }
-                    className="relative text-xl"
-                  >
-                    🔔
-
-                    {unreadCount > 0 && (
-
-                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                        {unreadCount}
-                      </span>
-
-                    )}
-
-                  </button>
-
-
-                  {notifOpen && (
-
-                    <div className="absolute right-0 mt-2 w-80 bg-white border rounded-xl shadow-lg max-h-96 overflow-y-auto">
-
-                      <div className="p-3 border-b flex justify-between">
-
-                        <span className="font-semibold">
-                          Notifications
-                        </span>
-
-                        <button
-                          onClick={markAllRead}
-                          className="text-blue-600 text-sm"
-                        >
-                          Mark all read
-                        </button>
-
-                      </div>
-
-
-                      {notifications.length === 0 && (
-
-                        <div className="p-4 text-gray-500">
-                          No notifications
-                        </div>
-
-                      )}
-
-
-                      {notifications.map(n => (
-
-                        <div
-                          key={n.id}
-                          onClick={() =>
-                            markAsRead(n.id)
-                          }
-                          className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${!n.is_read ? "bg-blue-50" : ""}`}
-                        >
-
-                          <div className="font-medium text-sm">
-                            {n.title}
-                          </div>
-
-                          <div className="text-xs text-gray-500">
-                            {n.message}
-                          </div>
-
-                        </div>
-
-                      ))}
-
-                    </div>
-
-                  )}
-
-                </div>
+                <NotificationBell />
 
 
                 {/* PROFILE */}
@@ -473,7 +211,7 @@ export default function Navbar() {
                       </button>
 
 
-                      {/* ✅ RESET PASSWORD */}
+                      {/* RESET PASSWORD */}
                       <button
                         onClick={() => {
                           setOpen(false)

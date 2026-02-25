@@ -317,7 +317,7 @@ export default function ProfilePage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full h-[44px] bg-black text-white rounded-full"
+              className="btn-primary w-full h-[44px] flex items-center justify-center gap-2 mb-3"
             >
               {saving ? "Saving..." : "Save"}
             </button>
