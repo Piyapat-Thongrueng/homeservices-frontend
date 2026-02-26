@@ -1,73 +1,265 @@
-import { useState } from "react";
-import { Menu } from "lucide-react";
-import { X } from "lucide-react";
-import Link from "next/link";
+import { useEffect, useState, useRef } from "react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/contexts/AuthContext"
+import NotificationBell from "@/components/NotificationBell"
 
-// Navbar.tsx
-const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+
+export default function Navbar() {
+
+  const router = useRouter()
+
+  // =====================
+  // GLOBAL AUTH STATE
+  // =====================
+
+  const { user, loading } = useAuth()
+
+  // =====================
+  // LOCAL STATE
+  // =====================
+
+  // profile dropdown
+  const [open, setOpen] = useState(false)
+
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+
+  // =====================
+  // LOGOUT
+  // =====================
+
+  const handleLogout = async () => {
+
+    await supabase.auth.signOut()
+
+    setOpen(false)
+
+    router.push("/")
+
+  }
+
+
+  const goLogin = () => {
+    router.push("/auth/login")
+  }
+
+
+  // =====================
+  // CLICK OUTSIDE
+  // =====================
+
+  useEffect(() => {
+
+    const handler = (event: MouseEvent) => {
+
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(
+          event.target as Node
+        )
+      ) {
+        setOpen(false)
+      }
+
+    }
+
+    document.addEventListener(
+      "mousedown",
+      handler
+    )
+
+    return () =>
+      document.removeEventListener(
+        "mousedown",
+        handler
+      )
+
+  }, [])
+
+
+  // =====================
+  // USER INFO
+  // =====================
+
+  const userName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email ||
+    "User"
+
+  const userEmail =
+    user?.email || ""
+
+  const avatarUrl =
+    user?.user_metadata?.avatar_url || null
+
+  const userInitial =
+    userName.length > 0
+      ? userName.charAt(0).toUpperCase()
+      : "U"
+
+
+  // =====================
+  // UI
+  // =====================
 
   return (
-    <nav className="bg-white backdrop-blur-md shadow-sm border-b border-gray-100">
-      <div className="w-full max-w-screen-2xl mx-auto px-5 sm:px-6 md:px-16 lg:px-24">
-        <div className="flex items-center justify-between py-5">
-          <div className="flex items-center gap-15">
-            <Link href="/">
-              <img
-                src="/web-logo.svg"
-                alt="HomeServices Logo"
-                className="w-50 h-auto object-contain"
-              />
-            </Link>
-            <Link
-              href="/service-lists"
-              className="hidden md:inline headline-4 font-medium text-black hover:text-blue-600 transition-colors"
-            >
-              บริการของเรา
-            </Link>
-          </div>
 
-          <div className="hidden md:flex items-center">
-            <button className="font-prompt border border-blue-600 text-blue-600 rounded-lg px-8 py-2 text-lg font-medium hover:bg-blue-600 hover:text-white transition-all duration-200 cursor-pointer">
-              เข้าสู่ระบบ
-            </button>
-          </div>
+    <nav className="sticky top-0 z-50 bg-white backdrop-blur-md shadow-sm border-b border-gray-100">
 
-          <button
-            className="md:hidden p-2 rounded-md hover:bg-gray-100 transition-colors"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {isMenuOpen ? (
-              <X className="cursor-pointer" />
-            ) : (
-              <Menu className="cursor-pointer" />
-            )}
-          </button>
-        </div>
+      <div className="w-full px-5 sm:px-6 md:px-35">
 
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 py-2 space-y-1">
+        <div className="flex items-center justify-between py-3">
+
+
+          {/* LEFT */}
+          <div className="flex items-center gap-5 sm:gap-10 md:gap-15">
+
+            <img
+              src="/web-logo.svg"
+              alt="HomeServices Logo"
+              className="h-5 w-30 sm:h-10 sm:w-40 cursor-pointer"
+              onClick={() =>
+                router.push("/")
+              }
+            />
+
             <a
               href="#services"
-              className="font-prompt block px-4 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-              onClick={() => setIsMenuOpen(false)}
+              className="headline-5 font-medium text-black hover:text-blue-600 transition-colors"
             >
               บริการของเรา
             </a>
-            <div className="px-4 py-2">
+
+          </div>
+
+
+          {/* RIGHT */}
+          <div className="flex items-center gap-4 relative">
+
+
+            {loading ? null : user ? (
+
+              <>
+
+                {/* NOTIFICATION */}
+                <NotificationBell />
+
+
+                {/* PROFILE */}
+                <div
+                  ref={dropdownRef}
+                  className="relative"
+                >
+
+                  <button
+                    onClick={() =>
+                      setOpen(!open)
+                    }
+                    className="flex items-center gap-3"
+                  >
+
+                    {avatarUrl ? (
+
+                      <img
+                        src={avatarUrl}
+                        className="w-9 h-9 rounded-full object-cover border"
+                      />
+
+                    ) : (
+
+                      <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
+                        {userInitial}
+                      </div>
+
+                    )}
+
+                    <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                      {userName}
+                    </span>
+
+                  </button>
+
+
+                  {open && (
+
+                    <div className="absolute right-0 mt-2 w-[240px] bg-white border rounded-xl shadow-lg overflow-hidden">
+
+                      <div className="px-4 py-3 border-b">
+
+                        <div className="text-sm font-semibold">
+                          {userName}
+                        </div>
+
+                        <div className="text-xs text-gray-500">
+                          {userEmail}
+                        </div>
+
+                      </div>
+
+
+                      <button
+                        onClick={() => {
+                          setOpen(false)
+                          router.push("/profile")
+                        }}
+                        className="w-full px-4 py-3 text-sm hover:bg-gray-50 text-left"
+                      >
+                        👤 Profile
+                      </button>
+
+
+                      {/* RESET PASSWORD */}
+                      <button
+                        onClick={() => {
+                          setOpen(false)
+                          router.push("/reset-password")
+                        }}
+                        className="w-full px-4 py-3 text-sm hover:bg-gray-50 text-left"
+                      >
+                        🔒 Reset password
+                      </button>
+
+
+                      <div className="border-t" />
+
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 text-left"
+                      >
+                        🚪 Log out
+                      </button>
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              </>
+
+            ) : (
+
               <button
-                className="w-full font-prompt border border-blue-600 text-blue-600 rounded-lg px-6 py-2 text-sm font-medium hover:bg-blue-600 hover:text-white transition-all duration-200 cursor-pointer"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={goLogin}
+                className="border border-blue-600 text-blue-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-600 hover:text-white"
               >
                 เข้าสู่ระบบ
               </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </nav>
-  );
-};
 
-export default Navbar;
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </nav>
+
+  )
+
+}
