@@ -1,20 +1,10 @@
 import { ArrowRight, Tag } from "lucide-react";
 import { useRouter } from "next/router";
 import { getCategoryColor } from "@/components/serviceCard/CategoryColors";
-
-interface ServiceListProps {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  category_name: string;
-  category_name_th: string;
-  category_id: number;
-  image: string;
-}
+import { Service } from "@/types/serviceListTypes/type";
 
 interface HomeServicesProps {
-  serviceLists: ServiceListProps[];
+  serviceLists: Service[];
   // mode: "landing" = แสดง 3 รายการ + ปุ่มดูทั้งหมด, "full" = แสดงทั้งหมด
   mode?: "landing" | "full";
   // Req1: callback เมื่อ user กด category badge บนการ์ด
@@ -89,7 +79,10 @@ export default function HomeServices({
                     <div className="flex items-center gap-2 text-gray-500 mb-6 grow">
                       <Tag className="w-4 h-4 text-blue-500 shrink-0" />
                       <p className="text-sm">
-                        {service.price.toLocaleString()} ฿
+                        {service.min_price?.toLocaleString()
+                          ? service.min_price.toLocaleString()
+                          : service.price?.toLocaleString()}
+                        ฿
                       </p>
                     </div>
 

@@ -8,7 +8,9 @@ export interface Service {
   id: number;
   name: string;
   description: string;
-  price: number;
+  price: number | null;
+  min_price: number | null;
+  max_price: number | null;
   category_id: number;
   category_name: string;
   category_name_th: string;
