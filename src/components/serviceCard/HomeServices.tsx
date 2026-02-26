@@ -1,22 +1,10 @@
 import { ArrowRight, Tag } from "lucide-react";
 import { useRouter } from "next/router";
 import { getCategoryColor } from "@/components/serviceCard/CategoryColors";
-
-interface ServiceListProps {
-  id: number;
-  name: string;
-  description: string;
-  price: number | null;
-  min_price: number | null;
-  max_price: number | null;
-  category_name: string;
-  category_name_th: string;
-  category_id: number;
-  image: string;
-}
+import { Service } from "@/types/serviceListTypes/type";
 
 interface HomeServicesProps {
-  serviceLists: ServiceListProps[];
+  serviceLists: Service[];
   // mode: "landing" = แสดง 3 รายการ + ปุ่มดูทั้งหมด, "full" = แสดงทั้งหมด
   mode?: "landing" | "full";
   // Req1: callback เมื่อ user กด category badge บนการ์ด
