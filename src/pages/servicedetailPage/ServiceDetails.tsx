@@ -14,55 +14,163 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import axios from "axios";
 import Navbar from "@/components/common/Navbar";
 import ServiceHero from "@/components/servicedetail/ServiceHero";
 import ServiceItemsSection from "@/components/servicedetail/ServiceItemsSection";
 import ServiceSummaryCard from "@/components/servicedetail/ServiceSummaryCard";
 import ServiceFooterNav from "@/components/servicedetail/ServiceFooterNav";
 import type { ServiceItem } from "@/components/servicedetail/types";
+import type {
+  ServiceDetailResponseApi,
+} from "@/types/serviceListTypes/type";
 import {
-  DEFAULT_SERVICE_ITEMS,
   ALL_ITEMS_STORAGE_KEY,
 } from "@/constants/service-constants";
-import { getFromLocalStorage, saveToLocalStorage } from "@/utils/localStorage-helpers";
+import {
+  getFromLocalStorage,
+  saveToLocalStorage,
+} from "@/utils/localStorage-helpers";
+import { useAuth } from "@/contexts/AuthContext";
+
+const getServiceScopedKey = (
+  baseKey: string,
+  serviceIdParam?: string | string[],
+  userId?: string,
+) => {
+  let key = baseKey;
+
+  if (userId) {
+    key = `${key}_${userId}`;
+  }
+
+  if (serviceIdParam) {
+    const id = Array.isArray(serviceIdParam) ? serviceIdParam[0] : serviceIdParam;
+    key = `${key}_${id}`;
+  }
+
+  return key;
+};
 
 export default function ServiceDetails() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  const [selectedService, setSelectedService] = useState<ServiceDetailResponseApi | null>(null);
   
   /**
-   * Initialize service items with defaults to prevent hydration mismatch
-   * Will be updated from localStorage on client side after mount
+   * Initialize service items as empty; will be populated from
+   * user+service-scoped localStorage or API on client side after mount
    */
-  const [serviceItems, setServiceItems] = useState<ServiceItem[]>(DEFAULT_SERVICE_ITEMS);
+  const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [isMounted, setIsMounted] = useState(false);
 
   /**
-   * Load service items from localStorage on client side only (after mount)
-   * This prevents hydration mismatch between server and client
+   * Allow saving to localStorage only after router is ready (avoids overwriting before load).
    */
   useEffect(() => {
-    setIsMounted(true);
-    const savedItems = getFromLocalStorage<ServiceItem[]>(ALL_ITEMS_STORAGE_KEY);
-    if (savedItems) {
-      // Merge with default items to ensure all items are present
-      const mergedItems = DEFAULT_SERVICE_ITEMS.map((defaultItem) => {
-        const savedItem = savedItems.find((item) => item.id === defaultItem.id);
-        return savedItem
-          ? { ...defaultItem, quantity: savedItem.quantity }
-          : defaultItem;
-      });
-      setServiceItems(mergedItems);
-    }
-  }, []);
+    if (router.isReady) setIsMounted(true);
+  }, [router.isReady]);
+
+  /**
+   * Load service data from API using serviceId in query
+   */
+  useEffect(() => {
+    const { serviceId } = router.query;
+    if (!serviceId) return;
+
+    const idString = Array.isArray(serviceId) ? serviceId[0] : serviceId;
+    const id = parseInt(idString, 10);
+    if (Number.isNaN(id)) return;
+
+    let isSubscribed = true;
+
+    const loadService = async () => {
+      try {
+        const response = await axios.get<ServiceDetailResponseApi>(
+          `https://homeservices-server.vercel.app/api/services/${id}`,
+        );
+        const data = response.data;
+        console.log("ServiceDetails services:", data);
+        if (!isSubscribed) return;
+
+        setSelectedService(data);
+      } catch (error) {
+        console.error("Error loading service detail:", error);
+      }
+    };
+
+    loadService();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [router.query.serviceId]);
+
+  /**
+   * When a service with items is loaded from the API, initialize service items
+   * from API and merge saved quantities from localStorage (same key as above).
+   */
+  useEffect(() => {
+    if (!selectedService) return;
+
+    const detail = selectedService;
+    if (!Array.isArray(detail.items) || detail.items.length === 0) return;
+
+    const { serviceId } = router.query;
+    const allItemsKey = getServiceScopedKey(
+      ALL_ITEMS_STORAGE_KEY,
+      serviceId,
+      user?.id,
+    );
+    const savedItems = getFromLocalStorage<ServiceItem[]>(allItemsKey);
+
+    const mappedItems: ServiceItem[] = detail.items.map((apiItem) => {
+      const saved = savedItems?.find((s) => s.id === apiItem.id);
+      return {
+        id: apiItem.id,
+        description: `${apiItem.name}`,
+        unit: apiItem.unit,
+        price: apiItem.price_per_unit,
+        quantity: saved?.quantity ?? 0,
+      };
+    });
+
+    setServiceItems(mappedItems);
+  }, [selectedService?.id, router.query.serviceId, user?.id]);
+
+  /**
+   * Items to display: always derived from current API (selectedService.items)
+   * with quantities from state. Keeps quantity logic while data comes from API.
+   */
+  const displayItems: ServiceItem[] =
+    selectedService?.items?.map((apiItem) => {
+      const withQty = serviceItems.find((s) => s.id === apiItem.id);
+      return {
+        id: apiItem.id,
+        description: `${apiItem.name}`,
+        unit: apiItem.unit,
+        price: apiItem.price_per_unit,
+        quantity: withQty?.quantity ?? 0,
+      };
+    }) ?? serviceItems;
 
   /**
    * Save all items to localStorage whenever serviceItems change (only after mount)
+   * Scoped by serviceId so each service has its own "memory"
    */
   useEffect(() => {
-    if (isMounted) {
-      saveToLocalStorage(ALL_ITEMS_STORAGE_KEY, serviceItems);
-    }
-  }, [serviceItems, isMounted]);
+    if (!isMounted || !router.isReady) return;
+
+    const { serviceId } = router.query;
+    const allItemsKey = getServiceScopedKey(
+      ALL_ITEMS_STORAGE_KEY,
+      serviceId,
+      user?.id,
+    );
+
+    saveToLocalStorage(allItemsKey, serviceItems);
+  }, [serviceItems, isMounted, router.isReady, router.query.serviceId, user?.id]);
 
   /**
    * Updates the quantity of a specific service item
@@ -80,9 +188,9 @@ export default function ServiceDetails() {
   };
 
   /**
-   * Calculate total price from all selected items
+   * Calculate total price from all selected items (from display list)
    */
-  const total = serviceItems.reduce(
+  const total = displayItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
@@ -98,36 +206,52 @@ export default function ServiceDetails() {
    */
   const handleNext = () => {
     if (hasItems) {
-      // Filter to only selected items (quantity > 0)
-      const selectedItems = serviceItems.filter((item) => item.quantity > 0);
+      const selectedItems = displayItems.filter((item) => item.quantity > 0);
       router.push({
         pathname: "/servicedetailPage/service-information",
-        query: { items: JSON.stringify(selectedItems) },
+        query: {
+          items: JSON.stringify(selectedItems),
+          serviceId: router.query.serviceId,
+        },
       });
     }
   };
 
+  /**
+   * Navigate back to previous page
+   */
+  const handleBack = () => {
+    router.back();
+  };
+
+  console.log("ServiceDetails serviceItems (items prop):", serviceItems);
+
   return (
     <div className="min-h-screen bg-utility-bg font-prompt pb-32">
       <Navbar />
-      <ServiceHero serviceName="ล้างแอร์" currentStep={1} />
+      <ServiceHero
+        serviceName={selectedService?.name ?? ""}
+        currentStep={1}
+        imageUrl={selectedService?.image}
+      />
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 pb-10">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)] gap-6 lg:gap-8">
           <ServiceItemsSection
-            items={serviceItems}
+            items={displayItems}
             onChangeQuantity={updateQuantity}
+            serviceName={selectedService?.name}
           />
-
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <ServiceSummaryCard items={serviceItems} total={total} />
+            <ServiceSummaryCard items={displayItems} total={total} />
           </div>
         </div>
       </main>
 
       <ServiceFooterNav 
         canProceed={hasItems} 
+        onBack={handleBack}
         onNext={handleNext}
       />
     </div>

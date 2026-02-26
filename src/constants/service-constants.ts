@@ -24,38 +24,6 @@ export const SERVICE_INFO_STORAGE_KEY = "serviceInfo";
 export const PAYMENT_DATA_STORAGE_KEY = "paymentData";
 
 // ============================================================================
-// Default Service Items
-// ============================================================================
-
-/** Default list of service items available for selection */
-export const DEFAULT_SERVICE_ITEMS: ServiceItem[] = [
-  {
-    id: 1,
-    description: "9,000 - 18,000 BTU, แบบติดผนัง",
-    price: 800.0,
-    quantity: 0,
-  },
-  {
-    id: 2,
-    description: "9,000 - 18,000 BTU, แบบติดผนัง",
-    price: 800.0,
-    quantity: 0,
-  },
-  {
-    id: 3,
-    description: "9,000 - 18,000 BTU, แบบติดผนัง",
-    price: 800.0,
-    quantity: 0,
-  },
-  {
-    id: 4,
-    description: "9,000 - 18,000 BTU, แบบติดผนัง",
-    price: 800.0,
-    quantity: 0,
-  },
-];
-
-// ============================================================================
 // Promotion Codes
 // ============================================================================
 

@@ -23,6 +23,7 @@ import DateInput from "@/components/servicedetail/DateInput";
 import TimePicker from "@/components/servicedetail/TimePicker";
 import LocationSelectors from "@/components/servicedetail/LocationSelectors";
 import type { ServiceItem } from "@/components/servicedetail/types";
+import type { Service } from "@/types/serviceListTypes/type";
 import {
   SERVICE_INFO_STORAGE_KEY,
   SERVICE_ITEMS_STORAGE_KEY,
@@ -31,9 +32,28 @@ import {
   getFromLocalStorage,
   saveToLocalStorage,
 } from "@/utils/localStorage-helpers";
-import {
-  parseServiceItemsFromQuery,
-} from "@/utils/router-helpers";
+import { parseServiceItemsFromQuery } from "@/utils/router-helpers";
+import { fetchServices } from "@/services/serviceListsApi/serviceApi";
+import { useAuth } from "@/contexts/AuthContext";
+
+const getServiceScopedKey = (
+  baseKey: string,
+  serviceIdParam?: string | string[],
+  userId?: string,
+) => {
+  let key = baseKey;
+
+  if (userId) {
+    key = `${key}_${userId}`;
+  }
+
+  if (serviceIdParam) {
+    const id = Array.isArray(serviceIdParam) ? serviceIdParam[0] : serviceIdParam;
+    key = `${key}_${id}`;
+  }
+
+  return key;
+};
 
 /**
  * Service information form data structure
@@ -63,8 +83,10 @@ const defaultServiceInfo: ServiceInfo = {
 
 export default function ServiceInformation() {
   const router = useRouter();
+  const { user } = useAuth();
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   /**
    * Initialize form data with defaults to prevent hydration mismatch
@@ -75,42 +97,99 @@ export default function ServiceInformation() {
   /**
    * Load form data from localStorage on client side only (after mount)
    * This prevents hydration mismatch between server and client
+   * Scoped by serviceId so each service has its own form data
    */
   useEffect(() => {
+    if (!router.isReady) return;
+
     setIsMounted(true);
-    const saved = getFromLocalStorage<ServiceInfo>(SERVICE_INFO_STORAGE_KEY);
+    const infoKey = getServiceScopedKey(
+      SERVICE_INFO_STORAGE_KEY,
+      router.query.serviceId,
+      user?.id,
+    );
+
+    const saved = getFromLocalStorage<ServiceInfo>(infoKey);
     if (saved) {
       setFormData(saved);
     }
-  }, []);
+  }, [router.isReady, router.query.serviceId, user?.id]);
 
   /**
-   * Load service items from router query or localStorage
+   * Load service items from router query or localStorage (scoped by serviceId)
    */
   useEffect(() => {
+    if (!router.isReady) return;
+
+    const itemsKey = getServiceScopedKey(
+      SERVICE_ITEMS_STORAGE_KEY,
+      router.query.serviceId,
+      user?.id,
+    );
+
     // Try to get items from query parameter first
     const queryItems = parseServiceItemsFromQuery(router.query.items);
     if (queryItems.length > 0) {
       setServiceItems(queryItems);
       // Save to localStorage for summary display
-      saveToLocalStorage(SERVICE_ITEMS_STORAGE_KEY, queryItems);
+      saveToLocalStorage(itemsKey, queryItems);
     } else {
       // Fallback to localStorage if no query param
-      const savedItems = getFromLocalStorage<ServiceItem[]>(SERVICE_ITEMS_STORAGE_KEY);
+      const savedItems =
+        getFromLocalStorage<ServiceItem[]>(itemsKey);
       if (savedItems) {
         setServiceItems(savedItems);
       }
     }
-  }, [router.query]);
+  }, [router.isReady, router.query, user?.id]);
+
+  /**
+   * Load selected service data from API using serviceId in query
+   */
+  useEffect(() => {
+    const { serviceId } = router.query;
+    if (!serviceId) return;
+
+    const idString = Array.isArray(serviceId) ? serviceId[0] : serviceId;
+    const id = parseInt(idString, 10);
+    if (Number.isNaN(id)) return;
+
+    let isSubscribed = true;
+
+    const loadService = async () => {
+      try {
+        const services = await fetchServices({});
+        if (!isSubscribed) return;
+
+        const service = services.find((item) => item.id === id) ?? null;
+        setSelectedService(service);
+      } catch (error) {
+        console.error("Error loading service detail (step 2):", error);
+      }
+    };
+
+    loadService();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [router.query.serviceId]);
 
   /**
    * Save form data to localStorage whenever it changes (only after mount)
+   * Scoped by serviceId so each service has its own form data
    */
   useEffect(() => {
-    if (isMounted) {
-      saveToLocalStorage(SERVICE_INFO_STORAGE_KEY, formData);
-    }
-  }, [formData, isMounted]);
+    if (!isMounted || !router.isReady) return;
+
+    const infoKey = getServiceScopedKey(
+      SERVICE_INFO_STORAGE_KEY,
+      router.query.serviceId,
+      user?.id,
+    );
+
+    saveToLocalStorage(infoKey, formData);
+  }, [formData, isMounted, router.isReady, router.query.serviceId, user?.id]);
 
   /**
    * Calculate total price from selected service items
@@ -142,6 +221,7 @@ export default function ServiceInformation() {
         query: {
           items: router.query.items,
           serviceInfo: JSON.stringify(formData),
+          serviceId: router.query.serviceId,
         },
       });
     }
@@ -167,7 +247,11 @@ export default function ServiceInformation() {
   return (
     <div className="min-h-screen bg-utility-bg font-prompt pb-32">
       <Navbar />
-      <ServiceHero serviceName="ล้างแอร์" currentStep={2} />
+      <ServiceHero
+        serviceName={selectedService?.name ?? ""}
+        currentStep={2}
+        imageUrl={selectedService?.image}
+      />
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 pb-10">

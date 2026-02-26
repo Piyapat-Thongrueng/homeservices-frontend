@@ -23,9 +23,11 @@ import PaymentMethodSelector from "@/components/servicedetail/PaymentMethodSelec
 import CreditCardForm from "@/components/servicedetail/CreditCardForm";
 import PromotionCodeInput from "@/components/servicedetail/PromotionCodeInput";
 import type { ServiceItem } from "@/components/servicedetail/types";
+import type { Service } from "@/types/serviceListTypes/type";
 import {
   PAYMENT_DATA_STORAGE_KEY,
   SERVICE_ITEMS_STORAGE_KEY,
+  SERVICE_INFO_STORAGE_KEY,
   VALID_PROMOTION_CODES,
 } from "@/constants/service-constants";
 import {
@@ -36,6 +38,27 @@ import {
   parseServiceItemsFromQuery,
   parseServiceInfoFromQuery,
 } from "@/utils/router-helpers";
+import { fetchServices } from "@/services/serviceListsApi/serviceApi";
+import { useAuth } from "@/contexts/AuthContext";
+
+const getServiceScopedKey = (
+  baseKey: string,
+  serviceIdParam?: string | string[],
+  userId?: string,
+) => {
+  let key = baseKey;
+
+  if (userId) {
+    key = `${key}_${userId}`;
+  }
+
+  if (serviceIdParam) {
+    const id = Array.isArray(serviceIdParam) ? serviceIdParam[0] : serviceIdParam;
+    key = `${key}_${id}`;
+  }
+
+  return key;
+};
 
 /**
  * Payment data structure
@@ -63,11 +86,13 @@ const defaultPaymentData: PaymentData = {
 
 export default function Payment() {
   const router = useRouter();
+  const { user } = useAuth();
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [serviceInfo, setServiceInfo] = useState<any>(null);
   const [discount, setDiscount] = useState(0);
   const [promotionError, setPromotionError] = useState<string>("");
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   /**
    * Initialize payment data with defaults to prevent hydration mismatch
@@ -78,29 +103,53 @@ export default function Payment() {
   /**
    * Load payment data from localStorage on client side only (after mount)
    * This prevents hydration mismatch between server and client
+   * Scoped by serviceId so each service has its own payment data
    */
   useEffect(() => {
+    if (!router.isReady) return;
+
     setIsMounted(true);
-    const saved = getFromLocalStorage<PaymentData>(PAYMENT_DATA_STORAGE_KEY);
+    const paymentKey = getServiceScopedKey(
+      PAYMENT_DATA_STORAGE_KEY,
+      router.query.serviceId,
+      user?.id,
+    );
+
+    const saved = getFromLocalStorage<PaymentData>(paymentKey);
     if (saved) {
       setPaymentData({
         ...saved,
         promotionCode: "", // Reset promotion code
       });
     }
-  }, []);
+  }, [router.isReady, router.query.serviceId, user?.id]);
 
   /**
    * Load service items and service info from router query or localStorage
+   * Scoped by serviceId so each service has its own data
    */
   useEffect(() => {
+    if (!router.isReady) return;
+
+    const itemsKey = getServiceScopedKey(
+      SERVICE_ITEMS_STORAGE_KEY,
+      router.query.serviceId,
+      user?.id,
+    );
+    const serviceInfoKey = getServiceScopedKey(
+      SERVICE_INFO_STORAGE_KEY,
+      router.query.serviceId,
+      user?.id,
+    );
+
     // Load service items
     const queryItems = parseServiceItemsFromQuery(router.query.items);
     if (queryItems.length > 0) {
       setServiceItems(queryItems);
-      saveToLocalStorage(SERVICE_ITEMS_STORAGE_KEY, queryItems);
+      saveToLocalStorage(itemsKey, queryItems);
     } else {
-      const savedItems = getFromLocalStorage<ServiceItem[]>(SERVICE_ITEMS_STORAGE_KEY);
+      const savedItems =
+        getFromLocalStorage<ServiceItem[]>(itemsKey);
       if (savedItems) {
         setServiceItems(savedItems);
       }
@@ -110,28 +159,67 @@ export default function Payment() {
     const queryServiceInfo = parseServiceInfoFromQuery(router.query.serviceInfo);
     if (queryServiceInfo) {
       setServiceInfo(queryServiceInfo);
-      saveToLocalStorage("serviceInfo", queryServiceInfo);
+      saveToLocalStorage(serviceInfoKey, queryServiceInfo);
     } else {
-      const savedInfo = getFromLocalStorage("serviceInfo");
+      const savedInfo = getFromLocalStorage(serviceInfoKey);
       if (savedInfo) {
         setServiceInfo(savedInfo);
       }
     }
-  }, [router.query]);
+  }, [router.isReady, router.query, user?.id]);
+
+  /**
+   * Load selected service data from API using serviceId in query
+   */
+  useEffect(() => {
+    const { serviceId } = router.query;
+    if (!serviceId) return;
+
+    const idString = Array.isArray(serviceId) ? serviceId[0] : serviceId;
+    const id = parseInt(idString, 10);
+    if (Number.isNaN(id)) return;
+
+    let isSubscribed = true;
+
+    const loadService = async () => {
+      try {
+        const services = await fetchServices({});
+        if (!isSubscribed) return;
+
+        const service = services.find((item) => item.id === id) ?? null;
+        setSelectedService(service);
+      } catch (error) {
+        console.error("Error loading service detail (payment):", error);
+      }
+    };
+
+    loadService();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [router.query.serviceId]);
 
   /**
    * Save payment data to localStorage whenever it changes (only after mount)
    * Note: promotionCode is not saved to localStorage
+   * Scoped by serviceId so each service has its own payment data
    */
   useEffect(() => {
-    if (isMounted) {
-      const dataToSave = {
-        ...paymentData,
-        promotionCode: "", // Don't save promotionCode
-      };
-      saveToLocalStorage(PAYMENT_DATA_STORAGE_KEY, dataToSave);
-    }
-  }, [paymentData, isMounted]);
+    if (!isMounted || !router.isReady) return;
+
+    const paymentKey = getServiceScopedKey(
+      PAYMENT_DATA_STORAGE_KEY,
+      router.query.serviceId,
+      user?.id,
+    );
+
+    const dataToSave = {
+      ...paymentData,
+      promotionCode: "", // Don't save promotionCode
+    };
+    saveToLocalStorage(paymentKey, dataToSave);
+  }, [paymentData, isMounted, router.isReady, router.query.serviceId, user?.id]);
 
   /**
    * Calculate total price from selected service items
@@ -171,6 +259,7 @@ export default function Payment() {
           serviceInfo: router.query.serviceInfo,
           paymentData: JSON.stringify(paymentData),
           total: finalTotal.toString(),
+          serviceId: router.query.serviceId,
         },
       });
     }
@@ -228,7 +317,11 @@ export default function Payment() {
   return (
     <div className="min-h-screen bg-utility-bg font-prompt pb-32">
       <Navbar />
-      <ServiceHero serviceName="ล้างแอร์" currentStep={3} />
+      <ServiceHero
+        serviceName={selectedService?.name ?? ""}
+        currentStep={3}
+        imageUrl={selectedService?.image}
+      />
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 pb-10">

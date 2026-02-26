@@ -20,11 +20,14 @@ interface ServiceHeroProps {
   serviceName: string;
   /** Current step in the booking process (1, 2, or 3) */
   currentStep?: 1 | 2 | 3;
+  /** Background image for the service hero (from API) */
+  imageUrl?: string;
 }
 
 const ServiceHero: React.FC<ServiceHeroProps> = ({
   serviceName,
   currentStep = 1,
+  imageUrl,
 }) => {
   const steps = [
     { icon: List, label: "รายการ", step: 1 },
@@ -47,8 +50,8 @@ const ServiceHero: React.FC<ServiceHeroProps> = ({
       {/* Top image banner */}
       <div className="relative w-full min-h-[240px] md:h-[280px] overflow-hidden">
         <img
-          src="/servicedetail_bg_img.svg"
-          alt="บริการล้างแอร์"
+          src={imageUrl}
+          alt={serviceName}
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black/10" />
