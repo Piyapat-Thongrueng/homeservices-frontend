@@ -1,3 +1,10 @@
+/**
+ * HomeServices Component
+ *
+ * Renders a responsive grid of service cards for either the landing page
+ * (showing a limited, "popular" subset) or the full service list, and
+ * handles navigation and login gating before entering the booking flow.
+ */
 import { ArrowRight, Tag } from "lucide-react";
 import { useRouter } from "next/router";
 import { getCategoryColor } from "@/components/serviceCard/CategoryColors";

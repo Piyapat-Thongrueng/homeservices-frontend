@@ -1,3 +1,9 @@
+/**
+ * Global site Footer
+ *
+ * Two-row footer shared across pages, showing company information in Thai,
+ * contact channels, and legal/policy links.
+ */
 import { Phone, Mail } from "lucide-react";
 
 export default function Footer() {

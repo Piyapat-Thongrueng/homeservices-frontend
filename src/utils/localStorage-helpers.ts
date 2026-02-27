@@ -39,9 +39,30 @@ export const saveToLocalStorage = <T>(key: string, data: T): boolean => {
 };
 
 /**
- * Removes an item from localStorage
+ * Builds a localStorage key that is scoped to the current user and service.
+ *
+ * This is used across the multi-step service detail flow so that:
+ * - Each user has isolated storage (via `userId`)
+ * - Each service booking has its own namespace (via `serviceId` from the router)
+ *
+ * Example shape: `${baseKey}_${userId}_${serviceId}`
  */
-export const removeFromLocalStorage = (key: string): void => {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(key);
+export const getServiceScopedKey = (
+  baseKey: string,
+  serviceIdParam?: string | string[],
+  userId?: string,
+): string => {
+  let key = baseKey;
+
+  if (userId) {
+    key = `${key}_${userId}`;
+  }
+
+  if (serviceIdParam) {
+    const id = Array.isArray(serviceIdParam) ? serviceIdParam[0] : serviceIdParam;
+    key = `${key}_${id}`;
+  }
+
+  return key;
 };
+

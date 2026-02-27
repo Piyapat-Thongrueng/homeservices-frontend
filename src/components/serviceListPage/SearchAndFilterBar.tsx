@@ -1,3 +1,14 @@
+/**
+ * SearchAndFilterBar Component
+ *
+ * Provides the sticky search and filter controls for the service list page:
+ * - free-text search
+ * - category selector
+ * - price range slider
+ * - sort options
+ * and orchestrates calling the services API before bubbling results and loading
+ * state up to the parent page.
+ */
 import { useState } from "react";
 import { Search } from "lucide-react";
 import CategoryDropdown from "./CategoryDropdown";

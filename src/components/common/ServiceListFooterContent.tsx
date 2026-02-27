@@ -1,3 +1,9 @@
+/**
+ * ServiceListFooterContent Component
+ *
+ * Blue footer section dedicated to the service list page, reinforcing
+ * brand trust and availability with long-form Thai marketing copy.
+ */
 export default function ServiceListFooterContent() {
     return (
       // Outer container for full-width background

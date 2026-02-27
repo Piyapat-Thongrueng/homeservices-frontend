@@ -1,3 +1,9 @@
+/**
+ * Service list Banner Component
+ *
+ * Displays a full-width hero banner for the service list page with a
+ * background image, color overlay, and marketing copy in Thai.
+ */
 const Banner = () => {
   return (
     <div>

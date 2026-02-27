@@ -1,3 +1,10 @@
+/**
+ * PriceRangeDropdown Component
+ *
+ * Dual-range slider used to constrain service search results to a given
+ * price interval. It is fully controlled from the parent via `minPrice`
+ * and `maxPrice` props and only emits numeric bounds, not API params.
+ */
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 

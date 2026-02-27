@@ -33,6 +33,7 @@ import {
 import {
   getFromLocalStorage,
   saveToLocalStorage,
+  getServiceScopedKey,
 } from "@/utils/localStorage-helpers";
 import {
   parseServiceItemsFromQuery,
@@ -40,25 +41,6 @@ import {
 } from "@/utils/router-helpers";
 import { fetchServices } from "@/services/serviceListsApi/serviceApi";
 import { useAuth } from "@/contexts/AuthContext";
-
-const getServiceScopedKey = (
-  baseKey: string,
-  serviceIdParam?: string | string[],
-  userId?: string,
-) => {
-  let key = baseKey;
-
-  if (userId) {
-    key = `${key}_${userId}`;
-  }
-
-  if (serviceIdParam) {
-    const id = Array.isArray(serviceIdParam) ? serviceIdParam[0] : serviceIdParam;
-    key = `${key}_${id}`;
-  }
-
-  return key;
-};
 
 /**
  * Payment data structure

@@ -1,3 +1,10 @@
+/**
+ * Main site Navbar
+ *
+ * Sticky top navigation bar that shows the brand, primary navigation link,
+ * and a user area that reflects global auth state (login button, profile
+ * dropdown, notification bell, and logout/reset actions).
+ */
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"

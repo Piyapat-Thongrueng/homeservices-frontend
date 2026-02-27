@@ -1,3 +1,10 @@
+/**
+ * LandingPageFooterContent Component
+ *
+ * Promotional blue footer block used on the landing page to invite
+ * technicians to join the platform, including descriptive copy and
+ * a highlighted contact email.
+ */
 export default function LandingPageFooterContent() {
     return (
       // Outer container for full-width background
