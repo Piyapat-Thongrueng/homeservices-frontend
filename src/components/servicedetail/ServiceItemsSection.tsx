@@ -19,18 +19,22 @@ interface ServiceItemsSectionProps {
   items: ServiceItem[];
   /** Callback when quantity changes (id, delta) */
   onChangeQuantity: (id: number, delta: number) => void;
+  /** Optional service name to show in heading (from API) */
+  serviceName?: string;
 }
 
 const ServiceItemsSection: React.FC<ServiceItemsSectionProps> = ({
   items,
   onChangeQuantity,
+  serviceName,
 }) => {
+  const headingText = serviceName
+    ? `เลือกรายการบริการ ${serviceName}`
+    : "เลือกรายการบริการ";
+
   return (
     <section className="card-box bg-utility-white p-5 md:p-8">
-      <h2 className="headline-3 text-gray-700 mb-8">
-        เลือกรายการบริการล้างแอร์
-      </h2>
-
+      <h2 className="headline-3 text-gray-700 mb-8">{headingText}</h2>
       <div className="space-y-5">
         {items.map((item) => (
           <div
@@ -44,7 +48,7 @@ const ServiceItemsSection: React.FC<ServiceItemsSectionProps> = ({
                 </p>
                 <p className="body-3 text-gray-600 flex items-center gap-3">
                   <Tag className="w-4 h-4" />
-                  <span>{item.price.toFixed(2)} ฿ / เครื่อง</span>
+                  <span>{item.price.toFixed(2)} ฿ / {item.unit}</span>
                 </p>
               </div>
 

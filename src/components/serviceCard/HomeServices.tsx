@@ -2,6 +2,7 @@ import { ArrowRight, Tag } from "lucide-react";
 import { useRouter } from "next/router";
 import { getCategoryColor } from "@/components/serviceCard/CategoryColors";
 import { Service } from "@/types/serviceListTypes/type";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HomeServicesProps {
   serviceLists: Service[];
@@ -17,10 +18,25 @@ export default function HomeServices({
   onCategoryClick,
 }: HomeServicesProps) {
   const router = useRouter();
+  const { user } = useAuth();
 
   // Req3: ถ้า mode="landing" แสดงแค่ 3 รายการแรก (ยอดนิยม ควร sort มาจาก API แล้ว)
   const displayList =
     mode === "landing" ? serviceLists.slice(0, 3) : serviceLists;
+
+  const handleSelectService = (service: Service) => {
+    // ถ้ายังไม่ได้ login ให้ไปหน้า login ก่อน
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    // ถ้า login แล้ว → ไปหน้า Service Details พร้อมส่ง serviceId ไปใน query
+    router.push({
+      pathname: "/servicedetailPage/ServiceDetails",
+      query: { serviceId: service.id },
+    });
+  };
 
   return (
     <div className="w-full bg-gray-50 py-16 text-gray-900 font-prompt overflow-hidden">
@@ -86,7 +102,10 @@ export default function HomeServices({
                       </p>
                     </div>
 
-                    <button className="text-blue-600 hover:text-blue-800 font-bold transition-colors cursor-pointer self-start underline underline-offset-4 decoration-blue-600/30 hover:decoration-blue-800 text-base">
+                    <button
+                      onClick={() => handleSelectService(service)}
+                      className="text-blue-600 hover:text-blue-800 font-bold transition-colors cursor-pointer self-start underline underline-offset-4 decoration-blue-600/30 hover:decoration-blue-800 text-base"
+                    >
                       เลือกบริการ
                     </button>
                   </div>

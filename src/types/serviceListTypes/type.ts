@@ -29,3 +29,26 @@ export interface ServiceFilterParams {
   order?: string;     // "ASC" | "DESC"
   filter?: string;    // "recommended" | "popular"
 }
+
+/** One item in the service detail API response (items array) */
+export interface ServiceDetailItemApi {
+  id: number;
+  name: string;
+  price_per_unit: number;
+  unit: string;
+}
+
+/** Service detail API response (GET /api/services/:id) */
+export interface ServiceDetailResponseApi {
+  id: number;
+  category_id: number;
+  name: string;
+  description: string;
+  price: string;
+  created_at: string;
+  updated_at: string;
+  image: string;
+  category_name: string;
+  category_name_th: string;
+  items: ServiceDetailItemApi[];
+}
