@@ -48,7 +48,7 @@ const ServiceListPage = () => {
     <div>
       <Navbar />
       <Banner />
-      <SearchAndFilterBar onResults={setServiceLists} onLoading={setLoading} />
+      <SearchAndFilterBar onResults={setServiceLists} onLoading={setLoading} allServices={serviceLists} />
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <p className="text-gray-500">กำลังค้นหาบริการ...</p>
