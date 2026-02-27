@@ -28,7 +28,7 @@ const ServiceListPage = () => {
     loadInitialServices();
   }, []);
 
-  // Req1: เมื่อกด category badge บนการ์ด → filter ตาม category_id
+  // เมื่อกด  category badge บนการ์ด → filter ตาม category_id
   const handleCategoryClick = async (
     categoryId: number,
     categoryNameTh: string,

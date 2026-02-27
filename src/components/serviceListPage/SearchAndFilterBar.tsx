@@ -84,7 +84,7 @@ export default function SearchAndFilterBar({
         </div>
         {/* Filter Row */}
         <div className="font-prompt flex items-stretch overflow-x-clip gap-0 pt-3 border-t border-gray-100 sm:pt-0 sm:border-t-0 sm:border-l sm:border-gray-200 sm:shrink-0">
-          {/* Req2: Category - ดึงข้อมูลตอน mount, ส่ง category_id */}
+          {/* Category - ดึงข้อมูลตอน mount, ส่ง category_id */}
           <CategoryDropdown
             selectedId={categoryId}
             selectedLabel={categoryLabel}
@@ -94,7 +94,7 @@ export default function SearchAndFilterBar({
             }}
           />
 
-          {/* Req3: Price Range - ส่ง min_price, max_price */}
+          {/* Price Range - ส่ง min_price, max_price */}
           <PriceRangeDropdown
             minPrice={minPrice}
             maxPrice={maxPrice}
@@ -104,7 +104,7 @@ export default function SearchAndFilterBar({
             }}
           />
 
-          {/* Req4: Sort - ส่ง filter/sort_by/order */}
+          {/* Sort - ส่ง filter/sort_by/order */}
           <SortDropdown
             selectedLabel={sortLabel}
             onSelect={(params, label) => {
