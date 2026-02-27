@@ -1,3 +1,10 @@
+/**
+ * CategoryDropdown Component
+ *
+ * Fetches service categories from the API on mount and exposes a dropdown
+ * control that lets users constrain search results to a specific category
+ * (or reset back to "all services").
+ */
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { fetchCategories } from "@/services/serviceListsApi/serviceApi";
@@ -24,7 +31,6 @@ export default function CategoryDropdown({
   const fetchCategoriesData = async () => {
     try {
       const data = await fetchCategories();
-      console.log("Fetched categories in dropdown:", data);
       setCategories(data);
     } catch (error) {
       console.error("Error fetching categories:", error);

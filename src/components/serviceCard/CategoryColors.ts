@@ -1,3 +1,9 @@
+/**
+ * Category color presets used to style service category badges.
+ *
+ * Centralizes Tailwind color classes so that cards and filters can share
+ * a consistent visual language for each service category.
+ */
 export const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   Cleaning: { bg: "bg-sky-100", text: "text-sky-700" },
   Repair: { bg: "bg-orange-100", text: "text-orange-700" },
@@ -7,11 +13,15 @@ export const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   Plumbing: { bg: "bg-teal-100", text: "text-teal-700" },
 };
 
-// fallback กรณี category ใหม่ที่ยังไม่ได้กำหนดสี
+// Fallback styling for categories that do not have a specific color mapping.
 export const DEFAULT_CATEGORY_COLOR = {
   bg: "bg-gray-100",
   text: "text-gray-600",
 };
 
+/**
+ * Returns the color config for a given category name, or a fallback when
+ * the category is unknown.
+ */
 export const getCategoryColor = (categoryName: string) =>
   CATEGORY_COLORS[categoryName] ?? DEFAULT_CATEGORY_COLOR;

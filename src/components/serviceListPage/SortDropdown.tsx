@@ -1,3 +1,10 @@
+/**
+ * SortDropdown Component
+ *
+ * A controlled dropdown used by the search bar to select how service
+ * results should be ordered (recommended, popular, alphabetical, etc).
+ * Emits the underlying filter/sort parameters back to the parent.
+ */
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { ServiceFilterParams } from "@/types/serviceListTypes/type";

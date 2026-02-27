@@ -1,3 +1,9 @@
+/**
+ * Landing page HeroSection
+ *
+ * Marketing hero for the home page with copy describing the service and
+ * a primary call-to-action button plus an illustrative hero image.
+ */
 const HeroSection = () => {
   return (
     <div className="w-full bg-blue-100 overflow-hidden">

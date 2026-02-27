@@ -30,27 +30,9 @@ import {
 import {
   getFromLocalStorage,
   saveToLocalStorage,
+  getServiceScopedKey,
 } from "@/utils/localStorage-helpers";
 import { useAuth } from "@/contexts/AuthContext";
-
-const getServiceScopedKey = (
-  baseKey: string,
-  serviceIdParam?: string | string[],
-  userId?: string,
-) => {
-  let key = baseKey;
-
-  if (userId) {
-    key = `${key}_${userId}`;
-  }
-
-  if (serviceIdParam) {
-    const id = Array.isArray(serviceIdParam) ? serviceIdParam[0] : serviceIdParam;
-    key = `${key}_${id}`;
-  }
-
-  return key;
-};
 
 export default function ServiceDetails() {
   const router = useRouter();
@@ -91,7 +73,6 @@ export default function ServiceDetails() {
           `https://homeservices-server.vercel.app/api/services/${id}`,
         );
         const data = response.data;
-        console.log("ServiceDetails services:", data);
         if (!isSubscribed) return;
 
         setSelectedService(data);
@@ -223,8 +204,6 @@ export default function ServiceDetails() {
   const handleBack = () => {
     router.back();
   };
-
-  console.log("ServiceDetails serviceItems (items prop):", serviceItems);
 
   return (
     <div className="min-h-screen bg-utility-bg font-prompt pb-32">

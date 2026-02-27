@@ -102,11 +102,6 @@ export default function NotificationBell() {
   const setupRealtime =
     (userId: string) => {
 
-      console.log(
-        "Setting up realtime for:",
-        userId
-      )
-
       // cleanup old
       if (channelRef.current) {
 
@@ -133,11 +128,6 @@ export default function NotificationBell() {
                 `user_id=eq.${userId}`
             },
             (payload) => {
-
-              console.log(
-                "Realtime received:",
-                payload
-              )
 
               const newNotif =
                 payload.new as Notification
@@ -177,14 +167,7 @@ export default function NotificationBell() {
 
             }
           )
-          .subscribe((status) => {
-
-            console.log(
-              "Realtime status:",
-              status
-            )
-
-          })
+          .subscribe()
 
       channelRef.current = channel
 
