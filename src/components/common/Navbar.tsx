@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/contexts/AuthContext"
 import NotificationBell from "@/components/NotificationBell"
+import Link from "next/link"
 
 
 
@@ -133,12 +134,12 @@ export default function Navbar() {
               }
             />
 
-            <a
-              href="#services"
+            <Link
+              href="/service-lists"
               className="headline-5 font-medium text-black hover:text-blue-600 transition-colors"
             >
               บริการของเรา
-            </a>
+            </Link>
 
           </div>
 

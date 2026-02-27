@@ -4,6 +4,9 @@
  * Marketing hero for the home page with copy describing the service and
  * a primary call-to-action button plus an illustrative hero image.
  */
+
+import Link from "next/link";
+
 const HeroSection = () => {
   return (
     <div className="w-full bg-blue-100 overflow-hidden">
@@ -21,9 +24,11 @@ const HeroSection = () => {
             และช่างมืออาชีพ
           </p>
           <div>
-            <button className="btn-primary font-medium py-4 text-2xl px-10 cursor-pointer">
-              เช็คราคาบริการ
-            </button>
+            <Link href="/service-lists">
+              <button className="btn-primary font-medium py-4 text-2xl px-10 cursor-pointer">
+                เช็คราคาบริการ
+              </button>
+            </Link>
           </div>
         </div>
 
