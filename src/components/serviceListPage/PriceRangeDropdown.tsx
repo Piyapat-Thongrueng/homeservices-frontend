@@ -12,9 +12,9 @@ const MIN = 0;
 const MAX = 2000;
 
 interface PriceRangeDropdownProps {
-  minPrice: number;
-  maxPrice: number;
-  onChange: (min: number, max: number) => void;
+  minPrice: number; // ราคาต่ำสุดปัจจุบัน (จาก parent)
+  maxPrice: number; // ราคาสูงสุดปัจจุบัน (จาก parent)
+  onChange: (min: number, max: number) => void; // callback ส่งค่ากลับ parent
 }
 
 export default function PriceRangeDropdown({
@@ -25,6 +25,7 @@ export default function PriceRangeDropdown({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // ปิด dropdown เมื่อ click นอก
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
