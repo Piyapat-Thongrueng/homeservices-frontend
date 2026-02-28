@@ -1,4 +1,3 @@
-"use client";
 import { useState, useEffect } from "react";
 import Navbar from "@/components/common/Navbar";
 import ServiceListFooterContent from "@/components/common/ServiceListFooterContent";
