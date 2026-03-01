@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/router"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function RegisterPage() {
 
@@ -49,47 +50,72 @@ export default function RegisterPage() {
 
 
     if (!name.trim()) {
+
       setNameError("โปรดกรอกชื่อ - นามสกุล")
       valid = false
+
     }
     else if (!nameRegex.test(name)) {
+
       setNameError("ชื่อใช้ได้เฉพาะ A-Z a-z ' -")
       valid = false
+
     }
+
 
     if (!phone.trim()) {
+
       setPhoneError("โปรดกรอกเบอร์โทรศัพท์")
       valid = false
+
     }
     else if (!phoneRegex.test(phone)) {
+
       setPhoneError("เบอร์โทรต้องเป็นตัวเลข 10 หลัก")
       valid = false
+
     }
+
 
     if (!email.trim()) {
+
       setEmailError("โปรดกรอกอีเมล")
       valid = false
+
     }
     else if (!emailRegex.test(email)) {
+
       setEmailError("email ต้องมี @ และ .com")
       valid = false
+
     }
 
+
+    // password ต้องมี ≥ 12 ตัว
     if (!password.trim()) {
+
       setPasswordError("โปรดกรอกรหัสผ่าน")
       valid = false
+
     }
     else if (password.length < 12) {
+
       setPasswordError("รหัสผ่านต้องมีอย่างน้อย 12 ตัวอักษร")
       valid = false
+
     }
+
 
     if (!accept) {
+
       setAcceptError("กรุณายอมรับ policy")
       valid = false
+
     }
 
+
     return valid
+
   }
 
 
@@ -111,28 +137,31 @@ export default function RegisterPage() {
 
     try {
 
-      const response = await fetch(
-        "http://localhost:4000/api/auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+      const { error } = await supabase.auth.signUp({
+
+        email,
+
+        password,
+
+        options: {
+
+          data: {
+
+            name,
+            phone,
+
           },
-          body: JSON.stringify({
-            email,
-            username: name,
-            password,
-            phone
-          }),
-        }
-      )
 
-      const data = await response.json()
+        },
 
-      if (!response.ok) {
-        alert("สมัครสมาชิกไม่สำเร็จ: " + data.error)
+      })
+
+      if (error) {
+
+        alert("สมัครสมาชิกไม่สำเร็จ: " + error.message)
         setLoading(false)
         return
+
       }
 
       alert("สมัครสมาชิกสำเร็จ")
@@ -141,10 +170,14 @@ export default function RegisterPage() {
 
     }
     catch (err: any) {
+
       alert("เกิดข้อผิดพลาด")
+
     }
     finally {
+
       setLoading(false)
+
     }
 
   }
@@ -162,7 +195,23 @@ export default function RegisterPage() {
 
     try {
 
-      alert("OAuth logic ยังใช้ Supabase เหมือนเดิม")
+      const { error } = await supabase.auth.signInWithOAuth({
+
+        provider,
+
+        options: {
+
+          redirectTo: `${window.location.origin}/`
+
+        }
+
+      })
+
+      if (error) {
+
+        alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message)
+
+      }
 
     }
     catch (err: any) {

@@ -257,7 +257,7 @@ export default function Navbar() {
 
               <button
                 onClick={goLogin}
-                className="border border-blue-600 text-blue-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-600 hover:text-white"
+                className="border border-blue-600 text-blue-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-600 hover:text-white cursor-pointer "
               >
                 เข้าสู่ระบบ
               </button>

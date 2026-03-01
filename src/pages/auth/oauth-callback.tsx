@@ -1,44 +1,58 @@
-import { useEffect } from "react"
-import { useRouter } from "next/router"
-import { supabase } from "@/lib/supabaseClient"
+import { useEffect } from "react";
+import { useRouter } from "next/router";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function OAuthCallback() {
 
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
 
-    if (!router.isReady) return
+    const handleOAuth = async () => {
 
-    const checkUser = async () => {
+      // อ่าน token จาก URL hash
+      const hash = window.location.hash;
 
-      const { data } = await supabase.auth.getUser()
-
-      // ❌ ไม่มี session
-      if (!data.user) {
-        router.replace("/auth/login")
-        return
+      if (!hash) {
+        router.push("/auth/login");
+        return;
       }
 
-      // ❌ ยังไม่ verify email
-      if (!data.user.email_confirmed_at) {
+      const params = new URLSearchParams(
+        hash.replace("#", "")
+      );
 
-        await supabase.auth.signOut()
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
 
-        alert("บัญชีนี้ยังไม่ได้ยืนยันอีเมล")
-
-        router.replace("/auth/login")
-        return
+      if (!access_token || !refresh_token) {
+        router.push("/auth/login");
+        return;
       }
 
-      // ✅ login success
-      router.replace("/")
+      // ✅ set session เข้า Supabase client
+      const { error } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      });
 
-    }
+      if (error) {
+        console.error(error);
+        router.push("/auth/login");
+        return;
+      }
 
-    checkUser()
+      // ✅ login สำเร็จ
+      router.push("/dashboard");
+    };
 
-  }, [router.isReady])
+    handleOAuth();
 
-  return <p>กำลังเข้าสู่ระบบ...</p>
+  }, []);
+
+  return (
+    <div className="flex h-screen items-center justify-center">
+      กำลังเข้าสู่ระบบ...
+    </div>
+  );
 }
