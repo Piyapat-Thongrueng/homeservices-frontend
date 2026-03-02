@@ -276,6 +276,7 @@ export default function NotificationBell() {
           p-4
           w-80
           z-50
+          
         ">
 
           <div className="
@@ -303,7 +304,11 @@ export default function NotificationBell() {
           onClick={() =>
             setNotifOpen(!notifOpen)
           }
-          className="relative text-xl"
+          className="  relative text-xl
+            cursor-pointer
+            transition-all duration-200
+            hover:scale-110
+            active:scale-95 "
         >
           🔔
 
@@ -322,6 +327,9 @@ export default function NotificationBell() {
               flex
               items-center
               justify-center
+              
+              
+              
             ">
               {unreadCount}
             </span>
@@ -361,6 +369,8 @@ export default function NotificationBell() {
                 className="
                   text-blue-600
                   text-sm
+                  cursor-pointer
+  
                 "
               >
                 Mark all read

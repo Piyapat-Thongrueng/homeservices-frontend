@@ -161,12 +161,17 @@ export default function Navbar() {
                   className="relative"
                 >
 
-                  <button
-                    onClick={() =>
-                      setOpen(!open)
-                    }
-                    className="flex items-center gap-3"
-                  >
+<button
+  onClick={() =>
+    setOpen(!open)
+  }
+  className="
+    flex items-center gap-3
+    cursor-pointer
+    transition-all duration-200
+    hover:scale-105
+  "
+>
 
                     {avatarUrl ? (
 
@@ -183,7 +188,7 @@ export default function Navbar() {
 
                     )}
 
-                    <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                    <span className="text-sm font-medium text-gray-700 hidden sm:block hover:text-blue-500">
                       {userName}
                     </span>
 
@@ -212,7 +217,7 @@ export default function Navbar() {
                           setOpen(false)
                           router.push("/profile")
                         }}
-                        className="w-full px-4 py-3 text-sm hover:bg-gray-50 text-left"
+                        className="w-full px-4 py-3 text-sm hover:bg-gray-200 text-left cursor-pointer"
                       >
                         👤 Profile
                       </button>
@@ -224,7 +229,7 @@ export default function Navbar() {
                           setOpen(false)
                           router.push("/reset-password")
                         }}
-                        className="w-full px-4 py-3 text-sm hover:bg-gray-50 text-left"
+                        className="w-full px-4 py-3 text-sm hover:bg-gray-200 text-left cursor-pointer"
                       >
                         🔒 Reset password
                       </button>
@@ -235,7 +240,7 @@ export default function Navbar() {
 
                       <button
                         onClick={handleLogout}
-                        className="w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 text-left"
+                        className="w-full px-4 py-3 text-sm text-red-600 hover:bg-red-100 text-left cursor-pointer"
                       >
                         🚪 Log out
                       </button>
@@ -252,7 +257,7 @@ export default function Navbar() {
 
               <button
                 onClick={goLogin}
-                className="border border-blue-600 text-blue-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-600 hover:text-white"
+                className="border border-blue-600 text-blue-600 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-600 hover:text-white cursor-pointer "
               >
                 เข้าสู่ระบบ
               </button>
