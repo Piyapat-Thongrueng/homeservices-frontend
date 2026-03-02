@@ -47,7 +47,7 @@ export default function HomeServices({
 
   return (
     <div className="w-full bg-gray-50 py-16 text-gray-900 font-prompt overflow-hidden">
-      <div className="max-w-6xl mx-auto px-4 sm:px-10 lg:px-18">
+      <div className="max-w-6xl mx-auto px-4 sm:px-10">
         {/* หัวข้อ */}
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold text-gray-900">

@@ -115,7 +115,7 @@ export default function SearchAndFilterBar({
 
   return (
     <div className="w-full sticky top-0 z-20 bg-white shadow-md">
-      <div className="w-full max-w-screen-2xl mx-auto px-4 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:py-6 sm:gap-0 sm:px-6 md:px-10 lg:px-18">
+      <div className="w-full max-w-screen-xl mx-auto px-4 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:py-6 sm:gap-0 sm:px-6 md:px-10 lg:px-18">
         {/* Search Input + Autocomplete Dropdown */}
         <div className="flex gap-3 items-center sm:flex-1 sm:min-w-0 sm:pr-4 overflow-visible">
           {/* เพิ่ม ref และ relative เพื่อให้ dropdown ชิดกับ input */}
