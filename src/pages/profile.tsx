@@ -69,7 +69,8 @@ export default function RepairDashboard() {
     const fetchOrders = async () => {
       setLoadingOrders(true);
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const API_URL = 'http://localhost:4000';
+        console.log("👉 กำลังยิงไปที่ URL:", `${API_URL}/api/orders/my-orders/${user.id}`);
         const response = await axios.get(`${API_URL}/api/orders/my-orders/${user.id}`);
         setOrders(response.data.map(normalizeOrder));
       } catch (error) {
