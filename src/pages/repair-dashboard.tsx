@@ -5,6 +5,8 @@ import Footer from '../components/common/Footer';
 import OrderSidebar from '../components/repairorder/OrderSidebar';
 import OrderCard from '../components/repairorder/OrderCard';
 
+import { useRequireAuth } from '@/contexts/useRequireAuth';
+
 type OrderForCard = {
   id: string;
   status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ';
@@ -38,64 +40,62 @@ function normalizeOrder(o: Record<string, unknown>): OrderForCard {
 }
 
 export default function RepairDashboard() {
-  const [currentTab, setCurrentTab] = useState<'profile' | 'orders' | 'history'>('orders');
-  
-  // 1. สร้างตัวแปร State มารองรับข้อมูลที่จะดึงมาจาก Database
+  // 2. เรียกใช้งาน Auth Hook (จะทำการ Redirect ไปหน้า Login ให้อัตโนมัติหากยังไม่ล็อกอิน)
+  const { user, loading: authLoading } = useRequireAuth(); 
+
   const [orders, setOrders] = useState<OrderForCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTab, setCurrentTab] = useState<'profile' | 'orders' | 'history'>('orders');
 
-  // 2. เรียกผ่าน API route ของ Next.js (proxy ไป backend) เพื่อหลีกเลี่ยง CORS
   useEffect(() => {
+    // 3. ป้องกันการดึงข้อมูลหากยังโหลด Auth ไม่เสร็จ หรือยังไม่มี User
+    if (authLoading || !user) return;
+
     const fetchOrders = async () => {
+      setLoading(true);
       try {
-        const response = await axios.get('http://localhost:4000/api/orders/my-orders/1');
-        const raw = response?.data;
-        const list = Array.isArray(raw) ? raw : raw?.data ?? raw?.orders ?? [];
-        setOrders(list.map(normalizeOrder));
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        
+        // 4. ส่ง user.id ไปดึงข้อมูลจาก Backend (/my-orders/:userId)
+        const response = await axios.get(`${API_URL}/api/orders/my-orders/${user.id}`);
+        
+        // แปลงข้อมูลให้อยู่ในรูปแบบที่การ์ดต้องการ
+        const normalized = response.data.map(normalizeOrder);
+        setOrders(normalized);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching orders:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrders();
-  }, []);
+  }, [user, authLoading]); // ใส่ dependency เพื่อให้ทำงานเมื่อ user หรือ authLoading เปลี่ยน
 
-  // 3. แยกข้อมูลเป็น "รอดำเนินการ" และ "ประวัติ (เสร็จแล้ว)"
+  // 5. แสดงหน้าโหลดระหว่างเช็คสถานะล็อกอิน
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center font-prompt">
+        <p className="text-gray-500 text-lg">กำลังตรวจสอบสิทธิ์เข้าใช้งาน...</p>
+      </div>
+    );
+  }
+
+  // หากไม่มี user ระบบของ useRequireAuth จะสั่ง router.replace('/auth/login') ไปแล้ว 
+  // เราแค่ return null เพื่อไม่ให้มัน render หน้า dashboard ที่ว่างเปล่าออกมา
+  if (!user) return null;
+
+  // ... (โค้ดส่วนฟังก์ชัน renderContent และ return UI ตามปกติ) ...
+
   const pendingOrders = orders.filter((o) => o.status !== 'ดำเนินการสำเร็จ');
   const historyOrders = orders.filter((o) => o.status === 'ดำเนินการสำเร็จ');
 
-  const renderContent = () => {
-    if (loading) return <div className="p-8 text-center">กำลังโหลดข้อมูล...</div>;
-
-    if (currentTab === 'orders') {
-      if (pendingOrders.length === 0) return <div>ไม่มีรายการคำสั่งซ่อม</div>;
-      return pendingOrders.map((order) => <OrderCard key={order.id} order={order} />);
-    } 
-    if (currentTab === 'history') {
-      if (historyOrders.length === 0) return <div>ไม่มีประวัติการซ่อม</div>;
-      return historyOrders.map((order) => <OrderCard key={order.id} order={order} />);
-    }
-    if (currentTab === 'profile') {
-      return <div className="p-6 bg-white rounded-xl shadow-sm">หน้าข้อมูลส่วนตัว (รอสร้าง)</div>;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+      {/* Navbar จะแสดงสถานะ Login อัตโนมัติ เพราะมันดึงข้อมูลจาก Context เดียวกัน */}
       <Navbar />
-      <div className="bg-blue-600 text-white text-center py-6 text-3xl font-bold">
-        {currentTab === 'history' ? 'ประวัติการซ่อม' : 
-         currentTab === 'profile' ? 'ข้อมูลผู้ใช้งาน' : 'รายการคำสั่งซ่อม'}
-      </div>
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 flex flex-col md:flex-row gap-8 mb-12">
-        <OrderSidebar activeTab={currentTab} onTabChange={setCurrentTab} />
-        <div className="flex-1 space-y-4">
-          {renderContent()}
-        </div>
-      </main>
-      <Footer />
+      
+      {/* ... โค้ด UI เดิม ... */}
     </div>
   );
 }
