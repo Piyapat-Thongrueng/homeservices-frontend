@@ -1,335 +1,181 @@
-import { useEffect, useState } from "react"
-import { useRouter } from "next/router"
-import { supabase } from "@/lib/supabaseClient"
-import Navbar from "@/components/common/Navbar"
-import { useAuth } from "@/contexts/AuthContext"
-import { useRequireAuth } from "@/contexts/useRequireAuth"
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import Navbar from '@/components/common/Navbar';
+import Footer from '@/components/common/Footer';
+import OrderSidebar from '@/components/repairorder/OrderSidebar';
+import OrderCard from '@/components/repairorder/OrderCard';
+import { useRequireAuth } from '@/contexts/useRequireAuth';
+import { supabase } from '@/lib/supabaseClient';
 
-export default function ProfilePage() {
+type OrderForCard = {
+  id: string;
+  status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ';
+  date: string;
+  worker: string;
+  price: string;
+  details: string[];
+};
 
-  const router = useRouter()
-  const { user, loading } = useRequireAuth()
-  const [saving, setSaving] = useState(false)
+function normalizeOrder(o: Record<string, unknown>): OrderForCard {
+  const s = String(o.status ?? '').toLowerCase();
+  let status: OrderForCard['status'] = 'รอดำเนินการ';
+  if (s === 'completed' || s === 'done') status = 'ดำเนินการสำเร็จ';
+  else if (s === 'in_progress' || s === 'processing') status = 'กำลังดำเนินการ';
 
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [username, setUsername] = useState("")
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const rawDetails = o.details ?? o.items ?? o.description ?? o.repair_items;
+  const details = Array.isArray(rawDetails)
+    ? rawDetails.map((d: unknown) => (typeof d === 'string' ? d : String(d)))
+    : rawDetails != null && typeof rawDetails === 'string'
+      ? [rawDetails]
+      : [];
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  return {
+    id: o.id != null ? String(o.id) : '',
+    status,
+    date: String(o.date ?? ''),
+    worker: String(o.worker ?? '-'),
+    price: String(o.price ?? '0'),
+    details,
+  };
+}
 
+export default function RepairDashboard() {
+  // 1. ระบบ Auth
+  const { user, loading: authLoading } = useRequireAuth();
 
-  // LOAD USER
+  // 2. Dashboard State
+  const [currentTab, setCurrentTab] = useState<'profile' | 'orders' | 'history'>('orders');
+  const [orders, setOrders] = useState<OrderForCard[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+
+  // 3. Profile State (นำมาจาก profile.tsx)
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // --- Effect 1: โหลดข้อมูล Profile ---
   useEffect(() => {
-
-    if (loading) return
-
-    if (!user) {
-
-      router.replace("/auth/login")
-
-      return
+    if (user) {
+      setEmail(user.email || "");
+      setName(user.user_metadata?.name || user.user_metadata?.full_name || "");
+      setUsername(user.user_metadata?.username || "");
     }
+  }, [user]);
 
-    // รองรับ Google + Facebook + email login
-    setEmail(user.email || "")
-
-    setName(
-      user.user_metadata?.name ||
-      user.user_metadata?.full_name ||
-      ""
-    )
-
-    setUsername(
-      user.user_metadata?.username ||
-      ""
-    )
-
-    setAvatarUrl(
-      user.user_metadata?.avatar_url ||
-      null
-    )
-
-  }, [user, loading, router])
-
-
-
-  // SELECT AVATAR
-  const handleSelectAvatar = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setSelectedFile(file)
-
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-
-    setPreviewUrl(URL.createObjectURL(file))
-  }
-
-
-
-  // SAVE PROFILE
-  const handleSave = async () => {
-
-    if (!user) return
-    if (saving) return
-
-    setSaving(true)
-
-    try {
-
-      let finalAvatarUrl = avatarUrl
-
-
-      // upload avatar
-      if (selectedFile) {
-
-        const fileExt =
-          selectedFile.name.split(".").pop()
-
-        const fileName =
-          `${user.id}-${Date.now()}.${fileExt}`
-
-        const { error: uploadError } =
-          await supabase.storage
-            .from("avatars-picture")
-            .upload(fileName, selectedFile, {
-              cacheControl: "3600",
-              upsert: true,
-            })
-
-        if (uploadError) throw uploadError
-
-        const { data } =
-          supabase.storage
-            .from("avatars-picture")
-            .getPublicUrl(fileName)
-
-        finalAvatarUrl = data.publicUrl
-
-        setAvatarUrl(finalAvatarUrl)
-
-        setSelectedFile(null)
-
-        if (previewUrl)
-          URL.revokeObjectURL(previewUrl)
-
-        setPreviewUrl(null)
-
+  // --- Effect 2: โหลดข้อมูล Orders ---
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const fetchOrders = async () => {
+      setLoadingOrders(true);
+      try {
+        const API_URL = 'http://localhost:4000';
+        console.log("👉 กำลังยิงไปที่ URL:", `${API_URL}/api/orders/my-orders/${user.id}`);
+        const response = await axios.get(`${API_URL}/api/orders/my-orders/${user.id}`);
+        setOrders(response.data.map(normalizeOrder));
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      } finally {
+        setLoadingOrders(false);
       }
+    };
+    fetchOrders();
+  }, [user, authLoading]);
 
-
-
-      // update user metadata
-      const { error } =
-        await supabase.auth.updateUser({
-          data: {
-            name,
-            username,
-            avatar_url: finalAvatarUrl
-          }
-        })
-
-      if (error) throw error
-
-
-      alert("บันทึกข้อมูลสำเร็จ ✅")
-
+  // --- Logic การบันทึก Profile ---
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { name: name, username: username }
+      });
+      if (error) throw error;
+      alert("บันทึกข้อมูลส่วนตัวสำเร็จ");
+    } catch (error: any) {
+      alert("เกิดข้อผิดพลาด: " + error.message);
+    } finally {
+      setSavingProfile(false);
     }
-    catch (err) {
+  };
 
-      console.error(err)
-
-      alert("เกิดข้อผิดพลาด ❌")
-
-    }
-    finally {
-
-      setSaving(false)
-
-    }
-
+  // --- Loading State ของหน้าเว็บ ---
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center font-prompt text-gray-500">กำลังตรวจสอบสิทธิ์...</div>;
   }
+  if (!user) return null;
 
+  const pendingOrders = orders.filter((o) => o.status !== 'ดำเนินการสำเร็จ');
+  const historyOrders = orders.filter((o) => o.status === 'ดำเนินการสำเร็จ');
 
+  // --- Render เนื้อหาตาม Tab ---
+  const renderContent = () => {
+    if (currentTab === 'profile') {
+      return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
+          <h2 className="text-xl font-semibold mb-6 text-gray-800">ข้อมูลผู้ใช้งาน</h2>
+          <div className="space-y-4 max-w-md">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล (ไม่สามารถแก้ไขได้)</label>
+              <input value={email} disabled className="w-full h-[44px] px-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
+              <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+            </div>
+            <button 
+              onClick={handleSaveProfile} 
+              disabled={savingProfile}
+              className="mt-6 btn-primary w-full sm:w-auto px-8 py-2.5 rounded-lg font-medium"
+            >
+              {savingProfile ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+            </button>
+          </div>
+        </div>
+      );
+    }
 
-  // loading screen
-  if (loading || !user) {
+    if (loadingOrders) return <div className="p-8 text-center text-gray-500">กำลังโหลดข้อมูลคำสั่งซ่อม...</div>;
 
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    )
-
-  }
-
-
-  const displayAvatar =
-    previewUrl || avatarUrl
-
-
+    if (currentTab === 'orders') {
+      if (pendingOrders.length === 0) return <div className="text-center py-10 text-gray-500 bg-white rounded-xl border border-gray-100">ไม่มีรายการคำสั่งซ่อมที่กำลังดำเนินการ</div>;
+      return <div className="space-y-4">{pendingOrders.map((order) => <OrderCard key={order.id} order={order} />)}</div>;
+    } 
+    
+    if (currentTab === 'history') {
+      if (historyOrders.length === 0) return <div className="text-center py-10 text-gray-500 bg-white rounded-xl border border-gray-100">ไม่มีประวัติการซ่อม</div>;
+      return <div className="space-y-4">{historyOrders.map((order) => <OrderCard key={order.id} order={order} />)}</div>;
+    }
+  };
 
   return (
-
-    <div className="min-h-screen bg-[#F9FAFB]">
-
+    <div className="min-h-screen bg-gray-50 flex flex-col font-prompt">
       <Navbar />
-
-      <div className="max-w-[1100px] mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
-
-
-        {/* SIDEBAR */}
-        <div className="w-full md:w-[260px] bg-[#F2F4F7] rounded-xl p-5">
-
-          <div className="flex items-center gap-3 mb-6">
-
-            <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-300">
-
-              {displayAvatar ? (
-                <img
-                  src={displayAvatar}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white font-bold">
-                  {name?.charAt(0).toUpperCase()}
-                </div>
-              )}
-
-            </div>
-
-            <div>
-              <div className="font-semibold text-[15px]">
-                {name}
-              </div>
-              <div className="text-[13px] text-gray-500">
-                Member
-              </div>
-            </div>
-
-          </div>
-
-
-          <div className="space-y-2">
-
-            <div className="bg-white rounded-lg px-3 py-2 font-medium">
-              Profile
-            </div>
-
-            <div
-              onClick={() =>
-                router.push("/reset-password")
-              }
-              className="px-3 py-2 text-gray-600 hover:bg-white rounded-lg cursor-pointer"
-            >
-              Reset password
-            </div>
-
-          </div>
-
-        </div>
-
-
-
-        {/* CONTENT */}
-        <div className="flex-1 bg-[#F2F4F7] rounded-xl p-6 flex justify-center">
-
-          <div className="w-full max-w-[420px] bg-white rounded-xl p-6">
-
-            <h2 className="text-center text-[20px] font-semibold mb-6">
-              Profile
-            </h2>
-
-
-            {/* AVATAR */}
-            <div className="flex flex-col items-center mb-6">
-
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-300 mb-3">
-
-                {displayAvatar ? (
-                  <img
-                    src={displayAvatar}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white text-xl font-bold">
-                    {name?.charAt(0).toUpperCase()}
-                  </div>
-                )}
-
-              </div>
-
-              <label className="text-[13px] bg-gray-100 px-4 py-1 rounded-full hover:bg-gray-200 cursor-pointer">
-
-                Select new picture
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleSelectAvatar}
-                  className="hidden"
-                />
-
-              </label>
-
-            </div>
-
-
-            <div className="mb-4">
-              <label>Name</label>
-              <input
-                value={name}
-                onChange={(e) =>
-                  setName(e.target.value)
-                }
-                className="w-full h-[44px] px-3 border rounded-lg"
-              />
-            </div>
-
-
-            <div className="mb-4">
-              <label>Username</label>
-              <input
-                value={username}
-                onChange={(e) =>
-                  setUsername(e.target.value)
-                }
-                className="w-full h-[44px] px-3 border rounded-lg"
-              />
-            </div>
-
-
-            <div className="mb-6">
-              <label>Email</label>
-              <input
-                value={email}
-                disabled
-                className="w-full h-[44px] px-3 border rounded-lg bg-gray-100"
-              />
-            </div>
-
-
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="btn-primary w-full h-[44px] flex items-center justify-center gap-2 mb-3"
-            >
-              {saving ? "Saving..." : "Save"}
-            </button>
-
-          </div>
-
-        </div>
-
+      
+      {/* Header Banner */}
+      <div className="bg-blue-600 text-white text-center py-8 text-2xl md:text-3xl font-bold tracking-wide shadow-inner">
+        {currentTab === 'history' ? 'ประวัติการซ่อม' : 
+         currentTab === 'profile' ? 'ข้อมูลผู้ใช้งาน' : 'รายการคำสั่งซ่อม'}
       </div>
 
+      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Sidebar */}
+          <div className="w-full md:w-64 shrink-0">
+            <OrderSidebar activeTab={currentTab} onTabChange={setCurrentTab} />
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1">
+            {renderContent()}
+          </div>
+        </div>
+      </main>
+
+      <Footer />
     </div>
-
-  )
-
+  );
 }
