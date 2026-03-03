@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useRouter } from 'next/router';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import OrderSidebar from '@/components/repairorder/OrderSidebar';
@@ -9,7 +10,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 type OrderForCard = {
   id: string;
-  status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ';
+  status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ' | 'ยกเลิกคำสั่งซ่อม';
   date: string;
   worker: string;
   price: string;
@@ -18,9 +19,17 @@ type OrderForCard = {
 
 function normalizeOrder(o: Record<string, unknown>): OrderForCard {
   const s = String(o.status ?? '').toLowerCase();
-  let status: OrderForCard['status'] = 'รอดำเนินการ';
-  if (s === 'completed' || s === 'done') status = 'ดำเนินการสำเร็จ';
-  else if (s === 'in_progress' || s === 'processing') status = 'กำลังดำเนินการ';
+  
+  // ให้ 'รอดำเนินการ' (pending) เป็นค่าเริ่มต้น
+  let status: OrderForCard['status'] = 'รอดำเนินการ'; 
+  
+  if (s === 'completed' || s === 'done') {
+    status = 'ดำเนินการสำเร็จ';
+  } else if (s === 'in_progress' || s === 'processing') {
+    status = 'กำลังดำเนินการ';
+  } else if (s === 'cancelled' || s === 'canceled') {
+    status = 'ยกเลิกคำสั่งซ่อม'; // ดักจับกรณียกเลิก
+  }
 
   const rawDetails = o.details ?? o.items ?? o.description ?? o.repair_items;
   const details = Array.isArray(rawDetails)
@@ -42,6 +51,7 @@ function normalizeOrder(o: Record<string, unknown>): OrderForCard {
 export default function RepairDashboard() {
   // 1. ระบบ Auth
   const { user, loading: authLoading } = useRequireAuth();
+  const router = useRouter();
 
   // 2. Dashboard State
   const [currentTab, setCurrentTab] = useState<'profile' | 'orders' | 'history'>('orders');
@@ -104,8 +114,11 @@ export default function RepairDashboard() {
   }
   if (!user) return null;
 
-  const pendingOrders = orders.filter((o) => o.status !== 'ดำเนินการสำเร็จ');
-  const historyOrders = orders.filter((o) => o.status === 'ดำเนินการสำเร็จ');
+// แท็บ "รายการคำสั่งซ่อม" จะโชว์แค่ รอดำเนินการ กับ กำลังดำเนินการ
+const pendingOrders = orders.filter((o) => o.status === 'รอดำเนินการ' || o.status === 'กำลังดำเนินการ');
+  
+// แท็บ "ประวัติการซ่อม" จะโชว์ ดำเนินการสำเร็จ และ ยกเลิกคำสั่งซ่อม
+const historyOrders = orders.filter((o) => o.status === 'ดำเนินการสำเร็จ' || o.status === 'ยกเลิกคำสั่งซ่อม');
 
   // --- Render เนื้อหาตาม Tab ---
   const renderContent = () => {
@@ -120,19 +133,31 @@ export default function RepairDashboard() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+              <input value={name} onChange={(e) => setName(e.target.value)} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all " />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
-              <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+              <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all " />
             </div>
-            <button 
-              onClick={handleSaveProfile} 
-              disabled={savingProfile}
-              className="mt-6 btn-primary w-full sm:w-auto px-8 py-2.5 rounded-lg font-medium"
-            >
-              {savingProfile ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
-            </button>
+         
+            <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 pt-6 border-t border-gray-100">
+              <button 
+                onClick={handleSaveProfile} 
+                disabled={savingProfile}
+                className="btn-primary w-full sm:w-auto px-10 py-2.5 rounded-lg font-medium shadow-sm transition-all hover:shadow-md"
+              >
+                {savingProfile ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+              </button>
+
+              <button
+                onClick={() => router.push('/reset-password')}
+                className="w-full sm:w-auto px-10 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 hover:text-blue-600 hover:border-blue-400 transition-all shadow-sm flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-lock text-sm"></i>
+                เปลี่ยนรหัสผ่าน
+              </button>
+            </div>
+          
           </div>
         </div>
       );
