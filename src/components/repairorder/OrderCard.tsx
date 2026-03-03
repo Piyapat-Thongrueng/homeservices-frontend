@@ -3,7 +3,7 @@ import { Calendar, UserCircle } from 'lucide-react';
 
 interface OrderType {
   id: string;
-  status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ';
+  status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ' | 'ยกเลิกคำสั่งซ่อม';
   date: string;
   worker: string;
   price: string;
