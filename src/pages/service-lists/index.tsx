@@ -28,7 +28,7 @@ const ServiceListPage = () => {
     loadInitialServices();
   }, []);
 
-  // Req1: เมื่อกด category badge บนการ์ด → filter ตาม category_id
+  // เมื่อกด  category badge บนการ์ด → filter ตาม category_id
   const handleCategoryClick = async (
     categoryId: number,
     categoryNameTh: string,
@@ -48,7 +48,7 @@ const ServiceListPage = () => {
     <div>
       <Navbar />
       <Banner />
-      <SearchAndFilterBar onResults={setServiceLists} onLoading={setLoading} />
+      <SearchAndFilterBar onResults={setServiceLists} onLoading={setLoading} allServices={serviceLists} />
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <p className="text-gray-500">กำลังค้นหาบริการ...</p>
