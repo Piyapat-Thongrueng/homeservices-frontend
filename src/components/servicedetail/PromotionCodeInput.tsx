@@ -56,6 +56,9 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
     }
   };
 
+  // เช็คสถานะว่า "ใช้งานโค้ดสำเร็จแล้วหรือยัง?" (ดูจากส่วนลดที่ > 0 และต้องไม่มี Error)
+  const isApplied = discount > 0 && !error;
+
   return (
     <div>
       <label className="block headline-5 text-gray-900 mb-2">
@@ -91,7 +94,8 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
           {hasDiscount ? "เปลี่ยนโค้ด" : "ใช้โค้ด"}
         </button>
       </div>
-      {/* Error Message */}
+      
+      {/* ข้อความแจ้งเตือน */}
       {error && <p className="mt-2 body-3 text-red-500">{error}</p>}
       {/* Success Message */}
       {hasDiscount && (
