@@ -15,6 +15,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import axios from "axios";
 import Navbar from "@/components/common/Navbar";
 import ServiceHero from "@/components/servicedetail/ServiceHero";
 import ServiceSummaryCard from "@/components/servicedetail/ServiceSummaryCard";
@@ -248,6 +249,15 @@ export default function Payment() {
   };
 
   /**
+   * Handle removing the applied promotion code
+   */
+  const handleRemovePromotionCode = () => {
+    updatePaymentField("promotionCode", ""); // ล้างข้อความในช่องกรอก
+    setDiscount(0);                          // รีเซ็ตส่วนลดกลับเป็น 0
+    setPromotionError("");                   // ล้างข้อความ Error (ถ้ามี)
+  };
+
+  /**
    * Navigate back to previous page
    */
   const handleBack = () => {
@@ -346,6 +356,7 @@ export default function Payment() {
                 error={promotionError}
                 onValueChange={handlePromotionCodeChange}
                 onApply={handleApplyPromotionCode}
+                onRemove={handleRemovePromotionCode} // เพิ่มบรรทัดนี้เข้าไป
               />
             </div>
           </section>

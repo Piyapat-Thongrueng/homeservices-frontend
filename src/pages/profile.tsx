@@ -54,12 +54,22 @@ export default function RepairDashboard() {
   const [orders, setOrders] = useState<OrderForCard[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
 
+  // Profile States
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
+  
+  // 🛑 Address States (แยกย่อยตามดีไซน์ใหม่)
+  const [addressDetail, setAddressDetail] = useState("");
+  const [subDistrict, setSubDistrict] = useState("");
+  const [district, setDistrict] = useState("");
+  const [province, setProvince] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  
   const [savingProfile, setSavingProfile] = useState(false);
   
-  // 🛑 State สำหรับรูปโปรไฟล์ (ยกมาจากของเพื่อน)
+  // Avatar States
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -69,7 +79,15 @@ export default function RepairDashboard() {
       setEmail(user.email || "");
       setName(user.user_metadata?.name || user.user_metadata?.full_name || "");
       setUsername(user.user_metadata?.username || "");
-      // ดึงรูปภาพเก่ามาแสดง
+      setPhone(user.user_metadata?.phone || "");
+      
+      // ดึงข้อมูลที่อยู่แยกส่วน
+      setAddressDetail(user.user_metadata?.address_detail || "");
+      setSubDistrict(user.user_metadata?.sub_district || "");
+      setDistrict(user.user_metadata?.district || "");
+      setProvince(user.user_metadata?.province || "");
+      setPostalCode(user.user_metadata?.postal_code || "");
+      
       setAvatarUrl(user.user_metadata?.avatar_url || null);
     }
   }, [user]);
@@ -79,7 +97,7 @@ export default function RepairDashboard() {
     const fetchOrders = async () => {
       setLoadingOrders(true);
       try {
-        const API_URL = 'http://localhost:4000';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         const response = await axios.get(`${API_URL}/api/orders/my-orders/${user.id}`);
         setOrders(response.data.map(normalizeOrder));
       } catch (error) {
@@ -91,7 +109,6 @@ export default function RepairDashboard() {
     fetchOrders();
   }, [user, authLoading]);
 
-  // 🛑 ฟังก์ชันเลือกรูป (พรีวิว) ยกมาจากของเพื่อน
   const handleSelectAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -100,19 +117,16 @@ export default function RepairDashboard() {
     setPreviewUrl(URL.createObjectURL(file));
   };
 
-  // 🛑 ฟังก์ชันเซฟข้อมูล (รูป + ข้อความ) ยกมาจากของเพื่อน
   const handleSaveProfile = async () => {
     if (!user || savingProfile) return;
     setSavingProfile(true);
     try {
       let finalAvatarUrl = avatarUrl;
 
-      // ถ้ามีการเลือกรูปใหม่ ให้ทำการอัปโหลดก่อน
       if (selectedFile) {
         const fileExt = selectedFile.name.split(".").pop();
         const fileName = `${user.id}-${Date.now()}.${fileExt}`;
 
-        // อัปโหลดเข้า Bucket "avatars-picture" ของเพื่อน
         const { error: uploadError } = await supabase.storage
           .from("avatars-picture")
           .upload(fileName, selectedFile, {
@@ -122,7 +136,6 @@ export default function RepairDashboard() {
 
         if (uploadError) throw uploadError;
 
-        // ดึง URL กลับมา
         const { data } = supabase.storage
           .from("avatars-picture")
           .getPublicUrl(fileName);
@@ -134,9 +147,19 @@ export default function RepairDashboard() {
         setPreviewUrl(null);
       }
 
-      // อัปเดตข้อมูลทั้งหมดลง User Metadata
+      // 🛑 บันทึกข้อมูลที่อยู่แยกฟิลด์กันให้เป็นระเบียบ
       const { error } = await supabase.auth.updateUser({
-        data: { name: name, username: username, avatar_url: finalAvatarUrl }
+        data: { 
+          name, 
+          username, 
+          phone, 
+          address_detail: addressDetail,
+          sub_district: subDistrict,
+          district: district,
+          province: province,
+          postal_code: postalCode,
+          avatar_url: finalAvatarUrl 
+        }
       });
       if (error) throw error;
       
@@ -154,15 +177,15 @@ export default function RepairDashboard() {
   const pendingOrders = orders.filter((o) => o.status === 'รอดำเนินการ' || o.status === 'กำลังดำเนินการ');
   const historyOrders = orders.filter((o) => o.status === 'ดำเนินการสำเร็จ' || o.status === 'ยกเลิกคำสั่งซ่อม');
 
-  // ตัวแปรเช็คว่าจะแสดงรูปไหน (พรีวิวรูปใหม่ หรือ รูปเก่าจากเน็ต)
   const displayAvatar = previewUrl || avatarUrl;
 
   const renderContent = () => {
     if (currentTab === 'profile') {
       return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
-          <h2 className="text-xl font-semibold mb-6 text-gray-800">ข้อมูลผู้ใช้งาน</h2>
           
+          {/* ================= โซนข้อมูลส่วนตัว ================= */}
+          <h2 className="text-xl font-semibold mb-6 text-gray-800">ข้อมูลผู้ใช้งาน</h2>
           <div className="flex flex-col md:flex-row gap-10">
             {/* ฝั่งซ้าย: ข้อมูล Text */}
             <div className="flex-1 space-y-4 max-w-md">
@@ -172,15 +195,19 @@ export default function RepairDashboard() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all " />
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ระบุชื่อ-นามสกุลของคุณ" className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all " />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
-                <input value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all " />
+                <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ระบุชื่อผู้ใช้งาน" className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all " />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08X-XXX-XXXX" maxLength={10} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all " />
               </div>
             </div>
 
-            {/* ฝั่งขวา: ส่วนอัปโหลดรูปโปรไฟล์ (ดีไซน์กล่องสี่เหลี่ยม) */}
+            {/* ฝั่งขวา: ส่วนอัปโหลดรูปโปรไฟล์ */}
             <div className="flex-1 flex flex-col items-center justify-start pt-4 border-t md:border-t-0 md:border-l border-gray-100 md:pl-10">
               <div className="w-48 h-48 rounded-xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center relative mb-4">
                 {displayAvatar ? (
@@ -192,7 +219,6 @@ export default function RepairDashboard() {
                   </div>
                 )}
               </div>
-              
               <label className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer shadow-sm transition-all flex items-center gap-2">
                 <i className="fa-solid fa-cloud-arrow-up"></i>
                 เลือกรูปภาพใหม่
@@ -203,8 +229,70 @@ export default function RepairDashboard() {
               </p>
             </div>
           </div>
+
+          {/* ================= โซนข้อมูลที่อยู่ (เต็มความกว้าง) ================= */}
+          <div className="mt-10 pt-8 border-t border-gray-100">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-800">ข้อมูลที่อยู่</h2>
+            </div>
+
+            <div className="space-y-5">
+              {/* แถว 1: รายละเอียดที่อยู่ (ยาวเต็ม) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">รายละเอียด</label>
+                <input 
+                  value={addressDetail} 
+                  onChange={(e) => setAddressDetail(e.target.value)} 
+                  placeholder="ระบุเลขที่, หมู่, ถนน, ซอย" 
+                  className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                />
+              </div>
+
+              {/* แถว 2-3: Grid 2 คอลัมน์ */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">รหัสไปรษณีย์</label>
+                  <input 
+                    value={postalCode} 
+                    onChange={(e) => setPostalCode(e.target.value)} 
+                    placeholder="รหัสไปรษณีย์" 
+                    maxLength={5}
+                    className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ตำบล/แขวง</label>
+                  <input 
+                    value={subDistrict} 
+                    onChange={(e) => setSubDistrict(e.target.value)} 
+                    placeholder="ระบุตำบล/แขวง" 
+                    className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">อำเภอ/เขต</label>
+                  <input 
+                    value={district} 
+                    onChange={(e) => setDistrict(e.target.value)} 
+                    placeholder="ระบุอำเภอ/เขต" 
+                    className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">จังหวัด</label>
+                  <input 
+                    value={province} 
+                    onChange={(e) => setProvince(e.target.value)} 
+                    placeholder="ระบุจังหวัด" 
+                    className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" 
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
          
-          <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 pt-6 border-t border-gray-100">
+          {/* ================= โซนปุ่ม Action ================= */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 mt-10 pt-6 border-t border-gray-100">
             <button 
               onClick={handleSaveProfile} 
               disabled={savingProfile}
@@ -242,7 +330,6 @@ export default function RepairDashboard() {
     <div className="min-h-screen bg-gray-50 flex flex-col font-prompt">
       <Navbar />
       
-      {/* Header Banner */}
       <div className="bg-blue-600 text-white text-center py-8 text-2xl md:text-3xl font-bold tracking-wide shadow-inner">
         {currentTab === 'history' ? 'ประวัติการซ่อม' : 
          currentTab === 'profile' ? 'ข้อมูลผู้ใช้งาน' : 'รายการคำสั่งซ่อม'}
