@@ -34,6 +34,7 @@ import {
   getServiceScopedKey,
 } from "@/utils/localStorage-helpers";
 import { parseServiceItemsFromQuery } from "@/utils/router-helpers";
+import { getPostalCodeForLocation } from "@/utils/thailand-locations";
 import { fetchServices } from "@/services/serviceListsApi/serviceApi";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -47,6 +48,7 @@ interface ServiceInfo {
   subDistrict: string;
   district: string;
   province: string;
+  postalCode: string;
   additionalInfo: string;
 }
 
@@ -60,6 +62,7 @@ const defaultServiceInfo: ServiceInfo = {
   subDistrict: "",
   district: "",
   province: "",
+  postalCode: "",
   additionalInfo: "",
 };
 
@@ -281,11 +284,30 @@ export default function ServiceInformation() {
                 province={formData.province}
                 district={formData.district}
                 subDistrict={formData.subDistrict}
-                onProvinceChange={(province) => updateFormField("province", province)}
-                onDistrictChange={(district) => updateFormField("district", district)}
-                onSubDistrictChange={(subDistrict) =>
-                  updateFormField("subDistrict", subDistrict)
-                }
+                onProvinceChange={(province) => {
+                  updateFormField("province", province);
+                  // Reset dependent fields when province changes
+                  updateFormField("district", "");
+                  updateFormField("subDistrict", "");
+                  updateFormField("postalCode", "");
+                }}
+                onDistrictChange={(district) => {
+                  updateFormField("district", district);
+                  // Reset sub-district and postal code when district changes
+                  updateFormField("subDistrict", "");
+                  updateFormField("postalCode", "");
+                }}
+                onSubDistrictChange={(subDistrict) => {
+                  updateFormField("subDistrict", subDistrict);
+                  const postal = getPostalCodeForLocation(
+                    formData.province,
+                    formData.district,
+                    subDistrict
+                  );
+                  if (postal) {
+                    updateFormField("postalCode", postal);
+                  }
+                }}
               />
 
               {/* Additional Information - Full Width */}

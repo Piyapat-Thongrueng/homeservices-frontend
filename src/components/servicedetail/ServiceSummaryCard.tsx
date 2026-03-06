@@ -21,6 +21,7 @@ interface ServiceInfo {
   subDistrict?: string;
   district?: string;
   province?: string;
+  postalCode?: string;
   additionalInfo?: string;
 }
 
@@ -100,7 +101,11 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
                     <span className="body-2 text-gray-900 text-right flex-1">{formatTimeToThai(serviceInfo.time)}</span>
                   </div>
                 )}
-                {(serviceInfo.address || serviceInfo.subDistrict || serviceInfo.district || serviceInfo.province) && (
+                {(serviceInfo.address ||
+                  serviceInfo.subDistrict ||
+                  serviceInfo.district ||
+                  serviceInfo.province ||
+                  serviceInfo.postalCode) && (
                   <div className="flex items-start justify-between gap-4">
                     <span className="body-2 text-gray-600 whitespace-nowrap">สถานที่:</span>
                     <span 
@@ -114,7 +119,13 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
                         overflow: 'hidden'
                       }}
                     >
-                      {[serviceInfo.address, serviceInfo.subDistrict, serviceInfo.district, serviceInfo.province]
+                      {[
+                        serviceInfo.address,
+                        serviceInfo.subDistrict,
+                        serviceInfo.district,
+                        serviceInfo.province,
+                        serviceInfo.postalCode,
+                      ]
                         .filter(Boolean)
                         .join(" ")}
                     </span>

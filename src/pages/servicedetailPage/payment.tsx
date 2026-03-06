@@ -20,7 +20,6 @@ import ServiceHero from "@/components/servicedetail/ServiceHero";
 import ServiceSummaryCard from "@/components/servicedetail/ServiceSummaryCard";
 import ServiceFooterNav from "@/components/servicedetail/ServiceFooterNav";
 import PaymentMethodSelector from "@/components/servicedetail/PaymentMethodSelector";
-import CreditCardForm from "@/components/servicedetail/CreditCardForm";
 import PromotionCodeInput from "@/components/servicedetail/PromotionCodeInput";
 import type { ServiceItem } from "@/components/servicedetail/types";
 import type { Service } from "@/types/serviceListTypes/type";
@@ -28,7 +27,6 @@ import {
   PAYMENT_DATA_STORAGE_KEY,
   SERVICE_ITEMS_STORAGE_KEY,
   SERVICE_INFO_STORAGE_KEY,
-  VALID_PROMOTION_CODES,
 } from "@/constants/service-constants";
 import {
   getFromLocalStorage,
@@ -40,6 +38,10 @@ import {
   parseServiceInfoFromQuery,
 } from "@/utils/router-helpers";
 import { fetchServices } from "@/services/serviceListsApi/serviceApi";
+import {
+  createCheckoutSession,
+  validatePromotionCode,
+} from "@/services/paymentApi";
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
@@ -75,6 +77,9 @@ export default function Payment() {
   const [promotionError, setPromotionError] = useState<string>("");
   const [isMounted, setIsMounted] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string>("");
+  const [promotionId, setPromotionId] = useState<number | null>(null);
 
   /**
    * Initialize payment data with defaults to prevent hydration mismatch
@@ -218,32 +223,122 @@ export default function Payment() {
 
   /**
    * Validate payment form
-   * For PromptPay: no validation needed
-   * For Credit Card: all fields must be filled
+   * Card details are collected on Stripe's hosted page,
+   * so we don't require local credit card inputs here anymore.
    */
-  const isFormValid = !!(
-    paymentData.method === "promptpay" ||
-    (paymentData.cardNumber &&
-      paymentData.cardName &&
-      paymentData.expiryDate &&
-      paymentData.cvv)
-  );
+  const isFormValid = true;
 
   /**
-   * Navigate to payment confirmation page
+   * Create Stripe Checkout session and redirect to Stripe, or show error
    */
-  const handleNext = () => {
-    if (isFormValid) {
-      router.push({
-        pathname: "/servicedetailPage/payment-confirmation",
-        query: {
-          items: router.query.items,
-          serviceInfo: router.query.serviceInfo,
-          paymentData: JSON.stringify(paymentData),
-          total: finalTotal.toString(),
-          serviceId: router.query.serviceId,
-        },
+  const handleNext = async () => {
+    if (!isFormValid) return;
+    if (!user?.id) {
+      setCheckoutError("กรุณาเข้าสู่ระบบก่อนชำระเงิน");
+      return;
+    }
+
+    setCheckoutError("");
+    setIsSubmitting(true);
+
+    try {
+      const serviceId =
+        typeof router.query.serviceId === "string"
+          ? parseInt(router.query.serviceId, 10)
+          : Number(router.query.serviceId?.[0]);
+      if (Number.isNaN(serviceId)) {
+        setCheckoutError("ไม่พบรหัสบริการ");
+        return;
+      }
+
+      const baseUrl =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+      // Base success URL for Stripe (must keep {CHECKOUT_SESSION_ID} literal)
+      const successUrlBase = `${baseUrl}/servicedetailPage/payment-confirmation?session_id={CHECKOUT_SESSION_ID}`;
+
+      // Additional params encoded separately
+      const successExtraParams = new URLSearchParams();
+      successExtraParams.set("items", JSON.stringify(serviceItems));
+      if (serviceInfo) {
+        successExtraParams.set("serviceInfo", JSON.stringify(serviceInfo));
+      }
+      successExtraParams.set("total", String(finalTotal));
+
+      const successUrl =
+        successExtraParams.toString().length > 0
+          ? `${successUrlBase}&${successExtraParams.toString()}`
+          : successUrlBase;
+
+      // Ensure all query parameters are properly percent-encoded
+      const cancelParams = new URLSearchParams();
+      cancelParams.set("serviceId", String(serviceId));
+
+      if (router.query.items) {
+        const itemsValue = Array.isArray(router.query.items)
+          ? router.query.items[0]
+          : router.query.items;
+        cancelParams.set("items", itemsValue);
+      }
+
+      if (router.query.serviceInfo) {
+        const serviceInfoValue = Array.isArray(router.query.serviceInfo)
+          ? router.query.serviceInfo[0]
+          : router.query.serviceInfo;
+        cancelParams.set("serviceInfo", serviceInfoValue);
+      }
+
+      const cancelUrl = `${baseUrl}/servicedetailPage/payment?${cancelParams.toString()}`;
+
+      const addressLine = serviceInfo
+        ? [
+            serviceInfo.address,
+            serviceInfo.subDistrict,
+            serviceInfo.district,
+            serviceInfo.province,
+            serviceInfo.postalCode,
+          ]
+            .filter(Boolean)
+            .join(" ")
+        : "";
+
+      const { url } = await createCheckoutSession({
+        authUserId: user.id,
+        promotionId: promotionId ?? undefined,
+        paymentType: paymentData.method === "promptpay" ? "QR" : "CR",
+        address: addressLine
+          ? {
+              address_line: addressLine,
+              province: serviceInfo?.province,
+              city: serviceInfo?.district,
+              postal_code: serviceInfo?.postalCode,
+            }
+          : undefined,
+        items: serviceItems.map((item) => ({
+          serviceId,
+          name: item.description,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        discountAmount: discount,
+        successUrl,
+        cancelUrl,
       });
+
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+
+      setCheckoutError("ไม่สามารถสร้างหน้าชำระเงินได้");
+    } catch (err) {
+      setCheckoutError(
+        err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการชำระเงิน"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -268,7 +363,7 @@ export default function Payment() {
    * Handle promotion code application
    * Validates the code and applies discount if valid
    */
-  const handleApplyPromotionCode = (code: string) => {
+  const handleApplyPromotionCode = async (code: string) => {
     const trimmedCode = code.trim().toUpperCase();
 
     if (!trimmedCode) {
@@ -277,13 +372,29 @@ export default function Payment() {
       return;
     }
 
-    // Check if code is valid
-    if (VALID_PROMOTION_CODES[trimmedCode]) {
-      setDiscount(VALID_PROMOTION_CODES[trimmedCode]);
+    try {
+      const result = await validatePromotionCode(trimmedCode);
+      if (!result.valid || !result.discountPercent) {
+        setPromotionId(null);
+        setDiscount(0);
+        setPromotionError(
+          result.message ?? "โค้ดส่วนลดไม่ถูกต้องหรือหมดอายุแล้ว"
+        );
+        return;
+      }
+
+      // discountPercent from DB is percentage of current total
+      const discountAmount = Math.round(
+        (total * result.discountPercent) / 100
+      );
+      setPromotionId(result.promotionId ?? null);
+      setDiscount(discountAmount);
       setPromotionError("");
-    } else {
+    } catch (err) {
+      console.error("Error validating promotion code:", err);
+      setPromotionId(null);
       setDiscount(0);
-      setPromotionError("โค้ดส่วนลดไม่ถูกต้องหรือหมดอายุแล้ว");
+      setPromotionError("ไม่สามารถตรวจสอบโค้ดส่วนลดได้");
     }
   };
 
@@ -294,6 +405,16 @@ export default function Payment() {
   const handlePromotionCodeChange = (value: string) => {
     updatePaymentField("promotionCode", value);
     setPromotionError(""); // Clear error when typing
+  };
+
+  /**
+   * Reset promotion code state back to initial when user clicks "เปลี่ยนโค้ด"
+   */
+  const handleResetPromotionCode = () => {
+    updatePaymentField("promotionCode", "");
+    setPromotionId(null);
+    setDiscount(0);
+    setPromotionError("");
   };
 
   return (
@@ -319,26 +440,6 @@ export default function Payment() {
                 onChange={(method) => updatePaymentField("method", method)}
               />
 
-              {/* Credit Card Fields - Only show if credit card is selected */}
-              {paymentData.method === "creditcard" && (
-                <CreditCardForm
-                  cardNumber={paymentData.cardNumber}
-                  cardName={paymentData.cardName}
-                  expiryDate={paymentData.expiryDate}
-                  cvv={paymentData.cvv}
-                  onCardNumberChange={(value) =>
-                    updatePaymentField("cardNumber", value)
-                  }
-                  onCardNameChange={(value) =>
-                    updatePaymentField("cardName", value)
-                  }
-                  onExpiryDateChange={(value) =>
-                    updatePaymentField("expiryDate", value)
-                  }
-                  onCvvChange={(value) => updatePaymentField("cvv", value)}
-                />
-              )}
-
               {/* Promotion Code Input */}
               <PromotionCodeInput
                 value={paymentData.promotionCode}
@@ -346,7 +447,13 @@ export default function Payment() {
                 error={promotionError}
                 onValueChange={handlePromotionCodeChange}
                 onApply={handleApplyPromotionCode}
+                onReset={handleResetPromotionCode}
               />
+
+              {/* Checkout error from API */}
+              {checkoutError && (
+                <p className="body-2 text-red-600">{checkoutError}</p>
+              )}
             </div>
           </section>
 
@@ -364,10 +471,10 @@ export default function Payment() {
       </main>
 
       <ServiceFooterNav
-        canProceed={isFormValid}
+        canProceed={isFormValid && !isSubmitting}
         onBack={handleBack}
         onNext={handleNext}
-        nextText="ยืนยันการชำระเงิน"
+        nextText={isSubmitting ? "กำลังดำเนินการ..." : "ยืนยันการชำระเงิน"}
       />
     </div>
   );
