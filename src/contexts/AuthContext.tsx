@@ -3,11 +3,12 @@ import React, { useContext, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/router";
 
 interface User {
-  id: string;
+  id: number;
   email: string;
-  name: string;
+  full_name: string;
   username: string;
   profile_pic: string;
+  phone: string;
   role: "user";
 }
 
@@ -65,10 +66,11 @@ function AuthProvider({ children }: AuthProviderProps) {
 
   const router = useRouter();
 
-  // ฟังก์ชันสำหรับดึงข้อมูลผู้ใช้จากเซิร์ฟเวอร์ โดยจะตรวจสอบว่ามี token ใน localStorage หรือไม่ หากไม่มี token จะตั้งสถานะผู้ใช้เป็น null และสถานะการโหลดเป็น false
+  // Fn1: ฟังก์ชันสำหรับดึงข้อมูลผู้ใช้จากเซิร์ฟเวอร์ โดยจะตรวจสอบว่ามี token ใน localStorage หรือไม่ หากไม่มี token จะตั้งสถานะผู้ใช้เป็น null และสถานะการโหลดเป็น false
   const fetchUser = async (): Promise<void> => {
-    // ดึง token จาก localStorage เพื่อใช้ในการตรวจสอบสิทธิ์ในการเข้าถึงข้อมูลผู้ใช้ หากไม่มี token ให้ตั้งสถานะ user เป็น null และ getUserLoading เป็น false แล้วออกจากฟังก์ชัน
+    // ดึง token จาก localStorage เพื่อใช้ในการตรวจสอบสิทธิ์ในการเข้าถึงข้อมูลผู้ใช้
     const token = localStorage.getItem("token");
+    // หากไม่มี token ให้ตั้งสถานะ user เป็น null และ getUserLoading เป็น false เพื่อแสดงว่าการโหลดข้อมูลผู้ใช้เสร็จสิ้น และออกจากฟังก์ชัน
     if (!token) {
       setState((prevState) => ({
         ...prevState,
@@ -77,7 +79,7 @@ function AuthProvider({ children }: AuthProviderProps) {
       }));
       return;
     }
-
+    // หากมี token ให้ตั้งสถานะ getUserLoading เป็น true เพื่อแสดงว่ากำลังโหลดข้อมูลผู้ใช้ จากนั้นส่งคำขอ GET ไปยัง API เพื่อดึงข้อมูลผู้ใช้ โดยแนบ token ใน header ของคำขอเพื่อยืนยันตัวตน
     try {
       setState((prevState) => ({
         ...prevState,
@@ -91,20 +93,72 @@ function AuthProvider({ children }: AuthProviderProps) {
           },
         },
       );
+
+      console.log("User data fetched:", response.data);
+      // เมื่อได้รับข้อมูลผู้ใช้สำเร็จ ให้ตั้งสถานะ user เป็นข้อมูลที่ได้รับจาก API และ getUserLoading เป็น false เพื่อแสดงว่าการโหลดข้อมูลผู้ใช้เสร็จสิ้น
       setState((prevState) => ({
         ...prevState,
         user: response.data,
         getUserLoading: false,
       }));
+      // หากเกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้ เช่น token ไม่ถูกต้อง หรือมีปัญหาในการเชื่อมต่อกับ API ให้จับข้อผิดพลาดและตั้งสถานะ error
+      // เป็นข้อความที่ได้รับจาก API หรือข้อความทั่วไป และตั้งสถานะ user เป็น null และ getUserLoading เป็น false เพื่อแสดงว่าการโหลดข้อมูลผู้ใช้เสร็จสิ้นแม้จะเกิดข้อผิดพลาด
     } catch (error) {
+      const axiosError = error as AxiosError<ErrorResponse>;
+
+      if (axiosError.response?.status === 401) {
+        // หาก token ไม่ถูกต้องหรือหมดอายุ ให้ลบ token ออกจาก localStorage และตั้งสถานะ user เป็น null
+        localStorage.removeItem("token");
+      }
       setState((prevState) => ({
         ...prevState,
+        error:
+          axiosError.response?.data?.error ||
+          axiosError.message ||
+          "Failed to fetch user",
         user: null,
         getUserLoading: false,
-        error:
-          (error as AxiosError<ErrorResponse>).response?.data.error ||
-          "An error occurred",
       }));
+    }
+  };
+
+  // ใช้ useEffect เพื่อเรียกฟังก์ชัน fetchUser เมื่อคอมโพเนนต์ถูก mount ขึ้นมา ซึ่งจะช่วยให้โหลดข้อมูลผู้ใช้ทันทีที่แอปเริ่มต้น
+  useEffect(() => {
+    fetchUser(); // Load user on initial app load
+  }, []);
+
+  // Fn2: ฟังก์ชันสำหรับเข้าสู่ระบบ โดยจะรับข้อมูลการเข้าสู่ระบบจากผู้ใช้และส่งคำขอ POST ไปยัง API เพื่อทำการตรวจสอบข้อมูลการเข้าสู่ระบบ
+  const login = async (data: LoginData): Promise<{ error?: string } | void> => {
+    // เริ่มต้นการเข้าสู่ระบบโดยตั้งสถานะ loading เป็น true และล้าง error ก่อนที่จะทำการส่งคำขอเข้าสู่ระบบไปยัง API
+    try {
+      setState((prevState) => ({ ...prevState, loading: true, error: null }));
+      // ส่งคำขอเข้าสู่ระบบไปยัง API และรอผลลัพธ์โดยแนบข้อมูลการเข้าสู่ระบบที่ผู้ใช้กรอกเข้ามาเข้าไปกับ request ผ่าน axios.post
+      const response = await axios.post(
+        "http://localhost:4000/api/auth/login",
+        data,
+      );
+      // เมื่อการเข้าสู่ระบบสำเร็จ ให้ดึง token ที่ได้รับจาก API และเก็บไว้ใน localStorage เพื่อใช้ในการตรวจสอบสิทธิ์ในการเข้าถึงข้อมูลผู้ใช้ในอนาคต จากนั้นตั้งสถานะ loading เป็น false และล้าง error
+      // จากนั้นนำทางผู้ใช้ไปยังหน้าแรกของแอปและเรียกฟังก์ชัน fetchUser เพื่อโหลดข้อมูลผู้ใช้ทันทีหลังจากเข้าสู่ระบบสำเร็จ
+      const token = response.data.access_token;
+      localStorage.setItem("token", token);
+
+      // Fetch and set user details
+      // นำทางผู้ใช้ไปยังหน้าแรกของแอปและเรียกฟังก์ชัน fetchUser เพื่อโหลดข้อมูลผู้ใช้ทันทีหลังจากเข้าสู่ระบบสำเร็จ
+      await fetchUser();
+      router.push("/");
+    } catch (error) {
+      const axiosError = error as AxiosError<ErrorResponse>;
+      const errorMessage = axiosError.response?.data?.error || "Login failed";
+
+      setState((prevState) => ({
+        ...prevState,
+        loading: false,
+        error: errorMessage,
+      }));
+
+      return { error: errorMessage };
+    } finally {
+      setState((prevState) => ({ ...prevState, loading: false }));
     }
   };
 }
