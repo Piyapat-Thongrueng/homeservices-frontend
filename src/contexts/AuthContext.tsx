@@ -161,4 +161,82 @@ function AuthProvider({ children }: AuthProviderProps) {
       setState((prevState) => ({ ...prevState, loading: false }));
     }
   };
+
+  // Fn3: ฟังก์ชันสำหรับลงทะเบียน โดยจะรับข้อมูลการลงทะเบียนจากผู้ใช้และส่งคำขอ POST ไปยัง API เพื่อทำการสร้างบัญชีผู้ใช้ใหม่
+  const register = async (
+    data: RegisterData,
+  ): Promise<{ error?: string } | void> => {
+    try {
+      // เริ่มต้นการลงทะเบียนโดยตั้งสถานะ loading เป็น true และล้าง error ก่อน ที่จะทำการส่งคำขอลงทะเบียนไปยัง API
+      setState((prevState) => ({ ...prevState, loading: true, error: null }));
+      // ส่งคำขอลงทะเบียนไปยัง API และรอผลลัพธ์โดยแนบข้อมูลการลงทะเบียนที่ผู้ใช้กรอกเข้ามาเข้าไปกับ request ผ่าน axios.post
+      await axios.post("http://localhost:4000/api/auth/register", data);
+      // เมื่อการลงทะเบียนสำเร็จ ให้ตั้งสถานะ loading เป็น false และล้าง error จากนั้นนำทางผู้ใช้ไปยังหน้า success
+      router.push("/login");
+    } catch (error) {
+      const axiosError = error as AxiosError<ErrorResponse>;
+      // หากเกิดข้อผิดพลาดในการลงทะเบียน ให้ดึงข้อความ error จาก response ของ API หากไม่มีให้ใช้ข้อความ "Registration failed" เป็นค่าเริ่มต้น
+      const errorMessage =
+        axiosError.response?.data?.error || "Registration failed";
+
+      setState((prevState) => ({
+        ...prevState,
+        loading: false,
+        error: errorMessage,
+      }));
+      return { error: errorMessage };
+    } finally {
+      setState((prevState) => ({ ...prevState, loading: false }));
+    }
+  };
+
+  // Logout user
+  const logout = () => {
+    localStorage.removeItem("token");
+    setState({
+      user: null,
+      error: null,
+      loading: false,
+      getUserLoading: null,
+    });
+    router.push("/login");
+  };
+
+  // คำนวณสถานะการเข้าสู่ระบบโดยตรวจสอบว่ามีข้อมูลผู้ใช้ใน state หรือไม่
+  // หากมีข้อมูลผู้ใช้แสดงว่าผู้ใช้เข้าสู่ระบบแล้ว และตั้งค่า isAuthenticated เป็น true
+  // หากไม่มีข้อมูลผู้ใช้แสดงว่าผู้ใช้ยังไม่ได้เข้าสู่ระบบ และตั้งค่า isAuthenticated เป็น false
+  const isAuthenticated = Boolean(state.user);
+  return (
+    <AuthContext.Provider
+      value={{
+        state,
+        login,
+        logout,
+        register,
+        isAuthenticated,
+        fetchUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
+
+// Hook for consuming AuthContext
+// ฟังก์ชัน useAuth เป็น custom hook ที่ช่วยให้คอมโพเนนต์อื่น ๆ สามารถเข้าถึงค่าและฟังก์ชันที่จัดการโดย AuthContext ได้อย่างง่ายดาย
+// โดยจะตรวจสอบว่าคอมโพเนนต์นั้นอยู่ภายใน AuthProvider หรือไม่ และหากไม่อยู่จะทำการโยนข้อผิดพลาดเพื่อแจ้งเตือนนักพัฒนาว่าต้องใช้ useAuth ภายใน AuthProvider เท่านั้น
+const useAuth = (): AuthContextValue => {
+  // ใช้ useContext เพื่อเข้าถึงค่าและฟังก์ชันที่จัดการโดย AuthContext และเก็บไว้ในตัวแปร context
+  const context = useContext(AuthContext);
+
+  // ตรวจสอบว่าค่า context เป็น undefined หรือไม่ ซึ่งหมายความว่าคอมโพเนนต์ที่เรียกใช้ useAuth ไม่ได้อยู่ภายใน AuthProvider
+  // และหากเป็นเช่นนั้นจะทำการโยนข้อผิดพลาดเพื่อแจ้งเตือนนักพัฒนาว่าต้องใช้ useAuth ภายใน AuthProvider เท่านั้น
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+
+  return context;
+};
+
+export { AuthProvider, useAuth };
+export type { User, AuthState, LoginData, RegisterData };
