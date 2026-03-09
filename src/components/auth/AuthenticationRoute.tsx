@@ -1,5 +1,6 @@
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 import LoadingScreen from "@/components/common/LoadingScreen";
-import { Navigate } from "react-router-dom";
 
 interface AuthenticationRouteProps {
   isLoading: boolean | null;
@@ -7,11 +8,20 @@ interface AuthenticationRouteProps {
   children: React.ReactNode;
 }
 
-// AuthenticationRoute เป็น component ที่ใช้สำหรับจัดการเส้นทางที่ต้องการการตรวจสอบสิทธิ์ผู้ใช้ 
-// โดยจะตรวจสอบสถานะการโหลดและสถานะการตรวจสอบสิทธิ์ของผู้ใช้ก่อนที่จะตัดสินใจว่าจะให้แสดงเนื้อหาหรือเปลี่ยนเส้นทางไปยังหน้าอื่น
-const AuthenticationRoute = ({ isLoading, isAuthenticated, children }: AuthenticationRouteProps) => {
+const AuthenticationRoute = ({
+  isLoading,
+  isAuthenticated,
+  children,
+}: AuthenticationRouteProps) => {
+  const router = useRouter();
 
-  // ถ้ากำลังโหลดข้อมูลผู้ใช้หรือสถานะการโหลดยังไม่ถูกกำหนด (null) จะแสดงหน้าจอโหลด
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/"); // ← ใช้ replace เหมือนเดิม แต่เป็น Next.js
+    }
+  }, [isLoading, isAuthenticated]);
+
+  // กำลังโหลดอยู่
   if (isLoading === null || isLoading) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -22,14 +32,13 @@ const AuthenticationRoute = ({ isLoading, isAuthenticated, children }: Authentic
     );
   }
 
+  // login แล้ว → return null เพราะ useEffect จะ redirect ให้
   if (isAuthenticated) {
-    // หากผู้ใช้เข้าสู่ระบบแล้ว จะเปลี่ยนเส้นทางไปยังหน้าแรก
-    return <Navigate to="/" replace />;
+    return null;
   }
 
-  // ผู้ใช้ยังไม่ได้เข้าสู่ระบบ
-  // แสดงเนื้อหาที่ต้องการให้ผู้ใช้ที่ยังไม่ได้เข้าสู่ระบบเห็น (เช่น หน้าเข้าสู่ระบบหรือหน้าสมัครสมาชิก)
-  return children;
+  // ยังไม่ได้ login → แสดงหน้า login/register ได้เลย
+  return <>{children}</>;
 };
 
 export default AuthenticationRoute;

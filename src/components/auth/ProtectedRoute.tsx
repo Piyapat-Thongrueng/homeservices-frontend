@@ -1,5 +1,6 @@
-import { Navigate } from "react-router-dom";
-import LoadingScreen from "../common/LoadingScreen";
+import { useEffect } from "react";
+import { useRouter } from "next/router";
+import LoadingScreen from "@/components/common/LoadingScreen";
 import type { ReactNode } from "react";
 
 interface ProtectedRouteProps {
@@ -7,7 +8,7 @@ interface ProtectedRouteProps {
   isAuthenticated: boolean;
   userRole: string | null;
   requiredRole: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 function ProtectedRoute({
@@ -17,10 +18,16 @@ function ProtectedRoute({
   requiredRole,
   children,
 }: ProtectedRouteProps): ReactNode {
+  const router = useRouter();
 
+  useEffect(() => {
+    if (!isLoading && (!isAuthenticated || userRole !== requiredRole)) {
+      router.replace("/auth/login");
+    }
+  }, [isLoading, isAuthenticated, userRole]);
 
+  // กำลังโหลดอยู่
   if (isLoading === null || isLoading) {
-    // แสดงหน้าจอโหลดขณะรอการตรวจสอบสถานะการเข้าสู่ระบบและบทบาทของผู้ใช้
     return (
       <div className="flex flex-col min-h-screen">
         <div className="min-h-screen md:p-8">
@@ -30,12 +37,12 @@ function ProtectedRoute({
     );
   }
 
+  // ไม่ผ่านเงื่อนไข → return null เพราะ useEffect จะ redirect ให้
   if (!isAuthenticated || userRole !== requiredRole) {
-    // หากผู้ใช้ไม่ได้เข้าสู่ระบบหรือบทบาทของผู้ใช้ไม่ตรงกับบทบาทที่ต้องการ ให้เปลี่ยนเส้นทางไปยังหน้าเข้าสู่ระบบ
-    return <Navigate to="/login" replace />;
+    return null;
   }
 
-  // ผู้ใช้ได้เข้าสู่ระบบและมีบทบาทที่ถูกต้อง
+  // ผ่านทุกเงื่อนไข
   return <>{children}</>;
 }
 
