@@ -191,9 +191,9 @@ function AuthProvider({ children }: AuthProviderProps) {
       user: null,
       error: null,
       loading: false,
-      getUserLoading: null,
+      getUserLoading: false,
     });
-    router.push("/auth/login");
+    router.push("/login");
   };
 
   // คำนวณสถานะการเข้าสู่ระบบโดยตรวจสอบว่ามีข้อมูลผู้ใช้ใน state หรือไม่
