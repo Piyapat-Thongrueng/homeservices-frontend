@@ -6,22 +6,24 @@ interface AuthenticationRouteProps {
   isLoading: boolean | null;
   isAuthenticated: boolean;
   children: React.ReactNode;
+  bypassRedirect?: boolean; // ← เพิ่มตรงนี้
 }
 
 const AuthenticationRoute = ({
   isLoading,
   isAuthenticated,
   children,
+  bypassRedirect = false, // ← default false
 }: AuthenticationRouteProps) => {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    // ถ้า bypassRedirect = true จะไม่ redirect
+    if (!isLoading && isAuthenticated && !bypassRedirect) {
       router.replace("/");
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated, bypassRedirect]);
 
-  // กำลังโหลดอยู่
   if (isLoading === null || isLoading) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -32,12 +34,10 @@ const AuthenticationRoute = ({
     );
   }
 
-  // login แล้ว → return null เพราะ useEffect จะ redirect ให้
-  if (isAuthenticated) {
+  if (isAuthenticated && !bypassRedirect) {
     return null;
   }
 
-  // ยังไม่ได้ login → แสดงหน้า login/register ได้เลย
   return <>{children}</>;
 };
 

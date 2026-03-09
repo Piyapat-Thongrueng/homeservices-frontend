@@ -138,14 +138,10 @@ function AuthProvider({ children }: AuthProviderProps) {
         data,
       );
       // เมื่อการเข้าสู่ระบบสำเร็จ ให้ดึง token ที่ได้รับจาก API และเก็บไว้ใน localStorage เพื่อใช้ในการตรวจสอบสิทธิ์ในการเข้าถึงข้อมูลผู้ใช้ในอนาคต จากนั้นตั้งสถานะ loading เป็น false และล้าง error
-      // จากนั้นนำทางผู้ใช้ไปยังหน้าแรกของแอปและเรียกฟังก์ชัน fetchUser เพื่อโหลดข้อมูลผู้ใช้ทันทีหลังจากเข้าสู่ระบบสำเร็จ
       const token = response.data.access_token;
       localStorage.setItem("token", token);
-
       // Fetch and set user details
-      // นำทางผู้ใช้ไปยังหน้าแรกของแอปและเรียกฟังก์ชัน fetchUser เพื่อโหลดข้อมูลผู้ใช้ทันทีหลังจากเข้าสู่ระบบสำเร็จ
       await fetchUser();
-      router.push("/");
     } catch (error) {
       const axiosError = error as AxiosError<ErrorResponse>;
       const errorMessage = axiosError.response?.data?.error || "Login failed";
