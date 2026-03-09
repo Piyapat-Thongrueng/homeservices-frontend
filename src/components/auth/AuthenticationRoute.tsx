@@ -17,7 +17,7 @@ const AuthenticationRoute = ({
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace("/"); // ← ใช้ replace เหมือนเดิม แต่เป็น Next.js
+      router.replace("/");
     }
   }, [isLoading, isAuthenticated]);
 

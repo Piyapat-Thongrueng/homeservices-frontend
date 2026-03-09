@@ -171,8 +171,6 @@ function AuthProvider({ children }: AuthProviderProps) {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
       // ส่งคำขอลงทะเบียนไปยัง API และรอผลลัพธ์โดยแนบข้อมูลการลงทะเบียนที่ผู้ใช้กรอกเข้ามาเข้าไปกับ request ผ่าน axios.post
       await axios.post("http://localhost:4000/api/auth/register", data);
-      // เมื่อการลงทะเบียนสำเร็จ ให้ตั้งสถานะ loading เป็น false และล้าง error จากนั้นนำทางผู้ใช้ไปยังหน้า success
-      router.push("/auth/login");
     } catch (error) {
       const axiosError = error as AxiosError<ErrorResponse>;
       // หากเกิดข้อผิดพลาดในการลงทะเบียน ให้ดึงข้อความ error จาก response ของ API หากไม่มีให้ใช้ข้อความ "Registration failed" เป็นค่าเริ่มต้น

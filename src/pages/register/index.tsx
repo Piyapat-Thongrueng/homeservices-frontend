@@ -2,113 +2,125 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthenticationRoute from "@/components/auth/AuthenticationRoute";
+import RegisterModal from "./RegisterModal";
+
+interface FormErrors {
+  name: string;
+  phone: string;
+  email: string;
+  password: string;
+  accept: string;
+}
+
+const initialErrors: FormErrors = {
+  name: "",
+  phone: "",
+  email: "",
+  password: "",
+  accept: "",
+};
 
 export default function RegisterPage() {
-  const { register, state, isAuthenticated } = useAuth(); // ← ใช้ context
+  const { register, state, isAuthenticated } = useAuth();
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [accept, setAccept] = useState(false);
+  const [name, setName] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [accept, setAccept] = useState<boolean>(false);
+  const [errors, setErrors] = useState<FormErrors>(initialErrors);
 
-  // error state
-  const [nameError, setNameError] = useState("");
-  const [phoneError, setPhoneError] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [acceptError, setAcceptError] = useState("");
+  // ← เพิ่ม modal state
+  const [modalType, setModalType] = useState<"success" | "error" | null>(null);
+  const [apiError, setApiError] = useState<string>("");
 
-  // VALIDATION FUNCTION
-
-  const validate = () => {
+  const validate = (): boolean => {
+    const newErrors: FormErrors = { ...initialErrors };
     let valid = true;
 
-    setNameError("");
-    setPhoneError("");
-    setEmailError("");
-    setPasswordError("");
-    setAcceptError("");
-
-    const nameRegex = /^[A-Za-zก-๙\s'-]+$/; // ← เพิ่มรองรับภาษาไทย
+    const nameRegex = /^[A-Za-zก-๙\s'-]+$/;
     const phoneRegex = /^[0-9]{10}$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // ← แก้ให้รองรับ .co.th ด้วย
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!name.trim()) {
-      setNameError("โปรดกรอกชื่อ - นามสกุล");
+      newErrors.name = "โปรดกรอกชื่อ - นามสกุล";
       valid = false;
     } else if (!nameRegex.test(name)) {
-      setNameError("ชื่อใช้ได้เฉพาะ A-Z a-z ภาษาไทย ' -");
+      newErrors.name = "ชื่อใช้ได้เฉพาะ A-Z a-z ภาษาไทย ' -";
       valid = false;
     }
 
     if (!phone.trim()) {
-      setPhoneError("โปรดกรอกเบอร์โทรศัพท์");
+      newErrors.phone = "โปรดกรอกเบอร์โทรศัพท์";
       valid = false;
     } else if (!phoneRegex.test(phone)) {
-      setPhoneError("เบอร์โทรต้องเป็นตัวเลข 10 หลัก");
+      newErrors.phone = "เบอร์โทรต้องเป็นตัวเลข 10 หลัก";
       valid = false;
     }
 
     if (!email.trim()) {
-      setEmailError("โปรดกรอกอีเมล");
+      newErrors.email = "โปรดกรอกอีเมล";
       valid = false;
     } else if (!emailRegex.test(email)) {
-      setEmailError("รูปแบบอีเมลไม่ถูกต้อง");
+      newErrors.email = "รูปแบบอีเมลไม่ถูกต้อง";
       valid = false;
     }
 
     if (!password.trim()) {
-      setPasswordError("โปรดกรอกรหัสผ่าน");
+      newErrors.password = "โปรดกรอกรหัสผ่าน";
       valid = false;
     } else if (password.length < 8) {
-      setPasswordError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
+      newErrors.password = "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร";
       valid = false;
     }
 
     if (!accept) {
-      setAcceptError("กรุณายอมรับ policy");
+      newErrors.accept = "กรุณายอมรับ policy";
       valid = false;
     }
 
+    setErrors(newErrors);
     return valid;
   };
 
-  // REGISTER FUNCTION
-
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.SyntheticEvent): Promise<void> => {
     e.preventDefault();
-
     if (state.loading) return;
+    if (!validate()) return;
 
-    const isValid = validate();
-    if (!isValid) return;
+    const result = await register({ full_name: name, phone, email, password });
 
-    // ใช้ register จาก context แทน supabase โดยตรง
-    const result = await register({
-      full_name: name,
-      phone,
-      email,
-      password,
-    });
-
-    // context จะ redirect ไป /login เองอัตโนมัติถ้าสำเร็จ
-    // แสดง error ถ้าไม่สำเร็จ
     if (result?.error) {
-      setEmailError(result.error);
+      // ← แสดง error modal
+      setApiError(result.error);
+      setModalType("error");
+    } else {
+      // ← แสดง success modal
+      setModalType("success");
     }
   };
 
-  // UI
+  const handleCloseModal = (): void => {
+    setModalType(null);
+    setApiError("");
+  };
 
   return (
-    // ← ครอบด้วย AuthenticationRoute ป้องกัน user ที่ login แล้วเข้าหน้านี้
     <AuthenticationRoute
       isLoading={state.getUserLoading}
       isAuthenticated={isAuthenticated}
     >
+      {/* Modal */}
+      {modalType && (
+        <RegisterModal
+          type={modalType}
+          errorMessage={apiError}
+          onClose={handleCloseModal}
+        />
+      )}
+
       <div className="min-h-screen bg-[#F6F7FB] flex justify-center px-4 py-10 sm:py-16">
-        <div className="w-full max-w-[420px] bg-white border border-[#E4E7EC] rounded-[8px] px-5 py-6 sm:px-8 sm:py-8">
+        <div className="w-full max-w-105 bg-white border border-[#E4E7EC] rounded-md px-5 py-6 sm:px-8 sm:py-8">
           <h1 className="text-center text-[20px] sm:text-[24px] font-semibold text-[#101828] mb-6">
             ลงทะเบียน
           </h1>
@@ -123,11 +135,13 @@ export default function RegisterPage() {
                 type="text"
                 placeholder="กรุณากรอกชื่อ นามสกุล"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full h-[44px] px-3 text-[14px] border border-[#D0D5DD] rounded-[6px] outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setName(e.target.value)
+                }
+                className="w-full h-11 px-3 text-[14px] border border-[#D0D5DD] rounded-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
-              {nameError && (
-                <p className="text-[12px] text-red-500 mt-1">{nameError}</p>
+              {errors.name && (
+                <p className="text-[12px] text-red-500 mt-1">{errors.name}</p>
               )}
             </div>
 
@@ -137,14 +151,16 @@ export default function RegisterPage() {
                 เบอร์โทรศัพท์<span className="text-[#D92D20]">*</span>
               </label>
               <input
-                type="text"
+                type="tel"
                 placeholder="กรุณากรอกเบอร์โทรศัพท์"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full h-[44px] px-3 text-[14px] border border-[#D0D5DD] rounded-[6px] outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setPhone(e.target.value)
+                }
+                className="w-full h-11 px-3 text-[14px] border border-[#D0D5DD] rounded-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
-              {phoneError && (
-                <p className="text-[12px] text-red-500 mt-1">{phoneError}</p>
+              {errors.phone && (
+                <p className="text-[12px] text-red-500 mt-1">{errors.phone}</p>
               )}
             </div>
 
@@ -157,11 +173,13 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="กรุณากรอกอีเมล"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-[44px] px-3 text-[14px] border border-[#D0D5DD] rounded-[6px] outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setEmail(e.target.value)
+                }
+                className="w-full h-11 px-3 text-[14px] border border-[#D0D5DD] rounded-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
-              {emailError && (
-                <p className="text-[12px] text-red-500 mt-1">{emailError}</p>
+              {errors.email && (
+                <p className="text-[12px] text-red-500 mt-1">{errors.email}</p>
               )}
             </div>
 
@@ -174,11 +192,15 @@ export default function RegisterPage() {
                 type="password"
                 placeholder="กรุณากรอกรหัสผ่าน"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-[44px] px-3 text-[14px] border border-[#D0D5DD] rounded-[6px] outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setPassword(e.target.value)
+                }
+                className="w-full h-11 px-3 text-[14px] border border-[#D0D5DD] rounded-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
-              {passwordError && (
-                <p className="text-[12px] text-red-500 mt-1">{passwordError}</p>
+              {errors.password && (
+                <p className="text-[12px] text-red-500 mt-1">
+                  {errors.password}
+                </p>
               )}
             </div>
 
@@ -188,7 +210,9 @@ export default function RegisterPage() {
                 type="checkbox"
                 className="mt-1"
                 checked={accept}
-                onChange={(e) => setAccept(e.target.checked)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setAccept(e.target.checked)
+                }
               />
               <span>
                 ยอมรับ{" "}
@@ -201,28 +225,19 @@ export default function RegisterPage() {
                 </span>
               </span>
             </div>
-            {acceptError && (
-              <p className="text-[12px] text-red-500">{acceptError}</p>
+            {errors.accept && (
+              <p className="text-[12px] text-red-500">{errors.accept}</p>
             )}
 
-            {/* แสดง error จาก API */}
-            {state.error && (
-              <p className="text-[12px] text-red-500 text-center">
-                {state.error}
-              </p>
-            )}
-
-            {/* SUBMIT BUTTON */}
             <button
               type="submit"
               disabled={state.loading ?? false}
-              className="btn-primary w-full h-[44px]"
+              className="btn-primary w-full h-11"
             >
               {state.loading ? "กำลังสมัคร..." : "ลงทะเบียน"}
             </button>
           </form>
 
-          {/* BACK TO LOGIN */}
           <p className="text-center text-[13px] text-blue-600 underline mt-6">
             <Link href="/login">กลับไปหน้าเข้าสู่ระบบ</Link>
           </p>
