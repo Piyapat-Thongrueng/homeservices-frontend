@@ -49,13 +49,13 @@ export default function PaymentConfirmation() {
               unit: "",
               price: it.price,
               quantity: it.quantity,
-            }))
+            })),
           );
           setTotal(order.netPrice);
 
           // Also hydrate service info from query parameters (sent from payment page)
           const queryServiceInfo = parseServiceInfoFromQuery(
-            router.query.serviceInfo
+            router.query.serviceInfo,
           );
           if (queryServiceInfo) setServiceInfo(queryServiceInfo);
 
@@ -72,7 +72,9 @@ export default function PaymentConfirmation() {
     const queryItems = parseServiceItemsFromQuery(router.query.items);
     if (queryItems.length > 0) setServiceItems(queryItems);
 
-    const queryServiceInfo = parseServiceInfoFromQuery(router.query.serviceInfo);
+    const queryServiceInfo = parseServiceInfoFromQuery(
+      router.query.serviceInfo,
+    );
     if (queryServiceInfo) setServiceInfo(queryServiceInfo);
 
     if (router.query.total) {
@@ -86,14 +88,21 @@ export default function PaymentConfirmation() {
    */
   const totalQuantity = serviceItems.reduce(
     (sum, item) => sum + item.quantity,
-    0
+    0,
   );
 
   /**
-   * Format address components into a single string
+   * Format address like ServiceSummaryCard:
+   * - If savedAddressLine exists on serviceInfo (saved address), use it directly
+   * - Otherwise combine address + subDistrict + district + province + postalCode
    */
   const formatAddress = () => {
     if (!serviceInfo) return "";
+    if (serviceInfo.savedAddressLine) {
+      return [serviceInfo.address, serviceInfo.postalCode]
+        .filter(Boolean)
+        .join(" ");
+    }
     return [
       serviceInfo.address,
       serviceInfo.subDistrict,
@@ -206,7 +215,10 @@ export default function PaymentConfirmation() {
                   <span className="body-2 text-gray-600 whitespace-nowrap">
                     สถานที่:
                   </span>
-                  <span className="body-2 text-gray-900 text-right flex-1" style={textWrapStyle}>
+                  <span
+                    className="body-2 text-gray-900 text-right flex-1"
+                    style={textWrapStyle}
+                  >
                     {formatAddress()}
                   </span>
                 </div>
@@ -218,7 +230,10 @@ export default function PaymentConfirmation() {
                   <span className="body-2 text-gray-600 whitespace-nowrap">
                     หมายเหตุ:
                   </span>
-                  <span className="body-2 text-gray-900 text-right flex-1" style={textWrapStyle}>
+                  <span
+                    className="body-2 text-gray-900 text-right flex-1"
+                    style={textWrapStyle}
+                  >
                     {serviceInfo.additionalInfo}
                   </span>
                 </div>

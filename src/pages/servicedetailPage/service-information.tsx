@@ -1,9 +1,9 @@
 /**
  * ServiceInformation Page
- * 
+ *
  * The second step in the service booking flow where users enter
  * service information including date, time, address, and location.
- * 
+ *
  * Features:
  * - Date and time selection
  * - Address input
@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import Navbar from "@/components/common/Navbar";
 import ServiceHero from "@/components/servicedetail/ServiceHero";
@@ -22,6 +23,18 @@ import ServiceFooterNav from "@/components/servicedetail/ServiceFooterNav";
 import DateInput from "@/components/servicedetail/DateInput";
 import TimePicker from "@/components/servicedetail/TimePicker";
 import LocationSelectors from "@/components/servicedetail/LocationSelectors";
+
+const AddressMapPicker = dynamic(
+  () => import("@/components/servicedetail/AddressMapPicker"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[280px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
+        กำลังโหลดแผนที่...
+      </div>
+    ),
+  },
+);
 import type { ServiceItem } from "@/components/servicedetail/types";
 import type { Service } from "@/types/serviceListTypes/type";
 import {
@@ -34,9 +47,20 @@ import {
   getServiceScopedKey,
 } from "@/utils/localStorage-helpers";
 import { parseServiceItemsFromQuery } from "@/utils/router-helpers";
-import { getPostalCodeForLocation } from "@/utils/thailand-locations";
+import {
+  getPostalCodeForLocation,
+  getSubDistrictsByDistrict,
+} from "@/utils/thailand-locations";
+import { ChevronDown } from "lucide-react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 import { fetchServices } from "@/services/serviceListsApi/serviceApi";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  getSavedAddresses,
+  updateAddressCoords,
+  type SavedAddress,
+} from "@/services/paymentApi";
 
 /**
  * Service information form data structure
@@ -50,6 +74,15 @@ interface ServiceInfo {
   province: string;
   postalCode: string;
   additionalInfo: string;
+  /** Optional: set by draggable map pin (Leaflet) */
+  latitude?: number;
+  longitude?: number;
+  /** When user picks a saved address – payment uses addressId only (no duplicate DB row). */
+  addressId?: number;
+  /** User opted to persist this address; backend findOrInsertAddress dedupes same fields. */
+  saveAddress?: boolean;
+  /** Full address line used for summary/confirmation when a saved address is selected. */
+  savedAddressLine?: string;
 }
 
 /**
@@ -64,6 +97,11 @@ const defaultServiceInfo: ServiceInfo = {
   province: "",
   postalCode: "",
   additionalInfo: "",
+  latitude: undefined,
+  longitude: undefined,
+  addressId: undefined,
+  saveAddress: false,
+  savedAddressLine: undefined,
 };
 
 export default function ServiceInformation() {
@@ -78,6 +116,73 @@ export default function ServiceInformation() {
    * Will be updated from localStorage on client side after mount
    */
   const [formData, setFormData] = useState<ServiceInfo>(defaultServiceInfo);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const isUsingSavedAddress = formData.addressId != null;
+  const [mapDragged, setMapDragged] = useState(false);
+  const [coordsUpdating, setCoordsUpdating] = useState(false);
+  const [coordsMessage, setCoordsMessage] = useState<string | null>(null);
+  const selectedSaved = isUsingSavedAddress
+    ? savedAddresses.find((a) => a.id === formData.addressId)
+    : undefined;
+
+  /** Combined address line — must match how we send to backend / how rows are stored */
+  const combinedAddressLine = (f: ServiceInfo) =>
+    [f.address, f.subDistrict, f.district, f.province, f.postalCode]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+  /** When "กรอกที่อยู่ใหม่" but data matches a saved row, reuse that row's lat/long */
+  const syncLatLongFromMatchingSaved = (
+    list: SavedAddress[],
+    f: ServiceInfo,
+  ) => {
+    const line = combinedAddressLine(f);
+    if (!line) return;
+    const city = (f.district || "").trim();
+    const province = (f.province || "").trim();
+    const postal = (f.postalCode || "").trim();
+    const match = list.find((a) => {
+      const al = (a.address_line || "").trim();
+      const ac = (a.city || "").trim();
+      const ap = (a.province || "").trim();
+      const az = (a.postal_code || "").trim();
+      return al === line && ac === city && ap === province && az === postal;
+    });
+    if (
+      match &&
+      match.latitude != null &&
+      match.longitude != null &&
+      Number.isFinite(Number(match.latitude)) &&
+      Number.isFinite(Number(match.longitude))
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        latitude: Number(match.latitude),
+        longitude: Number(match.longitude),
+        // do not set addressId — user chose "กรอกใหม่"; only reuse coords
+      }));
+    }
+  };
+
+  /** Load saved addresses for dropdown when user is logged in */
+  useEffect(() => {
+    if (!user?.id) {
+      setSavedAddresses([]);
+      return;
+    }
+    let cancelled = false;
+    getSavedAddresses(user.id)
+      .then((list) => {
+        if (!cancelled) setSavedAddresses(list);
+      })
+      .catch(() => {
+        if (!cancelled) setSavedAddresses([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   /**
    * Load form data from localStorage on client side only (after mount)
@@ -120,8 +225,7 @@ export default function ServiceInformation() {
       saveToLocalStorage(itemsKey, queryItems);
     } else {
       // Fallback to localStorage if no query param
-      const savedItems =
-        getFromLocalStorage<ServiceItem[]>(itemsKey);
+      const savedItems = getFromLocalStorage<ServiceItem[]>(itemsKey);
       if (savedItems) {
         setServiceItems(savedItems);
       }
@@ -181,19 +285,21 @@ export default function ServiceInformation() {
    */
   const total = serviceItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
-    0
+    0,
   );
 
   /**
    * Validate that all required fields are filled
    */
+  /** With addressId, payment uses saved row only — date/time still required */
   const isFormValid = !!(
     formData.date &&
     formData.time &&
-    formData.address &&
-    formData.subDistrict &&
-    formData.district &&
-    formData.province
+    (formData.addressId != null ||
+      (formData.address &&
+        formData.subDistrict &&
+        formData.district &&
+        formData.province))
   );
 
   /**
@@ -224,10 +330,142 @@ export default function ServiceInformation() {
    */
   const updateFormField = <K extends keyof ServiceInfo>(
     field: K,
-    value: ServiceInfo[K]
+    value: ServiceInfo[K],
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      /** Editing address fields manually clears saved address so backend inserts/reuses by payload */
+      if (
+        prev.addressId != null &&
+        (field === "address" ||
+          field === "subDistrict" ||
+          field === "district" ||
+          field === "province" ||
+          field === "postalCode")
+      ) {
+        next.addressId = undefined;
+      }
+      return next;
+    });
   };
+
+  /** Strip given tokens from the end of the string (for normalizing saved address_line). */
+  const stripLocationFromAddressLine = (
+    input: string,
+    parts: (string | null | undefined)[],
+  ) => {
+    let out = (input ?? "").trim();
+    const tokens = parts
+      .map((p) => (typeof p === "string" ? p.trim() : ""))
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+    for (const t of tokens) {
+      if (!t) continue;
+      const re = new RegExp(
+        `\\s*${t.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}$`,
+      );
+      out = out.replace(re, "").trim();
+    }
+    return out;
+  };
+
+  /** Apply a saved address row to the form and set addressId for payment. */
+  const applySavedAddress = (addr: SavedAddress) => {
+    const province = addr.province ?? "";
+    const district = addr.city ?? "";
+    const postalCode = addr.postal_code ?? "";
+    // 1) Strip postal, province, district from end of address_line so "ที่อยู่" is street-only.
+    let addressOnly = stripLocationFromAddressLine(addr.address_line ?? "", [
+      postalCode,
+      province,
+      district,
+    ]);
+    // 2) If there's a trailing sub-district (ตำบล) name, strip it and use for dropdown.
+    let subDistrict = "";
+    const possibleSubDistricts = getSubDistrictsByDistrict(province, district);
+    for (const sub of possibleSubDistricts.sort(
+      (a, b) => b.length - a.length,
+    )) {
+      const trimmed = addressOnly.trim();
+      if (!sub) continue;
+      if (trimmed === sub) {
+        addressOnly = "";
+        subDistrict = sub;
+        break;
+      }
+      if (trimmed.endsWith(" " + sub)) {
+        addressOnly = trimmed.slice(0, -(sub.length + 1)).trim();
+        subDistrict = sub;
+        break;
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      addressId: addr.id,
+      saveAddress: false,
+      savedAddressLine: addr.address_line ?? undefined,
+      province,
+      district,
+      postalCode,
+      subDistrict,
+      address: addressOnly,
+      latitude: addr.latitude != null ? Number(addr.latitude) : prev.latitude,
+      longitude:
+        addr.longitude != null ? Number(addr.longitude) : prev.longitude,
+    }));
+  };
+
+  /**
+   * Map uses only ตำบล + อำเภอ + จังหวัด + รหัส — NOT ที่อยู่ (ที่อยู่ is often inaccurate for geocode).
+   * User drags the pin to the exact spot; ที่อยู่ is still saved for the order.
+   */
+  useEffect(() => {
+    if (!formData.province || !formData.district || !formData.subDistrict) {
+      return;
+    }
+    const combined = [
+      formData.subDistrict,
+      formData.district,
+      formData.province,
+      formData.postalCode,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    if (!combined) return;
+
+    const t = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({
+          address_line: combined,
+          city: formData.district,
+          province: formData.province,
+          postal_code: formData.postalCode || "",
+        });
+        const res = await fetch(`${API_URL}/api/geocode/preview?${params}`);
+        const data = await res.json();
+        if (
+          data &&
+          typeof data.latitude === "number" &&
+          typeof data.longitude === "number"
+        ) {
+          setFormData((prev) => ({
+            ...prev,
+            latitude: data.latitude,
+            longitude: data.longitude,
+          }));
+        }
+      } catch {
+        // ignore – map keeps current center
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [
+    formData.province,
+    formData.district,
+    formData.subDistrict,
+    formData.postalCode,
+  ]);
 
   return (
     <div className="min-h-screen bg-utility-bg font-prompt pb-32">
@@ -265,50 +503,210 @@ export default function ServiceInformation() {
                 />
               </div>
 
-              {/* Address Field - Full Width */}
-              <div>
-                <label className="block headline-5 text-gray-800 font-medium mb-2">
-                  ที่อยู่<span className="text-red-500 ml-1">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => updateFormField("address", e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
-                  placeholder="กรุณากรอกที่อยู่"
-                />
-              </div>
+              {/* Saved addresses dropdown — same user reuses row in DB when paying */}
+              {user?.id && savedAddresses.length > 0 && (
+                <div>
+                  <label className="block headline-5 text-gray-800 font-medium mb-2">
+                    เลือกที่อยู่ที่บันทึกไว้
+                  </label>
+                  <div className="relative">
+                    <select
+                      className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer"
+                      value={formData.addressId ?? ""}
+                      onChange={(e) => {
+                        const id = e.target.value
+                          ? parseInt(e.target.value, 10)
+                          : NaN;
+                        if (Number.isNaN(id)) {
+                          // กรอกที่อยู่ใหม่ — เคลียร์ฟิลด์ที่อยู่ทั้งหมด
+                          setFormData((prev) => ({
+                            ...prev,
+                            addressId: undefined,
+                            savedAddressLine: undefined,
+                            address: "",
+                            province: "",
+                            district: "",
+                            subDistrict: "",
+                            postalCode: "",
+                            latitude: undefined,
+                            longitude: undefined,
+                            saveAddress: false,
+                          }));
+                          setMapDragged(false);
+                          setCoordsMessage(null);
+                          return;
+                        }
+                        const addr = savedAddresses.find((a) => a.id === id);
+                        if (addr) applySavedAddress(addr);
+                      }}
+                    >
+                      <option value="">— กรอกที่อยู่ใหม่ —</option>
+                      {savedAddresses.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {[a.address_line, a.province]
+                            .filter(Boolean)
+                            .join(" · ") || `ที่อยู่ #${a.id}`}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  </div>
+                  {formData.addressId != null && (
+                    <p className="mt-2 text-sm text-gray-600">
+                      ใช้ที่อยู่ที่บันทึกแล้ว — เลือก
+                      &quot;กรอกที่อยู่ใหม่&quot; เพื่อเปลี่ยน
+                    </p>
+                  )}
+                </div>
+              )}
 
-              {/* Location Selectors Component */}
-              <LocationSelectors
-                province={formData.province}
-                district={formData.district}
-                subDistrict={formData.subDistrict}
-                onProvinceChange={(province) => {
-                  updateFormField("province", province);
-                  // Reset dependent fields when province changes
-                  updateFormField("district", "");
-                  updateFormField("subDistrict", "");
-                  updateFormField("postalCode", "");
-                }}
-                onDistrictChange={(district) => {
-                  updateFormField("district", district);
-                  // Reset sub-district and postal code when district changes
-                  updateFormField("subDistrict", "");
-                  updateFormField("postalCode", "");
-                }}
-                onSubDistrictChange={(subDistrict) => {
-                  updateFormField("subDistrict", subDistrict);
-                  const postal = getPostalCodeForLocation(
-                    formData.province,
-                    formData.district,
-                    subDistrict
-                  );
-                  if (postal) {
-                    updateFormField("postalCode", postal);
-                  }
-                }}
-              />
+              {/* Map for saved address — move pin to update lat/long on that saved row */}
+              {isUsingSavedAddress && user?.id && (
+                <div>
+                  <label className="block headline-5 text-gray-800 font-medium mb-2">
+                    ตำแหน่งบนแผนที่ของที่อยู่นี้ (ลากหมุดเพื่ออัปเดตพิกัด)
+                  </label>
+                  <AddressMapPicker
+                    key={`saved-${formData.addressId}-${selectedSaved?.latitude ?? "na"}-${
+                      selectedSaved?.longitude ?? "na"
+                    }`}
+                    latitude={
+                      formData.latitude ??
+                      (selectedSaved?.latitude != null
+                        ? Number(selectedSaved.latitude)
+                        : undefined)
+                    }
+                    longitude={
+                      formData.longitude ??
+                      (selectedSaved?.longitude != null
+                        ? Number(selectedSaved.longitude)
+                        : undefined)
+                    }
+                    onPositionChange={async (lat, lng) => {
+                      if (!user?.id || !formData.addressId) return;
+                      setFormData((prev) => ({
+                        ...prev,
+                        latitude: lat,
+                        longitude: lng,
+                      }));
+                      setCoordsMessage(null);
+                      setCoordsUpdating(true);
+                      try {
+                        const res = await updateAddressCoords({
+                          authUserId: user.id,
+                          addressId: formData.addressId,
+                          latitude: lat,
+                          longitude: lng,
+                        });
+                        setCoordsMessage("อัปเดตพิกัดของที่อยู่นี้แล้ว");
+                        if (res?.addressId) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            addressId: res.addressId,
+                          }));
+                        }
+                        const list = await getSavedAddresses(user.id);
+                        setSavedAddresses(list);
+                      } catch (err) {
+                        setCoordsMessage(
+                          err instanceof Error
+                            ? err.message
+                            : "ไม่สามารถอัปเดตพิกัดได้",
+                        );
+                      } finally {
+                        setCoordsUpdating(false);
+                      }
+                    }}
+                  />
+                  {coordsMessage && (
+                    <p className="mt-2 text-sm text-gray-600">
+                      {coordsMessage}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Address fields: hidden when a saved address is selected */}
+              {!isUsingSavedAddress && (
+                <>
+                  {/* 1) ที่อยู่ (house/soi/street) */}
+                  <div>
+                    <label className="block headline-5 text-gray-800 font-medium mb-2">
+                      ที่อยู่<span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.address}
+                      onChange={(e) =>
+                        updateFormField("address", e.target.value)
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
+                    />
+                  </div>
+
+                  {/* 2) จังหวัด → เขต → ตำบล */}
+                  <LocationSelectors
+                    province={formData.province}
+                    district={formData.district}
+                    subDistrict={formData.subDistrict}
+                    onProvinceChange={(province) => {
+                      updateFormField("province", province);
+                      updateFormField("district", "");
+                      updateFormField("subDistrict", "");
+                      updateFormField("postalCode", "");
+                      // Keep previous lat/lng (when coming from a saved address) so map starts from existing coords.
+                    }}
+                    onDistrictChange={(district) => {
+                      updateFormField("district", district);
+                      updateFormField("subDistrict", "");
+                      updateFormField("postalCode", "");
+                      // Keep previous lat/lng (when coming from a saved address) so map starts from existing coords.
+                    }}
+                    onSubDistrictChange={(subDistrict) => {
+                      updateFormField("subDistrict", subDistrict);
+                      const postal = getPostalCodeForLocation(
+                        formData.province,
+                        formData.district,
+                        subDistrict,
+                      );
+                      if (postal) {
+                        updateFormField("postalCode", postal);
+                      }
+                    }}
+                  />
+
+                  {/* 3) Map after location — keep showing when saveAddress is checked */}
+                  <label className="block headline-5 text-gray-800 font-medium mb-2">
+                    ตำแหน่งบนแผนที่ (ลากหมุดให้ตรงจุด)
+                  </label>
+                  {formData.province &&
+                  formData.district &&
+                  (formData.subDistrict ||
+                    (formData.latitude != null &&
+                      formData.longitude != null)) ? (
+                    <div>
+                      <AddressMapPicker
+                        key={`${formData.province}-${formData.district}-${formData.subDistrict ?? "pin"}`}
+                        latitude={formData.latitude}
+                        longitude={formData.longitude}
+                        onPositionChange={(lat, lng) => {
+                          setMapDragged(true);
+                          setFormData((prev) => ({
+                            ...prev,
+                            latitude: lat,
+                            longitude: lng,
+                          }));
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-600">
+                      เลือกจังหวัด เขต และ ตำบล ก่อน
+                      แล้วแผนที่จะแสดงเพื่อให้คุณลากหมุดให้ตรงที่อยู่
+                    </div>
+                  )}
+                </>
+              )}
 
               {/* Additional Information - Full Width */}
               <div>
@@ -317,7 +715,9 @@ export default function ServiceInformation() {
                 </label>
                 <textarea
                   value={formData.additionalInfo}
-                  onChange={(e) => updateFormField("additionalInfo", e.target.value)}
+                  onChange={(e) =>
+                    updateFormField("additionalInfo", e.target.value)
+                  }
                   rows={4}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 resize-none transition-colors"
                   placeholder="กรุณาระบุข้อมูลเพิ่มเติม"
@@ -332,6 +732,12 @@ export default function ServiceInformation() {
               items={serviceItems}
               total={total}
               serviceInfo={formData}
+              savedAddressLine={
+                formData.addressId != null
+                  ? savedAddresses.find((a) => a.id === formData.addressId)
+                      ?.address_line
+                  : undefined
+              }
             />
           </div>
         </div>

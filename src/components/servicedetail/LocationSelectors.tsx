@@ -1,9 +1,9 @@
 /**
  * LocationSelectors Component
- * 
+ *
  * A component for selecting location information (Province, District, Sub-district)
  * with cascading dropdowns that reset dependent fields when parent changes.
- * 
+ *
  * Features:
  * - Cascading dropdowns (Province -> District -> Sub-district)
  * - Auto-reset of dependent fields
@@ -24,6 +24,8 @@ interface LocationSelectorsProps {
   district: string;
   /** Selected sub-district */
   subDistrict: string;
+  /** Disable all selectors (used when user selects a saved address) */
+  disabled?: boolean;
   /** Callback when province changes */
   onProvinceChange: (province: string) => void;
   /** Callback when district changes */
@@ -36,6 +38,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
   province,
   district,
   subDistrict,
+  disabled = false,
   onProvinceChange,
   onDistrictChange,
   onSubDistrictChange,
@@ -76,7 +79,8 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
           <select
             value={province}
             onChange={(e) => handleProvinceChange(e.target.value)}
-            className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer"
+            disabled={disabled}
+            className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
             <option value="" className="text-gray-400">
               เลือกจังหวัด
@@ -102,7 +106,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
             <select
               value={district}
               onChange={(e) => handleDistrictChange(e.target.value)}
-              disabled={!province}
+              disabled={disabled || !province}
               className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed cursor-pointer"
             >
               <option value="" className="text-gray-400">
@@ -127,7 +131,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
             <select
               value={subDistrict}
               onChange={(e) => onSubDistrictChange(e.target.value)}
-              disabled={!district}
+              disabled={disabled || !district}
               className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed cursor-pointer"
             >
               <option value="" className="text-gray-400">
