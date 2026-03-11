@@ -54,6 +54,12 @@ export default function RepairDashboard() {
   const [orders, setOrders] = useState<OrderForCard[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
 
+  useEffect(() => {
+    if (router.query.tab) {
+      setCurrentTab(router.query.tab as 'profile' | 'orders' | 'history');
+    }
+  }, [router.query.tab]);
+
   // Profile States
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -97,7 +103,7 @@ export default function RepairDashboard() {
     const fetchOrders = async () => {
       setLoadingOrders(true);
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const API_URL = 'http://localhost:4000'; 
         const response = await axios.get(`${API_URL}/api/orders/my-orders/${user.id}`);
         setOrders(response.data.map(normalizeOrder));
       } catch (error) {

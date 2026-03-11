@@ -105,9 +105,13 @@ export default function ResetPasswordPage() {
           
           {/* Sidebar - ใช้ตัวเดียวกับหน้า Dashboard */}
           <div className="w-full md:w-64 shrink-0">
-            <OrderSidebar activeTab="profile" onTabChange={(tab) => {
-                if(tab !== 'profile') router.push('/profile');
-            }} />
+          <OrderSidebar 
+              activeTab="profile" // 🛑 บังคับให้ไฮไลท์เมนู "ข้อมูลผู้ใช้งาน" ไว้เสมอเวลาอยู่หน้านี้
+              onTabChange={(tab) => {
+                // 🛑 เวลากดเมนูอื่น ให้กลับไปหน้า profile พร้อมแนบชื่อแท็บไปด้วย
+                router.push(`/profile?tab=${tab}`);
+              }}
+            />
           </div>
 
           {/* Content Area */}
