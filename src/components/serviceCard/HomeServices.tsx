@@ -25,7 +25,7 @@ export default function HomeServices({
   onCategoryClick,
 }: HomeServicesProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { state } = useAuth();
 
   // ถ้า mode="landing" แสดงแค่ 3 รายการแรก (ยอดนิยม ควร sort มาจาก API แล้ว)
   const displayList =
@@ -33,8 +33,8 @@ export default function HomeServices({
 
   const handleSelectService = (service: Service) => {
     // ถ้ายังไม่ได้ login ให้ไปหน้า login ก่อน
-    if (!user) {
-      router.push("/auth/login");
+    if (!state.user) {
+      router.push("/login");
       return;
     }
 

@@ -4,12 +4,14 @@ import { useRouter } from "next/router";
 
 interface User {
   id: number;
+  auth_user_id: string
   email: string;
   full_name: string;
   username: string;
   profile_pic: string;
   phone: string;
   role: "user";
+
 }
 
 interface AuthState {
