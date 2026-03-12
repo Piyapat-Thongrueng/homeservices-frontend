@@ -29,7 +29,7 @@ const AddressMapPicker = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[280px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
+      <div className="w-full h-70 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
         กำลังโหลดแผนที่...
       </div>
     ),
@@ -106,7 +106,8 @@ const defaultServiceInfo: ServiceInfo = {
 
 export default function ServiceInformation() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { state } = useAuth();
+  const user = state.user;
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -167,12 +168,12 @@ export default function ServiceInformation() {
 
   /** Load saved addresses for dropdown when user is logged in */
   useEffect(() => {
-    if (!user?.id) {
+    if (!state.user?.auth_user_id) {
       setSavedAddresses([]);
       return;
     }
     let cancelled = false;
-    getSavedAddresses(user.id)
+    getSavedAddresses(state.user.auth_user_id)
       .then((list) => {
         if (!cancelled) setSavedAddresses(list);
       })
@@ -182,7 +183,7 @@ export default function ServiceInformation() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [state.user?.auth_user_id]);
 
   /**
    * Load form data from localStorage on client side only (after mount)
@@ -196,14 +197,14 @@ export default function ServiceInformation() {
     const infoKey = getServiceScopedKey(
       SERVICE_INFO_STORAGE_KEY,
       router.query.serviceId,
-      user?.id,
+      user?.auth_user_id,
     );
 
     const saved = getFromLocalStorage<ServiceInfo>(infoKey);
     if (saved) {
       setFormData(saved);
     }
-  }, [router.isReady, router.query.serviceId, user?.id]);
+  }, [router.isReady, router.query.serviceId, user?.auth_user_id]);
 
   /**
    * Load service items from router query or localStorage (scoped by serviceId)
@@ -214,7 +215,7 @@ export default function ServiceInformation() {
     const itemsKey = getServiceScopedKey(
       SERVICE_ITEMS_STORAGE_KEY,
       router.query.serviceId,
-      user?.id,
+      user?.auth_user_id,
     );
 
     // Try to get items from query parameter first
@@ -230,7 +231,7 @@ export default function ServiceInformation() {
         setServiceItems(savedItems);
       }
     }
-  }, [router.isReady, router.query, user?.id]);
+  }, [router.isReady, router.query, user?.auth_user_id]);
 
   /**
    * Load selected service data from API using serviceId in query
@@ -274,11 +275,11 @@ export default function ServiceInformation() {
     const infoKey = getServiceScopedKey(
       SERVICE_INFO_STORAGE_KEY,
       router.query.serviceId,
-      user?.id,
+      user?.auth_user_id,
     );
 
     saveToLocalStorage(infoKey, formData);
-  }, [formData, isMounted, router.isReady, router.query.serviceId, user?.id]);
+  }, [formData, isMounted, router.isReady, router.query.serviceId, user?.auth_user_id]);
 
   /**
    * Calculate total price from selected service items
@@ -504,7 +505,7 @@ export default function ServiceInformation() {
               </div>
 
               {/* Saved addresses dropdown — same user reuses row in DB when paying */}
-              {user?.id && savedAddresses.length > 0 && (
+              {user?.auth_user_id && savedAddresses.length > 0 && (
                 <div>
                   <label className="block headline-5 text-gray-800 font-medium mb-2">
                     เลือกที่อยู่ที่บันทึกไว้
@@ -561,7 +562,7 @@ export default function ServiceInformation() {
               )}
 
               {/* Map for saved address — move pin to update lat/long on that saved row */}
-              {isUsingSavedAddress && user?.id && (
+              {isUsingSavedAddress && user?.auth_user_id && (
                 <div>
                   <label className="block headline-5 text-gray-800 font-medium mb-2">
                     ตำแหน่งบนแผนที่ของที่อยู่นี้ (ลากหมุดเพื่ออัปเดตพิกัด)
@@ -583,7 +584,7 @@ export default function ServiceInformation() {
                         : undefined)
                     }
                     onPositionChange={async (lat, lng) => {
-                      if (!user?.id || !formData.addressId) return;
+                      if (!user?.auth_user_id || !formData.addressId) return;
                       setFormData((prev) => ({
                         ...prev,
                         latitude: lat,
@@ -593,7 +594,7 @@ export default function ServiceInformation() {
                       setCoordsUpdating(true);
                       try {
                         const res = await updateAddressCoords({
-                          authUserId: user.id,
+                          authUserId: user.auth_user_id,
                           addressId: formData.addressId,
                           latitude: lat,
                           longitude: lng,
@@ -605,7 +606,7 @@ export default function ServiceInformation() {
                             addressId: res.addressId,
                           }));
                         }
-                        const list = await getSavedAddresses(user.id);
+                        const list = await getSavedAddresses(user.auth_user_id);
                         setSavedAddresses(list);
                       } catch (err) {
                         setCoordsMessage(

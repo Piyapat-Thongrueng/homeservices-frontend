@@ -123,7 +123,7 @@ const defaultPaymentData: PaymentData = {
 };
 export default function Payment() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { state } = useAuth();
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [serviceInfo, setServiceInfo] = useState<any>(null);
   const [discount, setDiscount] = useState(0);
@@ -156,7 +156,7 @@ export default function Payment() {
     const paymentKey = getServiceScopedKey(
       PAYMENT_DATA_STORAGE_KEY,
       router.query.serviceId,
-      user?.id,
+      state.user?.auth_user_id,
     );
 
     const saved = getFromLocalStorage<PaymentData>(paymentKey);
@@ -166,7 +166,7 @@ export default function Payment() {
         promotionCode: "", // Reset promotion code
       });
     }
-  }, [router.isReady, router.query.serviceId, user?.id]);
+  }, [router.isReady, router.query.serviceId, state.user?.auth_user_id]);
 
   /**
    * Load Stripe publishable key from backend config (for Elements)
@@ -192,12 +192,12 @@ export default function Payment() {
     const itemsKey = getServiceScopedKey(
       SERVICE_ITEMS_STORAGE_KEY,
       router.query.serviceId,
-      user?.id,
+      state.user?.auth_user_id,
     );
     const serviceInfoKey = getServiceScopedKey(
       SERVICE_INFO_STORAGE_KEY,
       router.query.serviceId,
-      user?.id,
+      state.user?.auth_user_id,
     );
 
     // Load service items
@@ -225,7 +225,7 @@ export default function Payment() {
         setServiceInfo(savedInfo);
       }
     }
-  }, [router.isReady, router.query, user?.id]);
+  }, [router.isReady, router.query, state.user?.id]);
 
   /**
    * Load selected service data from API using serviceId in query
@@ -270,7 +270,7 @@ export default function Payment() {
     const paymentKey = getServiceScopedKey(
       PAYMENT_DATA_STORAGE_KEY,
       router.query.serviceId,
-      user?.id,
+      state.user?.auth_user_id,
     );
 
     const dataToSave = {
@@ -283,7 +283,7 @@ export default function Payment() {
     isMounted,
     router.isReady,
     router.query.serviceId,
-    user?.id,
+    state.user?.auth_user_id,
   ]);
 
   /**
@@ -310,7 +310,7 @@ export default function Payment() {
    * Create PromptPay PaymentIntent and show Stripe’s QR modal on the frontend (no URL redirect).
    */
   const handleNextPromptPay = async () => {
-    if (!isFormValid || !user?.id) {
+    if (!isFormValid || !state.user?.id) {
       setCheckoutError("กรุณาเข้าสู่ระบบก่อนชำระเงิน");
       return;
     }
@@ -335,7 +335,7 @@ export default function Payment() {
 
       const { clientSecret, orderId: intentOrderId } =
         await createPromptPayIntent({
-          authUserId: user.id,
+          authUserId: state.user.auth_user_id,
           promotionId: promotionId ?? undefined,
           ...buildIntentAddressParams(serviceInfo),
           items: serviceItems.map((item) => ({
@@ -361,7 +361,7 @@ export default function Payment() {
         await stripeInstance.confirmPromptPayPayment(clientSecret, {
           payment_method: {
             billing_details: {
-              email: user.email ?? "customer@example.com",
+              email: state.user.email ?? "customer@example.com",
             },
           },
         });
@@ -375,7 +375,7 @@ export default function Payment() {
       if (paymentIntent?.status === "succeeded") {
         try {
           await markPaymentIntentPaid({
-            authUserId: user.id,
+            authUserId: state.user.auth_user_id,
             orderId: intentOrderId,
           });
         } catch (err) {
@@ -549,7 +549,7 @@ export default function Payment() {
         </>
       ) : (
         stripePublishableKey &&
-        user?.id && (
+        state.user?.id && (
           <Elements stripe={getStripePromise(stripePublishableKey)}>
             <>
               {mainContent}
@@ -570,7 +570,7 @@ export default function Payment() {
                     throw new Error("ไม่พบรหัสบริการ");
                   }
                   return createPaymentIntent({
-                    authUserId: user.id,
+                    authUserId: state.user!.auth_user_id,
                     promotionId: promotionId ?? undefined,
                     ...buildIntentAddressParams(serviceInfo),
                     items: serviceItems.map((item) => ({
@@ -588,7 +588,7 @@ export default function Payment() {
                 onSuccess={async (intentOrderId: number) => {
                   try {
                     await markPaymentIntentPaid({
-                      authUserId: user.id!,
+                      authUserId: state.user!.auth_user_id,
                       orderId: intentOrderId,
                     });
                   } catch (err) {

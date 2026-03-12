@@ -4,12 +4,14 @@ import { useRouter } from "next/router";
 
 interface User {
   id: number;
+  auth_user_id: string
   email: string;
   full_name: string;
   username: string;
   profile_pic: string;
   phone: string;
   role: "user";
+
 }
 
 interface AuthState {
@@ -193,7 +195,7 @@ function AuthProvider({ children }: AuthProviderProps) {
       loading: false,
       getUserLoading: false,
     });
-    router.push("/login");
+    router.push("/");
   };
 
   // คำนวณสถานะการเข้าสู่ระบบโดยตรวจสอบว่ามีข้อมูลผู้ใช้ใน state หรือไม่
