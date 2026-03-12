@@ -63,6 +63,22 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
   // Calculate final total after discount
   const finalTotal = total - discount;
 
+  // Build location line for "สถานที่" – prefer savedAddressLine when provided,
+  // otherwise use all address parts (ที่อยู่ + ตำบล + อำเภอ + จังหวัด + รหัสไปรษณีย์).
+  const locationLine =
+    savedAddressLine ||
+    (serviceInfo
+      ? [
+          serviceInfo.address,
+          serviceInfo.subDistrict,
+          serviceInfo.district,
+          serviceInfo.province,
+          serviceInfo.postalCode,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : "");
+
   return (
     <aside className="card-box bg-utility-white border border-gray-200 rounded-lg p-5 md:p-7">
       <h2 className="headline-3 text-gray-700 mb-4">{title}</h2>
@@ -111,7 +127,8 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
                     </span>
                   </div>
                 )}
-                {(serviceInfo.address ||
+                {(locationLine ||
+                  serviceInfo.address ||
                   serviceInfo.subDistrict ||
                   serviceInfo.district ||
                   serviceInfo.province ||
@@ -131,18 +148,7 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
                         overflow: "hidden",
                       }}
                     >
-                      {[serviceInfo.address, serviceInfo.postalCode]
-                        .filter(Boolean)
-                        .join(" ") ??
-                        [
-                          serviceInfo.address,
-                          serviceInfo.subDistrict,
-                          serviceInfo.district,
-                          serviceInfo.province,
-                          serviceInfo.postalCode,
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
+                      {locationLine}
                     </span>
                   </div>
                 )}

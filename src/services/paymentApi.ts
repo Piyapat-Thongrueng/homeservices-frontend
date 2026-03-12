@@ -9,7 +9,8 @@ export interface CreateCheckoutSessionItem {
 
 export interface CreateCheckoutSessionAddress {
   address_line: string;
-  city?: string;
+  district?: string;
+  subdistrict?: string;
   province?: string;
   postal_code?: string;
   /** Optional: from Leaflet pin – used when set (skips server geocoding). */
@@ -175,7 +176,8 @@ export interface PromotionValidationResponse {
 export interface SavedAddress {
   id: number;
   address_line: string;
-  city: string | null;
+  district: string | null;
+  subdistrict: string | null;
   province: string | null;
   postal_code: string | null;
   latitude: number | null;
@@ -204,7 +206,8 @@ export async function updateAddressCoords(params: {
   addressId?: number;
   /** When addressId omitted, match row by these fields */
   address_line?: string;
-  city?: string;
+  district?: string;
+  subdistrict?: string;
   province?: string;
   postal_code?: string;
   latitude: number;
