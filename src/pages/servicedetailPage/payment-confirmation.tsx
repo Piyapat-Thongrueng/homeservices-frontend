@@ -1,14 +1,11 @@
 /**
  * PaymentConfirmation Page
- * 
+ *
  * The final step in the service booking flow that displays
  * a confirmation message after successful payment.
- * 
- * Features:
- * - Success confirmation message
- * - Service details summary
- * - Total amount display
- * - Navigation back to home
+ *
+ * When arriving from Stripe (session_id in query), fetches order from backend.
+ * Otherwise falls back to query params (items, serviceInfo, total).
  */
 
 import { useEffect, useState } from "react";
@@ -21,53 +18,97 @@ import {
   parseServiceItemsFromQuery,
   parseServiceInfoFromQuery,
 } from "@/utils/router-helpers";
+import { getCheckoutSession } from "@/services/paymentApi";
 
 export default function PaymentConfirmation() {
   const router = useRouter();
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [serviceInfo, setServiceInfo] = useState<any>(null);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   /**
-   * Load service items, service info, and total from router query
+   * When session_id is present (Stripe redirect), fetch order from backend.
+   * Otherwise load from query params.
    */
   useEffect(() => {
-    // Load service items
+    const sessionId =
+      typeof router.query.session_id === "string"
+        ? router.query.session_id
+        : router.query.session_id?.[0];
+
+    if (sessionId) {
+      getCheckoutSession(sessionId)
+        .then((data) => {
+          const order = data.order;
+          setServiceItems(
+            order.items.map((it) => ({
+              id: it.serviceId,
+              description: it.name,
+              unit: "",
+              price: it.price,
+              quantity: it.quantity,
+            })),
+          );
+          setTotal(order.netPrice);
+
+          // Also hydrate service info from query parameters (sent from payment page)
+          const queryServiceInfo = parseServiceInfoFromQuery(
+            router.query.serviceInfo,
+          );
+          if (queryServiceInfo) setServiceInfo(queryServiceInfo);
+
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : "โหลดข้อมูลไม่สำเร็จ");
+          setLoading(false);
+        });
+      return;
+    }
+
+    // Fallback: load from query (e.g. direct visit or old flow)
     const queryItems = parseServiceItemsFromQuery(router.query.items);
-    if (queryItems.length > 0) {
-      setServiceItems(queryItems);
-    }
+    if (queryItems.length > 0) setServiceItems(queryItems);
 
-    // Load service info
-    const queryServiceInfo = parseServiceInfoFromQuery(router.query.serviceInfo);
-    if (queryServiceInfo) {
-      setServiceInfo(queryServiceInfo);
-    }
+    const queryServiceInfo = parseServiceInfoFromQuery(
+      router.query.serviceInfo,
+    );
+    if (queryServiceInfo) setServiceInfo(queryServiceInfo);
 
-    // Load total
     if (router.query.total) {
       setTotal(parseFloat(router.query.total as string));
     }
-  }, [router.query]);
+    setLoading(false);
+  }, [router.query, router.query.session_id]);
 
   /**
    * Calculate total quantity of selected items
    */
   const totalQuantity = serviceItems.reduce(
     (sum, item) => sum + item.quantity,
-    0
+    0,
   );
 
   /**
-   * Format address components into a single string
+   * Format address like ServiceSummaryCard:
+   * - If savedAddressLine exists on serviceInfo (saved address), use it directly
+   * - Otherwise combine address + subDistrict + district + province + postalCode
    */
   const formatAddress = () => {
     if (!serviceInfo) return "";
+    if (serviceInfo.savedAddressLine) {
+      return [serviceInfo.address, serviceInfo.postalCode]
+        .filter(Boolean)
+        .join(" ");
+    }
     return [
       serviceInfo.address,
       serviceInfo.subDistrict,
       serviceInfo.district,
       serviceInfo.province,
+      serviceInfo.postalCode,
     ]
       .filter(Boolean)
       .join(" ");
@@ -84,6 +125,37 @@ export default function PaymentConfirmation() {
     minWidth: 0,
     overflow: "hidden" as const,
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-utility-bg font-prompt pb-32">
+        <Navbar />
+        <main className="max-w-2xl mx-auto px-4 md:px-8 pb-10 pt-8 flex justify-center items-center min-h-[40vh]">
+          <p className="body-2 text-gray-600">กำลังโหลด...</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-utility-bg font-prompt pb-32">
+        <Navbar />
+        <main className="max-w-2xl mx-auto px-4 md:px-8 pb-10 pt-8">
+          <div className="card-box bg-utility-white border border-gray-200 rounded-lg p-8 text-center">
+            <p className="body-2 text-red-600 mb-4">{error}</p>
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="btn-primary px-6 py-2 cursor-pointer"
+            >
+              กลับหน้าหลัก
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-utility-bg font-prompt pb-32">
@@ -105,7 +177,7 @@ export default function PaymentConfirmation() {
             {/* Service Item Description and Quantity */}
             <div className="flex items-center justify-between gap-4">
               <p className="body-2 text-gray-700 flex-1">
-                {serviceItems[0]?.description}
+                {serviceItems[0]?.description ?? "บริการ"}
               </p>
               <p className="body-2 text-gray-600 whitespace-nowrap">
                 {totalQuantity} รายการ
@@ -143,7 +215,10 @@ export default function PaymentConfirmation() {
                   <span className="body-2 text-gray-600 whitespace-nowrap">
                     สถานที่:
                   </span>
-                  <span className="body-2 text-gray-900 text-right flex-1" style={textWrapStyle}>
+                  <span
+                    className="body-2 text-gray-900 text-right flex-1"
+                    style={textWrapStyle}
+                  >
                     {formatAddress()}
                   </span>
                 </div>
@@ -155,7 +230,10 @@ export default function PaymentConfirmation() {
                   <span className="body-2 text-gray-600 whitespace-nowrap">
                     หมายเหตุ:
                   </span>
-                  <span className="body-2 text-gray-900 text-right flex-1" style={textWrapStyle}>
+                  <span
+                    className="body-2 text-gray-900 text-right flex-1"
+                    style={textWrapStyle}
+                  >
                     {serviceInfo.additionalInfo}
                   </span>
                 </div>

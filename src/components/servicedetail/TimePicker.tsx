@@ -1,9 +1,9 @@
 /**
  * TimePicker Component
- * 
+ *
  * A custom time picker component that allows users to select hours and minutes
  * from scrollable lists. Displays time in HH:MM format.
- * 
+ *
  * Features:
  * - Scrollable hour (00-23) and minute (00-59) selectors
  * - Visual feedback for selected values
@@ -65,7 +65,10 @@ const TimePicker: React.FC<TimePickerProps> = ({
    */
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (timePickerRef.current && !timePickerRef.current.contains(event.target as Node)) {
+      if (
+        timePickerRef.current &&
+        !timePickerRef.current.contains(event.target as Node)
+      ) {
         setShowTimePicker(false);
       }
     };
@@ -115,7 +118,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
         {showTimePicker && (
           <div
             ref={timePickerRef}
-            className="absolute top-full left-0 mt-2 bg-white border-2 border-blue-600 rounded-lg shadow-lg z-50 w-full max-w-[280px]"
+            className="absolute top-full left-0 mt-2 bg-white border-2 border-blue-600 rounded-lg shadow-lg z-1100 w-full max-w-[280px]"
           >
             <div className="flex">
               {/* Hours Column - 00 to 23 */}

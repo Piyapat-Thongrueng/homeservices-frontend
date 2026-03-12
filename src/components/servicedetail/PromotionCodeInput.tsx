@@ -22,6 +22,8 @@ interface PromotionCodeInputProps {
   onValueChange: (value: string) => void;
   /** Callback when apply button is clicked (receives the code to validate) */
   onApply: (code: string) => void;
+  /** Optional callback when user wants to reset / change code after applied */
+  onReset?: () => void;
 }
 
 const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
@@ -30,11 +32,18 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
   error,
   onValueChange,
   onApply,
+  onReset,
 }) => {
+  const hasDiscount = discount > 0 && !error;
+
   /**
    * Handles apply button click
    */
   const handleApply = () => {
+    if (hasDiscount && onReset) {
+      onReset();
+      return;
+    }
     onApply(value);
   };
 
@@ -58,27 +67,34 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
           type="text"
           value={value || ""}
           onChange={(e) => onValueChange(e.target.value)}
-          className={`flex-1 px-4 py-3 border rounded-lg headline-5 focus:outline-none ${
+          className={`flex-1 px-4 py-3 border rounded-lg headline-5 focus:outline-none transition-colors ${
             error
-              ? "border-red-500 focus:border-red-500"
-              : "border-gray-300 focus:border-blue-600"
+              ? "border-red-500 focus:border-red-500 bg-white"
+              : hasDiscount
+              ? "border-gray-300 bg-gray-100 text-gray-800 disabled:opacity-100"
+              : "border-gray-300 focus:border-blue-600 bg-white"
           }`}
           placeholder="กรุณากรอกโค้ดส่วนลด (ถ้ามี)"
           onKeyPress={handleKeyPress}
+          disabled={hasDiscount}
         />
         {/* Apply Button */}
         <button
           type="button"
-          className="btn-primary px-6 cursor-pointer"
+          className={`px-6 cursor-pointer rounded-lg font-medium transition-colors ${
+            hasDiscount
+              ? "bg-yellow-500 text-white hover:bg-yellow-400"
+              : "btn-primary"
+          }`}
           onClick={handleApply}
         >
-          ใช้โค้ด
+          {hasDiscount ? "เปลี่ยนโค้ด" : "ใช้โค้ด"}
         </button>
       </div>
       {/* Error Message */}
       {error && <p className="mt-2 body-3 text-red-500">{error}</p>}
       {/* Success Message */}
-      {discount > 0 && !error && (
+      {hasDiscount && (
         <p className="mt-2 body-3 text-green-600">
           ใช้โค้ดส่วนลดสำเร็จ!
         </p>

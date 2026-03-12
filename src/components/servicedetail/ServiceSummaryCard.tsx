@@ -1,9 +1,9 @@
 /**
  * ServiceSummaryCard Component
- * 
+ *
  * Displays a summary of selected service items, service information,
  * and total price. Used as a sidebar component on service detail pages.
- * 
+ *
  * Features:
  * - Lists selected service items with quantities
  * - Displays service information (date, time, location, notes)
@@ -21,6 +21,7 @@ interface ServiceInfo {
   subDistrict?: string;
   district?: string;
   province?: string;
+  postalCode?: string;
   additionalInfo?: string;
 }
 
@@ -33,6 +34,8 @@ interface ServiceSummaryCardProps {
   total: number;
   /** Service information (date, time, location, etc.) */
   serviceInfo?: ServiceInfo;
+  /** When user selected a saved address, show this full address line for สถานที่ */
+  savedAddressLine?: string;
   /** Applied promotion code */
   promotionCode?: string;
   /** Discount amount */
@@ -44,16 +47,17 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
   items,
   total,
   serviceInfo,
+  savedAddressLine,
   promotionCode,
   discount = 0,
 }) => {
   // Filter to only show items with quantity > 0
   const selectedItems = items.filter((item) => item.quantity > 0);
-  
+
   // Calculate total quantity of selected items
   const totalQuantity = selectedItems.reduce(
     (sum, item) => sum + item.quantity,
-    0
+    0,
   );
 
   // Calculate final total after discount
@@ -68,70 +72,94 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
           {/* Service Items List */}
           <div className="space-y-3 mb-4">
             {selectedItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-2">
-                <p className="body-3 text-utility-black">
-                  {item.description}
-                </p>
+              <div
+                key={item.id}
+                className="flex items-center justify-between gap-2"
+              >
+                <p className="body-3 text-utility-black">{item.description}</p>
                 <p className="body-2 text-gray-900 whitespace-nowrap">
                   {item.quantity} รายการ
                 </p>
               </div>
             ))}
           </div>
-          
+
           {/* Separator Line - only show if there's serviceInfo */}
-          {serviceInfo && (
-            <div className="border-t border-gray-300 my-4" />
-          )}
-          
+          {serviceInfo && <div className="border-t border-gray-300 my-4" />}
+
           {/* Service Info */}
           {serviceInfo && (
             <>
               <div className="space-y-2 mb-4">
                 {serviceInfo.date && (
                   <div className="flex items-start gap-2">
-                    <span className="body-2 text-gray-600 min-w-[60px]">วันที่:</span>
-                    <span className="body-2 text-gray-900 text-right flex-1">{formatDateToThai(serviceInfo.date)}</span>
+                    <span className="body-2 text-gray-600 min-w-[60px]">
+                      วันที่:
+                    </span>
+                    <span className="body-2 text-gray-900 text-right flex-1">
+                      {formatDateToThai(serviceInfo.date)}
+                    </span>
                   </div>
                 )}
                 {serviceInfo.time && (
                   <div className="flex items-start gap-2">
-                    <span className="body-2 text-gray-600 min-w-[60px]">เวลา:</span>
-                    <span className="body-2 text-gray-900 text-right flex-1">{formatTimeToThai(serviceInfo.time)}</span>
+                    <span className="body-2 text-gray-600 min-w-[60px]">
+                      เวลา:
+                    </span>
+                    <span className="body-2 text-gray-900 text-right flex-1">
+                      {formatTimeToThai(serviceInfo.time)}
+                    </span>
                   </div>
                 )}
-                {(serviceInfo.address || serviceInfo.subDistrict || serviceInfo.district || serviceInfo.province) && (
+                {(serviceInfo.address ||
+                  serviceInfo.subDistrict ||
+                  serviceInfo.district ||
+                  serviceInfo.province ||
+                  serviceInfo.postalCode) && (
                   <div className="flex items-start justify-between gap-4">
-                    <span className="body-2 text-gray-600 whitespace-nowrap">สถานที่:</span>
-                    <span 
+                    <span className="body-2 text-gray-600 whitespace-nowrap">
+                      สถานที่:
+                    </span>
+                    <span
                       className="body-2 text-gray-900 text-right flex-1"
                       style={{
-                        wordBreak: 'break-word',
-                        overflowWrap: 'anywhere',
-                        maxWidth: '30ch',
-                        lineHeight: '1.5',
+                        wordBreak: "break-word",
+                        overflowWrap: "anywhere",
+                        maxWidth: "30ch",
+                        lineHeight: "1.5",
                         minWidth: 0,
-                        overflow: 'hidden'
+                        overflow: "hidden",
                       }}
                     >
-                      {[serviceInfo.address, serviceInfo.subDistrict, serviceInfo.district, serviceInfo.province]
+                      {[serviceInfo.address, serviceInfo.postalCode]
                         .filter(Boolean)
-                        .join(" ")}
+                        .join(" ") ??
+                        [
+                          serviceInfo.address,
+                          serviceInfo.subDistrict,
+                          serviceInfo.district,
+                          serviceInfo.province,
+                          serviceInfo.postalCode,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
                     </span>
                   </div>
                 )}
                 {serviceInfo.additionalInfo && (
                   <div className="flex items-start justify-between gap-4">
-                    <span className="body-2 text-gray-600 whitespace-nowrap">หมายเหตุ:</span>
-                    <span 
+                    <span className="body-2 text-gray-600 whitespace-nowrap">
+                      หมายเหตุ:
+                    </span>
+                    <span
                       className="body-2 text-gray-900 text-right flex-1"
                       style={{
-                        wordBreak: 'break-word',
-                        overflowWrap: 'anywhere',
-                        maxWidth: '30ch',
-                        lineHeight: '1.5',
+                        wordBreak: "break-word",
+                        overflowWrap: "anywhere",
+                        maxWidth: "30ch",
+                        lineHeight: "1.5",
                         minWidth: 0,
-                        overflow: 'hidden'
+                        overflow: "hidden",
                       }}
                     >
                       {serviceInfo.additionalInfo}
@@ -147,7 +175,9 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
             <div className="mb-2">
               <div className="flex items-center justify-between">
                 <span className="body-2 text-gray-600">Promotion Code:</span>
-                <span className="body-2 text-red-500">-{discount.toFixed(2)} ฿</span>
+                <span className="body-2 text-red-500">
+                  -{discount.toFixed(2)} ฿
+                </span>
               </div>
             </div>
           )}
@@ -178,4 +208,3 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
 };
 
 export default ServiceSummaryCard;
-
