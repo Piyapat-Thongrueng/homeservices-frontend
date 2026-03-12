@@ -83,7 +83,8 @@ function buildIntentAddressParams(
     address: {
       address_line: addressLine,
       province: serviceInfo?.province,
-      city: serviceInfo?.district,
+      district: serviceInfo?.district,
+      subdistrict: serviceInfo?.subDistrict,
       postal_code: serviceInfo?.postalCode,
       ...(serviceInfo?.latitude != null &&
       serviceInfo?.longitude != null &&
@@ -295,6 +296,11 @@ export default function Payment() {
   );
 
   /**
+   * Ensure we have at least one item to pay for
+   */
+  const hasItems = serviceItems.length > 0;
+
+  /**
    * Calculate final total after discount
    */
   const finalTotal = total - discount;
@@ -310,8 +316,14 @@ export default function Payment() {
    * Create PromptPay PaymentIntent and show Stripe’s QR modal on the frontend (no URL redirect).
    */
   const handleNextPromptPay = async () => {
-    if (!isFormValid || !state.user?.id) {
+    if (!isFormValid || !state.user?.auth_user_id) {
       setCheckoutError("กรุณาเข้าสู่ระบบก่อนชำระเงิน");
+      return;
+    }
+    if (!hasItems) {
+      setCheckoutError(
+        "ไม่พบรายการบริการที่ต้องชำระ กรุณากลับไปเลือกบริการอีกครั้ง",
+      );
       return;
     }
     if (!stripePublishableKey) {
@@ -494,8 +506,10 @@ export default function Payment() {
               onChange={(method) => updatePaymentField("method", method)}
             />
 
-            {/* Credit Card Form - shown only when credit card is selected */}
-            {paymentData.method === "creditcard" && <CreditCardForm />}
+            {/* Credit Card Form - only when card selected AND inside Stripe Elements */}
+            {paymentData.method === "creditcard" &&
+              stripePublishableKey &&
+              state.user?.auth_user_id && <CreditCardForm />}
 
             {/* Promotion Code Input */}
             <PromotionCodeInput
@@ -536,83 +550,82 @@ export default function Payment() {
         currentStep={3}
         imageUrl={selectedService?.image}
       />
-
       {paymentData.method === "promptpay" ? (
         <>
           {mainContent}
           <ServiceFooterNav
-            canProceed={isFormValid && !isSubmitting}
+            canProceed={isFormValid && !isSubmitting && hasItems}
             onBack={handleBack}
             onNext={handleNextPromptPay}
             nextText={isSubmitting ? "กำลังดำเนินการ..." : "ยืนยันการชำระเงิน"}
           />
         </>
-      ) : (
-        stripePublishableKey &&
-        state.user?.id && (
-          <Elements stripe={getStripePromise(stripePublishableKey)}>
-            <>
-              {mainContent}
-              <StripeFooterInner
-                canProceed={isFormValid && !isSubmitting}
-                isSubmitting={isSubmitting}
-                onBack={handleBack}
-                onCreatePaymentIntent={async () => {
-                  const serviceIdRaw = router.query.serviceId;
-                  const serviceIdValue =
-                    typeof serviceIdRaw === "string"
-                      ? serviceIdRaw
-                      : serviceIdRaw?.[0];
-                  const serviceId = serviceIdValue
-                    ? parseInt(serviceIdValue, 10)
-                    : NaN;
-                  if (Number.isNaN(serviceId)) {
-                    throw new Error("ไม่พบรหัสบริการ");
-                  }
-                  return createPaymentIntent({
+      ) : stripePublishableKey && state.user?.auth_user_id ? (
+        <Elements stripe={getStripePromise(stripePublishableKey)}>
+          <>
+            {mainContent}
+            <StripeFooterInner
+              canProceed={isFormValid && !isSubmitting}
+              isSubmitting={isSubmitting}
+              onBack={handleBack}
+              onCreatePaymentIntent={async () => {
+                const serviceIdRaw = router.query.serviceId;
+                const serviceIdValue =
+                  typeof serviceIdRaw === "string"
+                    ? serviceIdRaw
+                    : serviceIdRaw?.[0];
+                const serviceId = serviceIdValue
+                  ? parseInt(serviceIdValue, 10)
+                  : NaN;
+                if (Number.isNaN(serviceId)) {
+                  throw new Error("ไม่พบรหัสบริการ");
+                }
+                return createPaymentIntent({
+                  authUserId: state.user!.auth_user_id,
+                  promotionId: promotionId ?? undefined,
+                  ...buildIntentAddressParams(serviceInfo),
+                  items: serviceItems.map((item) => ({
+                    serviceId,
+                    name: item.description,
+                    quantity: item.quantity,
+                    price: item.price,
+                  })),
+                  discountAmount: discount,
+                  appointmentDate: serviceInfo?.date || undefined,
+                  appointmentTime: serviceInfo?.time || undefined,
+                  remark: serviceInfo?.additionalInfo || undefined,
+                });
+              }}
+              onSuccess={async (intentOrderId: number) => {
+                try {
+                  await markPaymentIntentPaid({
                     authUserId: state.user!.auth_user_id,
-                    promotionId: promotionId ?? undefined,
-                    ...buildIntentAddressParams(serviceInfo),
-                    items: serviceItems.map((item) => ({
-                      serviceId,
-                      name: item.description,
-                      quantity: item.quantity,
-                      price: item.price,
-                    })),
-                    discountAmount: discount,
-                    appointmentDate: serviceInfo?.date || undefined,
-                    appointmentTime: serviceInfo?.time || undefined,
-                    remark: serviceInfo?.additionalInfo || undefined,
+                    orderId: intentOrderId,
                   });
-                }}
-                onSuccess={async (intentOrderId: number) => {
-                  try {
-                    await markPaymentIntentPaid({
-                      authUserId: state.user!.auth_user_id,
-                      orderId: intentOrderId,
-                    });
-                  } catch (err) {
-                    console.error("Failed to mark order as paid:", err);
-                  }
-                  const query: Record<string, string> = {
-                    items: JSON.stringify(serviceItems),
-                    total: String(finalTotal),
-                    orderId: String(intentOrderId),
-                  };
-                  if (serviceInfo) {
-                    query.serviceInfo = JSON.stringify(serviceInfo);
-                  }
-                  router.push({
-                    pathname: "/servicedetailPage/payment-confirmation",
-                    query,
-                  });
-                }}
-                setCheckoutError={setCheckoutError}
-                setIsSubmitting={setIsSubmitting}
-              />
-            </>
-          </Elements>
-        )
+                } catch (err) {
+                  console.error("Failed to mark order as paid:", err);
+                }
+                const query: Record<string, string> = {
+                  items: JSON.stringify(serviceItems),
+                  total: String(finalTotal),
+                  orderId: String(intentOrderId),
+                };
+                if (serviceInfo) {
+                  query.serviceInfo = JSON.stringify(serviceInfo);
+                }
+                router.push({
+                  pathname: "/servicedetailPage/payment-confirmation",
+                  query,
+                });
+              }}
+              setCheckoutError={setCheckoutError}
+              setIsSubmitting={setIsSubmitting}
+            />
+          </>
+        </Elements>
+      ) : (
+        // Fallback: show content with no active Stripe Elements (e.g. config not loaded yet)
+        <>{mainContent}</>
       )}
     </div>
   );
@@ -666,6 +679,9 @@ const StripeFooterInner: React.FC<StripeFooterInnerProps> = ({
   const elements = useElements();
 
   const handleNext = async () => {
+    if (!canProceed) {
+      return;
+    }
     if (!stripe || !elements) {
       setCheckoutError("ระบบชำระเงินยังไม่พร้อมใช้งาน");
       return;
