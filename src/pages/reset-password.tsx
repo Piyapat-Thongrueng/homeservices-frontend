@@ -4,11 +4,18 @@ import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import OrderSidebar from "@/components/repairorder/OrderSidebar";
 import { supabase } from "@/lib/supabaseClient";
-import { useRequireAuth } from "@/contexts/useRequireAuth";
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useRequireAuth();
+  const { state, isAuthenticated } = useAuth();
+  const { user, getUserLoading: authLoading } = state;
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   const [saving, setSaving] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
