@@ -55,6 +55,8 @@ import {
   type CreatePaymentIntentParams,
 } from "@/services/paymentApi";
 import { useAuth } from "@/contexts/AuthContext";
+import { getCart, addToCart, updateCart } from "@/services/cartApi";
+import { ShoppingCart } from "lucide-react";
 
 /** When serviceInfo has addressId, pass only addressId so backend reuses row (no duplicate insert). */
 function buildIntentAddressParams(
@@ -137,6 +139,10 @@ export default function Payment() {
   const [stripePublishableKey, setStripePublishableKey] = useState<
     string | null
   >(null);
+  const [cartItemIdForService, setCartItemIdForService] = useState<number | null>(null);
+  const [cartActionLoading, setCartActionLoading] = useState(false);
+  const [cartActionError, setCartActionError] = useState<string | null>(null);
+  const [cartActionSuccess, setCartActionSuccess] = useState<string | null>(null);
 
   /**
    * Initialize payment data with defaults to prevent hydration mismatch
@@ -183,12 +189,78 @@ export default function Payment() {
       });
   }, []);
 
+  /** When coming from cart: load cart item and set serviceItems, serviceInfo, selectedService */
+  const cartItemIdParam =
+    router.query.cartItemId != null
+      ? Number(
+          Array.isArray(router.query.cartItemId)
+            ? router.query.cartItemId[0]
+            : router.query.cartItemId
+        )
+      : null;
+  const isFromCart = Number.isFinite(cartItemIdParam) && cartItemIdParam != null;
+
+  useEffect(() => {
+    if (!router.isReady || !state.user?.auth_user_id || !isFromCart || !cartItemIdParam) return;
+
+    let cancelled = false;
+    getCart(state.user.auth_user_id)
+      .then((res) => {
+        if (cancelled) return;
+        const item = (res.cartItems ?? []).find((c) => c.id === cartItemIdParam);
+        if (!item) return;
+        const mappedItems: ServiceItem[] = item.details.map((d) => ({
+          id: d.serviceItemId,
+          description: d.name,
+          unit: d.unit,
+          price: d.pricePerUnit,
+          quantity: d.quantity,
+        }));
+        setServiceItems(mappedItems);
+        setServiceInfo({
+          addressId: item.addressId ?? undefined,
+          date: item.appointmentDate ?? "",
+          time: item.appointmentTime
+            ? String(item.appointmentTime).replace(/^(\d{1,2}):(\d{2}).*/, "$1:$2")
+            : "",
+          address: "",
+          subDistrict: item.subdistrict ?? "",
+          district: item.district ?? "",
+          province: item.province ?? "",
+          postalCode: item.postalCode ?? "",
+          additionalInfo: item.remark ?? "",
+          savedAddressLine: item.addressLine ?? undefined,
+        });
+        setSelectedService({
+          id: item.serviceId,
+          name: item.serviceName,
+          image: item.serviceImage ?? "",
+          description: "",
+          price: null,
+          min_price: null,
+          max_price: null,
+          category_id: 0,
+          category_name: "",
+          category_name_th: "",
+          avg_rating: 0,
+          order_count: 0,
+          created_at: "",
+        } as Service);
+        setCartItemIdForService(cartItemIdParam);
+      })
+      .catch((err) => console.error("Load cart for payment:", err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, state.user?.auth_user_id, isFromCart, cartItemIdParam]);
+
   /**
    * Load service items and service info from router query or localStorage
-   * Scoped by serviceId so each service has its own data
+   * Scoped by serviceId so each service has its own data (skip when loading from cart)
    */
   useEffect(() => {
-    if (!router.isReady) return;
+    if (!router.isReady || isFromCart) return;
 
     const itemsKey = getServiceScopedKey(
       SERVICE_ITEMS_STORAGE_KEY,
@@ -226,7 +298,7 @@ export default function Payment() {
         setServiceInfo(savedInfo);
       }
     }
-  }, [router.isReady, router.query, state.user?.id]);
+  }, [router.isReady, router.query, state.user?.id, isFromCart]);
 
   /**
    * Load selected service data from API using serviceId in query
@@ -259,6 +331,30 @@ export default function Payment() {
       isSubscribed = false;
     };
   }, [router.query.serviceId]);
+
+  /** When not from cart: check if this service is already in cart (for Update cart vs Add to cart) */
+  useEffect(() => {
+    if (isFromCart || !state.user?.auth_user_id || !router.query.serviceId) return;
+    const sid =
+      typeof router.query.serviceId === "string"
+        ? router.query.serviceId
+        : router.query.serviceId?.[0];
+    const serviceIdNum = parseInt(sid, 10);
+    if (Number.isNaN(serviceIdNum)) return;
+    let cancelled = false;
+    getCart(state.user.auth_user_id)
+      .then((res) => {
+        if (cancelled) return;
+        const found = (res.cartItems ?? []).find((c) => c.serviceId === serviceIdNum);
+        setCartItemIdForService(found ? found.id : null);
+      })
+      .catch(() => {
+        if (!cancelled) setCartItemIdForService(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.user?.auth_user_id, router.query.serviceId, isFromCart]);
 
   /**
    * Save payment data to localStorage whenever it changes (only after mount)
@@ -389,6 +485,7 @@ export default function Payment() {
           await markPaymentIntentPaid({
             authUserId: state.user.auth_user_id,
             orderId: intentOrderId,
+            cartItemId: isFromCart ? cartItemIdParam ?? undefined : undefined,
           });
         } catch (err) {
           console.error("Failed to mark order as paid:", err);
@@ -419,7 +516,117 @@ export default function Payment() {
    * Navigate back to previous page
    */
   const handleBack = () => {
-    router.back();
+    if (isFromCart) {
+      // When coming from cart, go back to service-information so user can edit the order
+      const serviceIdRaw = router.query.serviceId;
+      const serviceId =
+        typeof serviceIdRaw === "string"
+          ? serviceIdRaw
+          : serviceIdRaw?.[0];
+      router.push({
+        pathname: "/servicedetailPage/service-information",
+        query: serviceId ? { serviceId, fromCart: "1" } : { fromCart: "1" },
+      });
+    } else {
+      router.back();
+    }
+  };
+
+  /** Build address line from serviceInfo for cart API */
+  const combinedAddressLine = serviceInfo
+    ? [
+        serviceInfo.address,
+        serviceInfo.subDistrict,
+        serviceInfo.district,
+        serviceInfo.province,
+        serviceInfo.postalCode,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+    : "";
+
+  /**
+   * Add to cart or Update cart (below summary card on payment page)
+   */
+  const handleCartAction = async () => {
+    if (!state.user?.auth_user_id || !hasItems) return;
+    const serviceIdRaw = router.query.serviceId;
+    const serviceId =
+      typeof serviceIdRaw === "string"
+        ? parseInt(serviceIdRaw, 10)
+        : parseInt(serviceIdRaw?.[0] ?? "", 10);
+    if (Number.isNaN(serviceId)) return;
+
+    setCartActionError(null);
+    setCartActionSuccess(null);
+    setCartActionLoading(true);
+
+    const items = serviceItems.map((i) => ({
+      serviceItemId: i.id,
+      quantity: i.quantity,
+      pricePerUnit: i.price,
+    }));
+
+    const basePayload = {
+      authUserId: state.user.auth_user_id,
+      appointmentDate: serviceInfo?.date ?? "",
+      appointmentTime: serviceInfo?.time ?? "",
+      remark: serviceInfo?.additionalInfo || undefined,
+      items,
+    };
+
+    try {
+      if (cartItemIdForService != null) {
+        const addressPayload =
+          serviceInfo?.addressId != null
+            ? { addressId: serviceInfo.addressId }
+            : {
+                address: {
+                  address_line: combinedAddressLine,
+                  district: serviceInfo?.district,
+                  subdistrict: serviceInfo?.subDistrict,
+                  province: serviceInfo?.province,
+                  postal_code: serviceInfo?.postalCode,
+                  latitude: serviceInfo?.latitude,
+                  longitude: serviceInfo?.longitude,
+                },
+              };
+        await updateCart(cartItemIdForService, {
+          ...basePayload,
+          ...addressPayload,
+        });
+        setCartActionSuccess("อัปเดตตะกร้าแล้ว");
+      } else {
+        const addressPayload =
+          serviceInfo?.addressId != null
+            ? { addressId: serviceInfo.addressId }
+            : {
+                address: {
+                  address_line: combinedAddressLine,
+                  district: serviceInfo?.district,
+                  subdistrict: serviceInfo?.subDistrict,
+                  province: serviceInfo?.province,
+                  postal_code: serviceInfo?.postalCode,
+                  latitude: serviceInfo?.latitude,
+                  longitude: serviceInfo?.longitude,
+                },
+              };
+        const res = await addToCart({
+          ...basePayload,
+          serviceId,
+          ...addressPayload,
+        });
+        setCartActionSuccess("เพิ่มลงตะกร้าแล้ว");
+        setCartItemIdForService(res.cartItemId);
+      }
+    } catch (err) {
+      setCartActionError(
+        err instanceof Error ? err.message : "เกิดข้อผิดพลาด"
+      );
+    } finally {
+      setCartActionLoading(false);
+    }
   };
 
   /**
@@ -529,14 +736,38 @@ export default function Payment() {
         </section>
 
         {/* Right Panel - Summary */}
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        <div className="lg:sticky lg:top-24 lg:self-start space-y-4">
           <ServiceSummaryCard
             items={serviceItems}
             total={total}
             serviceInfo={serviceInfo}
+            savedAddressLine={serviceInfo?.savedAddressLine}
             promotionCode={paymentData.promotionCode}
             discount={discount}
           />
+          {state.user?.auth_user_id && (
+            <div>
+              {cartActionSuccess && (
+                <p className="body-3 text-green-600 mb-2">{cartActionSuccess}</p>
+              )}
+              {cartActionError && (
+                <p className="body-3 text-red-600 mb-2">{cartActionError}</p>
+              )}
+              <button
+                type="button"
+                disabled={!hasItems || cartActionLoading}
+                onClick={handleCartAction}
+                className="btn-primary w-full inline-flex items-center justify-center gap-2"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartActionLoading
+                  ? "กำลังบันทึก..."
+                  : cartItemIdForService != null
+                    ? "อัปเดตตะกร้า"
+                    : "เพิ่มลงตะกร้า"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </main>
@@ -601,6 +832,7 @@ export default function Payment() {
                   await markPaymentIntentPaid({
                     authUserId: state.user!.auth_user_id,
                     orderId: intentOrderId,
+                    cartItemId: isFromCart ? cartItemIdParam ?? undefined : undefined,
                   });
                 } catch (err) {
                   console.error("Failed to mark order as paid:", err);

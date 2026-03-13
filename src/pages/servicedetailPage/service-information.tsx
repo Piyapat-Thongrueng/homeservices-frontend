@@ -51,7 +51,12 @@ import {
   getPostalCodeForLocation,
   getSubDistrictsByDistrict,
 } from "@/utils/thailand-locations";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ShoppingCart } from "lucide-react";
+import {
+  getCart,
+  addToCart,
+  updateCart,
+} from "@/services/cartApi";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 import { fetchServices } from "@/services/serviceListsApi/serviceApi";
@@ -104,6 +109,34 @@ const defaultServiceInfo: ServiceInfo = {
   savedAddressLine: undefined,
 };
 
+/**
+ * Combined address line used across cart, payment, and summary flows.
+ * Kept outside the component for clearer separation of pure helpers.
+ */
+const buildCombinedAddressLine = (f: ServiceInfo) =>
+  [f.address, f.subDistrict, f.district, f.province, f.postalCode]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+/** Strip given tokens from the end of the string (for normalizing saved address_line). */
+const stripLocationFromAddressLine = (
+  input: string,
+  parts: (string | null | undefined)[],
+) => {
+  let out = (input ?? "").trim();
+  const tokens = parts
+    .map((p) => (typeof p === "string" ? p.trim() : ""))
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  for (const t of tokens) {
+    if (!t) continue;
+    const re = new RegExp(`\\s*${t.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}$`);
+    out = out.replace(re, "").trim();
+  }
+  return out;
+};
+
 export default function ServiceInformation() {
   const router = useRouter();
   const { state } = useAuth();
@@ -122,16 +155,17 @@ export default function ServiceInformation() {
   const [mapDragged, setMapDragged] = useState(false);
   const [coordsUpdating, setCoordsUpdating] = useState(false);
   const [coordsMessage, setCoordsMessage] = useState<string | null>(null);
+  const [cartItemIdForService, setCartItemIdForService] = useState<number | null>(null);
+  const [cartActionLoading, setCartActionLoading] = useState(false);
+  const [cartActionError, setCartActionError] = useState<string | null>(null);
+  const [cartActionSuccess, setCartActionSuccess] =
+    useState<string | null>(null);
   const selectedSaved = isUsingSavedAddress
     ? savedAddresses.find((a) => a.id === formData.addressId)
     : undefined;
 
   /** Combined address line — must match how we send to backend / how rows are stored */
-  const combinedAddressLine = (f: ServiceInfo) =>
-    [f.address, f.subDistrict, f.district, f.province, f.postalCode]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
+  const combinedAddressLine = (f: ServiceInfo) => buildCombinedAddressLine(f);
 
   /** When "กรอกที่อยู่ใหม่" but data matches a saved row, reuse that row's lat/long */
   const syncLatLongFromMatchingSaved = (
@@ -140,15 +174,15 @@ export default function ServiceInformation() {
   ) => {
     const line = combinedAddressLine(f);
     if (!line) return;
-    const city = (f.district || "").trim();
+    const dis = (f.district || "").trim();
     const province = (f.province || "").trim();
     const postal = (f.postalCode || "").trim();
     const match = list.find((a) => {
       const al = (a.address_line || "").trim();
-      const ac = (a.city || "").trim();
+      const ac = (a.district || "").trim();
       const ap = (a.province || "").trim();
       const az = (a.postal_code || "").trim();
-      return al === line && ac === city && ap === province && az === postal;
+      return al === line && ac === dis && ap === province && az === postal;
     });
     if (
       match &&
@@ -232,6 +266,32 @@ export default function ServiceInformation() {
       }
     }
   }, [router.isReady, router.query, user?.auth_user_id]);
+
+  /** When user is logged in and we have serviceId, check if this service is already in cart (for Update cart vs Add to cart) */
+  useEffect(() => {
+    if (!state.user?.auth_user_id || !router.query.serviceId) {
+      setCartItemIdForService(null);
+      return;
+    }
+    const sid = Array.isArray(router.query.serviceId)
+      ? router.query.serviceId[0]
+      : router.query.serviceId;
+    const serviceIdNum = parseInt(sid, 10);
+    if (Number.isNaN(serviceIdNum)) return;
+    let cancelled = false;
+    getCart(state.user.auth_user_id)
+      .then((res) => {
+        if (cancelled) return;
+        const found = (res.cartItems ?? []).find((c) => c.serviceId === serviceIdNum);
+        setCartItemIdForService(found ? found.id : null);
+      })
+      .catch(() => {
+        if (!cancelled) setCartItemIdForService(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.user?.auth_user_id, router.query.serviceId]);
 
   /**
    * Load selected service data from API using serviceId in query
@@ -323,7 +383,108 @@ export default function ServiceInformation() {
    * Navigate back to previous page
    */
   const handleBack = () => {
-    router.back();
+    // If user came from cart flow, go back to item selection step instead of browser history
+    if (router.query.fromCart) {
+      const sid = Array.isArray(router.query.serviceId)
+        ? router.query.serviceId[0]
+        : router.query.serviceId;
+      router.push({
+        pathname: "/servicedetailPage/ServiceDetails",
+        query: sid ? { serviceId: sid } : undefined,
+      });
+    } else {
+      router.back();
+    }
+  };
+
+  /**
+   * Add to cart or Update cart (below summary card)
+   */
+  const handleCartAction = async () => {
+    if (!state.user?.auth_user_id || !isFormValid) return;
+    const sid = Array.isArray(router.query.serviceId)
+      ? router.query.serviceId[0]
+      : router.query.serviceId;
+    const serviceIdNum = parseInt(sid ?? "", 10);
+    if (Number.isNaN(serviceIdNum)) return;
+    if (serviceItems.length === 0) return;
+
+    setCartActionError(null);
+    setCartActionSuccess(null);
+    setCartActionLoading(true);
+
+    const items = serviceItems
+      .filter((i) => i.quantity > 0)
+      .map((i) => ({
+        serviceItemId: i.id,
+        quantity: i.quantity,
+        pricePerUnit: i.price,
+      }));
+    if (items.length === 0) {
+      setCartActionError("กรุณาเลือกรายการบริการอย่างน้อย 1 รายการ");
+      setCartActionLoading(false);
+      return;
+    }
+
+    const basePayload = {
+      authUserId: state.user.auth_user_id,
+      appointmentDate: formData.date,
+      appointmentTime: formData.time,
+      remark: formData.additionalInfo || undefined,
+      items,
+    };
+
+    try {
+      if (cartItemIdForService != null) {
+        const addressPayload =
+          formData.addressId != null
+            ? { addressId: formData.addressId }
+            : {
+                address: {
+                  address_line: combinedAddressLine(formData),
+                  district: formData.district,
+                  subdistrict: formData.subDistrict,
+                  province: formData.province,
+                  postal_code: formData.postalCode,
+                  latitude: formData.latitude,
+                  longitude: formData.longitude,
+                },
+              };
+        await updateCart(cartItemIdForService, {
+          ...basePayload,
+          ...addressPayload,
+        });
+        setCartActionSuccess("อัปเดตตะกร้าแล้ว");
+      } else {
+        const addressPayload =
+          formData.addressId != null
+            ? { addressId: formData.addressId }
+            : {
+                address: {
+                  address_line: combinedAddressLine(formData),
+                  district: formData.district,
+                  subdistrict: formData.subDistrict,
+                  province: formData.province,
+                  postal_code: formData.postalCode,
+                  latitude: formData.latitude,
+                  longitude: formData.longitude,
+                },
+              };
+        const res = await addToCart({
+          ...basePayload,
+          serviceId: serviceIdNum,
+          ...addressPayload,
+        });
+        setCartActionSuccess("เพิ่มลงตะกร้าแล้ว");
+        setCartItemIdForService(res.cartItemId);
+      }
+    } catch (err) {
+      setCartActionError(
+        err instanceof Error ? err.message : "เกิดข้อผิดพลาด"
+      );
+    } finally {
+      setCartActionLoading(false);
+    }
   };
 
   /**
@@ -350,30 +511,10 @@ export default function ServiceInformation() {
     });
   };
 
-  /** Strip given tokens from the end of the string (for normalizing saved address_line). */
-  const stripLocationFromAddressLine = (
-    input: string,
-    parts: (string | null | undefined)[],
-  ) => {
-    let out = (input ?? "").trim();
-    const tokens = parts
-      .map((p) => (typeof p === "string" ? p.trim() : ""))
-      .filter(Boolean)
-      .sort((a, b) => b.length - a.length);
-    for (const t of tokens) {
-      if (!t) continue;
-      const re = new RegExp(
-        `\\s*${t.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}$`,
-      );
-      out = out.replace(re, "").trim();
-    }
-    return out;
-  };
-
   /** Apply a saved address row to the form and set addressId for payment. */
   const applySavedAddress = (addr: SavedAddress) => {
     const province = addr.province ?? "";
-    const district = addr.city ?? "";
+    const district = addr.district ?? "";
     const postalCode = addr.postal_code ?? "";
     // 1) Strip postal, province, district from end of address_line so "ที่อยู่" is street-only.
     let addressOnly = stripLocationFromAddressLine(addr.address_line ?? "", [
@@ -439,7 +580,7 @@ export default function ServiceInformation() {
       try {
         const params = new URLSearchParams({
           address_line: combined,
-          city: formData.district,
+          dis: formData.district,
           province: formData.province,
           postal_code: formData.postalCode || "",
         });
@@ -728,7 +869,7 @@ export default function ServiceInformation() {
           </section>
 
           {/* Right Panel - Summary */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
+          <div className="lg:sticky lg:top-24 lg:self-start space-y-4">
             <ServiceSummaryCard
               items={serviceItems}
               total={total}
@@ -740,6 +881,29 @@ export default function ServiceInformation() {
                   : undefined
               }
             />
+            {user?.auth_user_id && (
+              <div>
+              <button
+                type="button"
+                disabled={!isFormValid || cartActionLoading}
+                onClick={handleCartAction}
+                className="btn-primary w-full inline-flex items-center justify-center gap-2"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartActionLoading
+                  ? "กำลังบันทึก..."
+                  : cartItemIdForService != null
+                    ? "อัปเดตตะกร้า"
+                    : "เพิ่มลงตะกร้า"}
+              </button>
+              {cartActionSuccess && (
+                <p className="body-3 text-green-600 mb-2">{cartActionSuccess}</p>
+              )}
+              {cartActionError && (
+                <p className="body-3 text-red-600 mb-2">{cartActionError}</p>
+              )}
+            </div>
+            )}
           </div>
         </div>
       </main>
