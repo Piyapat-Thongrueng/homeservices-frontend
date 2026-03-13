@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
+import { getCart } from "@/services/cartApi";
 
 export default function Navbar() {
   const router = useRouter();
@@ -9,6 +11,7 @@ export default function Navbar() {
 
   const [open, setOpen] = useState<boolean>(false);
   const [showLogoutModal, setShowLogoutModal] = useState<boolean>(false);
+  const [cartCount, setCartCount] = useState<number>(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // ← ปิด dropdown เมื่อคลิกข้างนอก
@@ -29,6 +32,29 @@ export default function Navbar() {
   const userName = user?.full_name || user?.username || "User";
   const userEmail = user?.email || "";
   const userInitial = userName.charAt(0).toUpperCase();
+
+  // Load cart count for badge when user is logged in
+  useEffect(() => {
+    if (!user?.auth_user_id) {
+      setCartCount(0);
+      return;
+    }
+    let cancelled = false;
+    getCart(user.auth_user_id)
+      .then((res) => {
+        if (cancelled) return;
+        // Show count of distinct cart entries (cards), not total service quantities
+        const count = res.cartItems?.length ?? 0;
+        setCartCount(count);
+      })
+      .catch(() => {
+        if (!cancelled) setCartCount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Re-fetch when route changes so count stays in sync after leaving cart page
+  }, [user?.auth_user_id, router.pathname]);
 
   // ← เปิด modal แทนการ logout ทันที
   const handleLogoutClick = (): void => {
@@ -194,6 +220,21 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
+
+                  {/* CART - to the right of profile */}
+                  <span className="w-px h-7 bg-gray-300 shrink-0" aria-hidden />
+                  <button
+                    onClick={() => router.push("/cartPage/cart")}
+                    className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
+                    aria-label="ตะกร้าสินค้า"
+                  >
+                    <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center leading-none">
+                        {cartCount}
+                      </span>
+                    )}
+                  </button>
                 </>
               ) : (
                 <button

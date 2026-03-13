@@ -99,9 +99,7 @@ export default function PaymentConfirmation() {
   const formatAddress = () => {
     if (!serviceInfo) return "";
     if (serviceInfo.savedAddressLine) {
-      return [serviceInfo.address, serviceInfo.postalCode]
-        .filter(Boolean)
-        .join(" ");
+      return serviceInfo.savedAddressLine as string;
     }
     return [
       serviceInfo.address,
@@ -207,7 +205,8 @@ export default function PaymentConfirmation() {
               )}
 
               {/* Location */}
-              {(serviceInfo?.address ||
+              {(serviceInfo?.savedAddressLine ||
+                serviceInfo?.address ||
                 serviceInfo?.subDistrict ||
                 serviceInfo?.district ||
                 serviceInfo?.province) && (

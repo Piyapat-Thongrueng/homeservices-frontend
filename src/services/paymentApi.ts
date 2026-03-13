@@ -107,6 +107,8 @@ export async function createPromptPayIntent(
 export async function markPaymentIntentPaid(params: {
   authUserId: string;
   orderId: number;
+  /** When paying from cart, pass cart item id so backend deletes it after payment */
+  cartItemId?: number;
 }): Promise<void> {
   const res = await fetch(`${API_URL}/api/payment/intent/mark-paid`, {
     method: "POST",
