@@ -34,6 +34,8 @@ import {
 } from "@/utils/localStorage-helpers";
 import { useAuth } from "@/contexts/AuthContext";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
 export default function ServiceDetails() {
   const router = useRouter();
   const { state } = useAuth();
@@ -71,7 +73,7 @@ export default function ServiceDetails() {
     const loadService = async () => {
       try {
         const response = await axios.get<ServiceDetailResponseApi>(
-          `https://homeservices-server.vercel.app/api/services/${id}`,
+          `${API_URL}/api/services/${id}`,
         );
         const data = response.data;
         if (!isSubscribed) return;
