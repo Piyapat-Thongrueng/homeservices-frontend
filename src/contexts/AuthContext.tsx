@@ -1,17 +1,17 @@
 import axios, { AxiosError } from "axios";
 import React, { useContext, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/router";
+import { supabase } from "@/utils/supabaseClient";
 
 interface User {
   id: number;
-  auth_user_id: string
+  auth_user_id: string;
   email: string;
   full_name: string;
   username: string;
   profile_pic: string;
   phone: string;
   role: "user";
-
 }
 
 interface AuthState {
@@ -36,6 +36,7 @@ interface RegisterData {
 interface AuthContextValue {
   state: AuthState;
   login: (data: LoginData) => Promise<{ error?: string } | void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   register: (data: RegisterData) => Promise<{ error?: string } | void>;
   isAuthenticated: boolean;
@@ -160,6 +161,16 @@ function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const loginWithGoogle = async (): Promise<void> => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) console.error("Google login error:", error);
+  };
+
   // Fn3: ฟังก์ชันสำหรับลงทะเบียน โดยจะรับข้อมูลการลงทะเบียนจากผู้ใช้และส่งคำขอ POST ไปยัง API เพื่อทำการสร้างบัญชีผู้ใช้ใหม่
   const register = async (
     data: RegisterData,
@@ -207,6 +218,7 @@ function AuthProvider({ children }: AuthProviderProps) {
       value={{
         state,
         login,
+        loginWithGoogle,
         logout,
         register,
         isAuthenticated,

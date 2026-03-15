@@ -4,6 +4,7 @@ import type { ChangeEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthenticationRoute from "@/components/auth/AuthenticationRoute";
 import LoginModal from "./LoginModal";
+import { Mail, Lock, Eye, EyeOff, Wrench, ArrowLeft } from "lucide-react";
 
 interface FormErrors {
   email: string;
@@ -16,21 +17,18 @@ const initialErrors: FormErrors = {
 };
 
 export default function LoginPage() {
-  const { login, state, isAuthenticated } = useAuth();
+  const { login, state, isAuthenticated, loginWithGoogle } = useAuth();
 
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>(initialErrors);
-
   const [modalType, setModalType] = useState<"success" | "error" | null>(null);
   const [apiError, setApiError] = useState<string>("");
-
-  // ฟังก์ชันสำหรับตรวจสอบความถูกต้องของฟอร์ม
 
   const validate = (): boolean => {
     const newErrors: FormErrors = { ...initialErrors };
     let valid = true;
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!email.trim()) {
@@ -40,7 +38,6 @@ export default function LoginPage() {
       newErrors.email = "รูปแบบอีเมลไม่ถูกต้อง";
       valid = false;
     }
-
     if (!password.trim()) {
       newErrors.password = "โปรดกรอกรหัสผ่าน";
       valid = false;
@@ -53,7 +50,6 @@ export default function LoginPage() {
     return valid;
   };
 
-  // ฟังก์ชันสำหรับจัดการการเข้าสู่ระบบ และแสดง modal ตามผลลัพธ์
   const handleLogin = async (e: React.SyntheticEvent): Promise<void> => {
     e.preventDefault();
     if (state.loading) return;
@@ -69,20 +65,17 @@ export default function LoginPage() {
     }
   };
 
-  // ฟังก์ชันสำหรับปิด modal
   const handleCloseModal = (): void => {
     setModalType(null);
     setApiError("");
   };
 
-  // UI
   return (
     <AuthenticationRoute
       isLoading={state.getUserLoading}
       isAuthenticated={isAuthenticated}
       bypassRedirect={modalType === "success"}
     >
-      {/* Modal */}
       {modalType && (
         <LoginModal
           type={modalType}
@@ -91,27 +84,35 @@ export default function LoginPage() {
         />
       )}
 
-      <div className="min-h-screen bg-[#F6F7FB] flex justify-center px-4 py-10 sm:py-16">
-        <div className="w-full max-w-105 bg-white border border-[#E4E7EC] rounded-md px-5 py-6 sm:px-8 sm:py-8">
-          <h1 className="text-center text-[20px] sm:text-[24px] font-semibold text-[#101828] mb-6">
-            เข้าสู่ระบบ
-          </h1>
+      <div className="min-h-screen bg-[#F6F7FB] flex items-center justify-center px-4 py-10 font-prompt">
+        <div className="w-full max-w-md bg-white border border-gray-200 rounded-2xl px-8 py-10 shadow-sm">
+          {/* Logo */}
+          <div className="flex flex-col items-center mb-8">
+            <h1 className="text-[32px] font-bold text-gray-900">เข้าสู่ระบบ</h1>
+          </div>
 
           <form className="space-y-4" onSubmit={handleLogin}>
             {/* EMAIL */}
             <div>
-              <label className="block text-[14px] font-medium text-[#344054] mb-1">
-                อีเมล
+              <label className="block text-[14px] font-semibold text-gray-700 mb-1.5">
+                อีเมล <span className="text-red-500">*</span>
               </label>
-              <input
-                type="email"
-                placeholder="กรุณากรอกอีเมล"
-                value={email}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setEmail(e.target.value)
-                }
-                className="w-full h-11 px-3 text-[14px] border border-[#D0D5DD] rounded-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-              />
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="email"
+                  placeholder="กรุณากรอกอีเมลของคุณ"
+                  value={email}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setEmail(e.target.value)
+                  }
+                  className={`w-full h-11 pl-10 pr-4 text-[14px] bg-gray-50 border rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all ${
+                    errors.email
+                      ? "border-red-400 focus:border-red-400"
+                      : "border-gray-200 focus:border-blue-500"
+                  }`}
+                />
+              </div>
               {errors.email && (
                 <p className="text-[12px] text-red-500 mt-1">{errors.email}</p>
               )}
@@ -119,18 +120,36 @@ export default function LoginPage() {
 
             {/* PASSWORD */}
             <div>
-              <label className="block text-[14px] font-medium text-[#344054] mb-1">
-                รหัสผ่าน
+              <label className="block text-[14px] font-semibold text-gray-700 mb-1.5">
+                รหัสผ่าน <span className="text-red-500">*</span>
               </label>
-              <input
-                type="password"
-                placeholder="กรุณากรอกรหัสผ่าน"
-                value={password}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setPassword(e.target.value)
-                }
-                className="w-full h-11 px-3 text-[14px] border border-[#D0D5DD] rounded-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-              />
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="กรุณากรอกรหัสผ่านของคุณ"
+                  value={password}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setPassword(e.target.value)
+                  }
+                  className={`w-full h-11 pl-10 pr-10 text-[14px] bg-gray-50 border rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all ${
+                    errors.password
+                      ? "border-red-400 focus:border-red-400"
+                      : "border-gray-200 focus:border-blue-500"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
               {errors.password && (
                 <p className="text-[12px] text-red-500 mt-1">
                   {errors.password}
@@ -142,35 +161,50 @@ export default function LoginPage() {
             <div className="text-right">
               <Link
                 href="/forgot-password"
-                className="text-[13px] text-blue-600 underline"
+                className="text-[13px] text-blue-600 hover:underline"
               >
                 ลืมรหัสผ่าน?
               </Link>
             </div>
 
+            {/* SUBMIT */}
             <button
               type="submit"
               disabled={state.loading ?? false}
-              className="btn-primary w-full h-11 text-[14px]"
+              className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-md shadow-blue-100 cursor-pointer"
             >
               {state.loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
             </button>
           </form>
 
           {/* DIVIDER */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 border-t border-[#E4E7EC]" />
-            <span className="text-[12px] text-[#98A2B3]">
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 border-t border-gray-100" />
+            <span className="text-[12px] text-gray-400">
               หรือลงชื่อเข้าใช้ผ่าน
             </span>
-            <div className="flex-1 border-t border-[#E4E7EC]" />
+            <div className="flex-1 border-t border-gray-100" />
           </div>
 
-          {/* FACEBOOK — UI only */}
+          {/* GOOGLE */}
+          <button
+            type="button"
+            onClick={loginWithGoogle}
+            className="w-full h-11 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors cursor-pointer text-[14px] text-gray-700 font-medium"
+          >
+            <img
+              src="/icons/google_logos_.png"
+              alt="Google"
+              className="w-4.5 h-4.5"
+            />
+            เข้าสู่ระบบด้วยบัญชี Google
+          </button>
+
+          {/* FACEBOOK — disabled */}
           <button
             type="button"
             disabled
-            className="btn-secondary w-full h-11 flex items-center justify-center gap-2 mb-3 opacity-50 cursor-not-allowed"
+            className="w-full h-11 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 mt-3 opacity-40 cursor-not-allowed text-[14px] text-gray-600 font-medium"
           >
             <img
               src="/icons/facebook_logos_.png"
@@ -180,27 +214,29 @@ export default function LoginPage() {
             เข้าสู่ระบบด้วย Facebook
           </button>
 
-          {/* GOOGLE — UI only */}
-          <button
-            type="button"
-            disabled
-            className="btn-secondary w-full h-11 flex items-center justify-center gap-2 opacity-50 cursor-not-allowed"
-          >
-            <img
-              src="/icons/google_logos_.png"
-              alt="Google"
-              className="w-4.5 h-4.5"
-            />
-            เข้าสู่ระบบด้วย Google
-          </button>
-
-          {/* REGISTER LINK */}
-          <p className="text-center text-[13px] text-[#667085] mt-6">
-            ยังไม่มีบัญชีผู้ใช้ HomeService?{" "}
-            <Link href="/register" className="text-blue-600 underline">
+          {/* REGISTER LINK + BACK TO HOME */}
+          <p className="text-center text-[14px] text-gray-400 mt-6">
+            ยังไม่มีบัญชีผู้ใช้ HomeServices?{" "}
+            <Link
+              href="/register"
+              className="text-blue-600 font-semibold hover:underline"
+            >
               ลงทะเบียน
             </Link>
           </p>
+
+          {/* BACK TO HOME */}
+          <div className="mt-5 pt-5 border-t border-gray-100 flex justify-center">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-[13px] text-gray-500 hover:text-blue-600 font-medium transition-colors group"
+            >
+              <span className="w-7 h-7 rounded-full bg-gray-100 group-hover:bg-blue-50 flex items-center justify-center transition-colors">
+                <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
+              </span>
+              กลับไปยังหน้าหลัก
+            </Link>
+          </div>
         </div>
       </div>
     </AuthenticationRoute>
