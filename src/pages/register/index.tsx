@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import AuthenticationRoute from "@/components/auth/AuthenticationRoute";
 import RegisterModal from "./RegisterModal";
 import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowLeft } from "lucide-react";
+import TermsModal from "./TermsModal";
+import PrivacyModal from "./PrivacyModal";
 
 interface FormErrors {
   name: string;
@@ -33,6 +35,8 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<FormErrors>(initialErrors);
   const [modalType, setModalType] = useState<"success" | "error" | null>(null);
   const [apiError, setApiError] = useState<string>("");
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const validate = (): boolean => {
     const newErrors: FormErrors = { ...initialErrors };
@@ -269,11 +273,17 @@ export default function RegisterPage() {
                 </div>
                 <span className="text-[14px] text-gray-500 leading-relaxed">
                   ยอมรับ{" "}
-                  <span className="text-blue-600 font-medium hover:underline cursor-pointer">
+                  <span
+                    onClick={() => setShowTerms(true)}
+                    className="text-blue-600 font-medium hover:underline cursor-pointer"
+                  >
                     ข้อตกลงและเงื่อนไข
                   </span>{" "}
                   และ{" "}
-                  <span className="text-blue-600 font-medium hover:underline cursor-pointer">
+                  <span
+                    onClick={() => setShowPrivacy(true)}
+                    className="text-blue-600 font-medium hover:underline cursor-pointer"
+                  >
                     นโยบายความเป็นส่วนตัว
                   </span>
                 </span>
@@ -318,6 +328,8 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+      {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
+      {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
     </AuthenticationRoute>
   );
 }
