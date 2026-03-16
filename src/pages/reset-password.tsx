@@ -4,18 +4,11 @@ import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import OrderSidebar from "@/components/repairorder/OrderSidebar";
 import { supabase } from "@/lib/supabaseClient";
-import { useAuth } from '@/contexts/AuthContext';
+import { useRequireAuth } from "@/contexts/useRequireAuth";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const { state, isAuthenticated } = useAuth();
-  const { user, getUserLoading: authLoading } = state;
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [authLoading, isAuthenticated, router]);
+  const { user, loading: authLoading } = useRequireAuth();
 
   const [saving, setSaving] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -112,13 +105,9 @@ export default function ResetPasswordPage() {
           
           {/* Sidebar - ใช้ตัวเดียวกับหน้า Dashboard */}
           <div className="w-full md:w-64 shrink-0">
-          <OrderSidebar 
-              activeTab="profile" // 🛑 บังคับให้ไฮไลท์เมนู "ข้อมูลผู้ใช้งาน" ไว้เสมอเวลาอยู่หน้านี้
-              onTabChange={(tab) => {
-                // 🛑 เวลากดเมนูอื่น ให้กลับไปหน้า profile พร้อมแนบชื่อแท็บไปด้วย
-                router.push(`/profile?tab=${tab}`);
-              }}
-            />
+            <OrderSidebar activeTab="profile" onTabChange={(tab) => {
+                if(tab !== 'profile') router.push('/profile');
+            }} />
           </div>
 
           {/* Content Area */}

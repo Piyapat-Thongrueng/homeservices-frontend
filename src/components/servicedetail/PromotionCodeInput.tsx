@@ -22,8 +22,7 @@ interface PromotionCodeInputProps {
   onValueChange: (value: string) => void;
   /** Callback when apply button is clicked (receives the code to validate) */
   onApply: (code: string) => void;
-  /** Optional callback when user wants to reset / change code after applied */
-  onReset?: () => void;
+  onRemove: () => void;
 }
 
 const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
@@ -32,7 +31,7 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
   error,
   onValueChange,
   onApply,
-  onReset,
+  onRemove,
 }) => {
   const hasDiscount = discount > 0 && !error;
 
@@ -70,35 +69,40 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
           type="text"
           value={value || ""}
           onChange={(e) => onValueChange(e.target.value)}
-          className={`flex-1 px-4 py-3 border rounded-lg headline-5 focus:outline-none transition-colors ${
+          disabled={isApplied} // ล็อกช่องพิมพ์ถ้าใช้โค้ดสำเร็จแล้ว
+          className={`flex-1 px-4 py-3 border rounded-lg headline-5 focus:outline-none ${
             error
-              ? "border-red-500 focus:border-red-500 bg-white"
-              : hasDiscount
-              ? "border-gray-300 bg-gray-100 text-gray-800 disabled:opacity-100"
-              : "border-gray-300 focus:border-blue-600 bg-white"
+              ? "border-red-500 focus:border-red-500"
+              : isApplied
+              ? "border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed" // สไตล์ตอนโดนล็อก (สีเทาจาง)
+              : "border-gray-300 focus:border-blue-600"
           }`}
           placeholder="กรุณากรอกโค้ดส่วนลด (ถ้ามี)"
-          onKeyPress={handleKeyPress}
-          disabled={hasDiscount}
+          onKeyPress={!isApplied ? handleKeyPress : undefined}
         />
-        {/* Apply Button */}
-        <button
-          type="button"
-          className={`px-6 cursor-pointer rounded-lg font-medium transition-colors ${
-            hasDiscount
-              ? "bg-yellow-500 text-white hover:bg-yellow-400"
-              : "btn-primary"
-          }`}
-          onClick={handleApply}
-        >
-          {hasDiscount ? "เปลี่ยนโค้ด" : "ใช้โค้ด"}
-        </button>
+        {/* สลับปุ่มตามสถานะ isApplied */}
+        {isApplied ? (
+          <button
+            type="button"
+            className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors whitespace-nowrap font-medium"
+            onClick={onRemove}
+          >
+            เปลี่ยนโค้ด
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn-primary px-6 py-3 rounded-lg cursor-pointer whitespace-nowrap"
+            onClick={handleApply}
+          >
+            ใช้โค้ด
+          </button>
+        )}
       </div>
       
       {/* ข้อความแจ้งเตือน */}
       {error && <p className="mt-2 body-3 text-red-500">{error}</p>}
-      {/* Success Message */}
-      {hasDiscount && (
+      {isApplied && (
         <p className="mt-2 body-3 text-green-600">
           ใช้โค้ดส่วนลดสำเร็จ!
         </p>
