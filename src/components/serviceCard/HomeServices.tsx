@@ -15,7 +15,7 @@ interface HomeServicesProps {
   serviceLists: Service[];
   // mode: "landing" = แสดง 3 รายการ + ปุ่มดูทั้งหมด, "full" = แสดงทั้งหมด
   mode?: "landing" | "full";
-  // Req1: callback เมื่อ user กด category badge บนการ์ด
+  // callback เมื่อ user กด category badge บนการ์ด
   onCategoryClick?: (categoryId: number, categoryNameTh: string) => void;
 }
 
@@ -25,16 +25,16 @@ export default function HomeServices({
   onCategoryClick,
 }: HomeServicesProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { state } = useAuth();
 
-  // Req3: ถ้า mode="landing" แสดงแค่ 3 รายการแรก (ยอดนิยม ควร sort มาจาก API แล้ว)
+  // ถ้า mode="landing" แสดงแค่ 3 รายการแรก (ยอดนิยม ควร sort มาจาก API แล้ว)
   const displayList =
     mode === "landing" ? serviceLists.slice(0, 3) : serviceLists;
 
   const handleSelectService = (service: Service) => {
     // ถ้ายังไม่ได้ login ให้ไปหน้า login ก่อน
-    if (!user) {
-      router.push("/auth/login");
+    if (!state.user) {
+      router.push("/login");
       return;
     }
 
@@ -47,7 +47,7 @@ export default function HomeServices({
 
   return (
     <div className="w-full bg-gray-50 py-16 text-gray-900 font-prompt overflow-hidden">
-      <div className="max-w-6xl mx-auto px-4 sm:px-10 lg:px-18">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10">
         {/* หัวข้อ */}
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold text-gray-900">
@@ -80,7 +80,7 @@ export default function HomeServices({
                   </div>
 
                   <div className="p-6 flex flex-col grow">
-                    {/* Req1 + Req2: category badge กดได้ + สีต่างกันตาม category */}
+                    {/* category badge กดได้ + สีต่างกันตาม category */}
                     <button
                       onClick={() =>
                         onCategoryClick?.(
@@ -102,10 +102,11 @@ export default function HomeServices({
                     <div className="flex items-center gap-2 text-gray-500 mb-6 grow">
                       <Tag className="w-4 h-4 text-blue-500 shrink-0" />
                       <p className="text-sm">
-                        {service.min_price?.toLocaleString()
-                          ? service.min_price.toLocaleString()
-                          : service.price?.toLocaleString()}
-                        ฿
+                        {service.min_price !== null &&
+                        service.max_price !== null &&
+                        service.min_price !== service.max_price
+                          ? `${Math.floor(service.min_price).toLocaleString()} - ${Math.floor(service.max_price).toLocaleString()} ฿`
+                          : `${Math.floor(service.price ?? service.min_price ?? 0).toLocaleString()} ฿`}
                       </p>
                     </div>
 
@@ -122,7 +123,7 @@ export default function HomeServices({
           </div>
         )}
 
-        {/* Req3: ปุ่ม "ดูบริการทั้งหมด" แสดงเฉพาะ mode="landing" */}
+        {/* ปุ่ม "ดูบริการทั้งหมด" แสดงเฉพาะ mode="landing" */}
         {mode === "landing" && (
           <div className="mt-16 flex justify-center">
             <button

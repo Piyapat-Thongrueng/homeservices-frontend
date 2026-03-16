@@ -34,9 +34,12 @@ import {
 } from "@/utils/localStorage-helpers";
 import { useAuth } from "@/contexts/AuthContext";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
 export default function ServiceDetails() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { state } = useAuth();
+  const user = state.user;
 
   const [selectedService, setSelectedService] = useState<ServiceDetailResponseApi | null>(null);
   
@@ -70,7 +73,7 @@ export default function ServiceDetails() {
     const loadService = async () => {
       try {
         const response = await axios.get<ServiceDetailResponseApi>(
-          `https://homeservices-server.vercel.app/api/services/${id}`,
+          `${API_URL}/api/services/${id}`,
         );
         const data = response.data;
         if (!isSubscribed) return;
@@ -102,7 +105,7 @@ export default function ServiceDetails() {
     const allItemsKey = getServiceScopedKey(
       ALL_ITEMS_STORAGE_KEY,
       serviceId,
-      user?.id,
+      user?.auth_user_id,
     );
     const savedItems = getFromLocalStorage<ServiceItem[]>(allItemsKey);
 
@@ -118,7 +121,7 @@ export default function ServiceDetails() {
     });
 
     setServiceItems(mappedItems);
-  }, [selectedService?.id, router.query.serviceId, user?.id]);
+  }, [selectedService?.id, router.query.serviceId, user?.auth_user_id]);
 
   /**
    * Items to display: always derived from current API (selectedService.items)
@@ -147,11 +150,11 @@ export default function ServiceDetails() {
     const allItemsKey = getServiceScopedKey(
       ALL_ITEMS_STORAGE_KEY,
       serviceId,
-      user?.id,
+      user?.auth_user_id,
     );
 
     saveToLocalStorage(allItemsKey, serviceItems);
-  }, [serviceItems, isMounted, router.isReady, router.query.serviceId, user?.id]);
+  }, [serviceItems, isMounted, router.isReady, router.query.serviceId, user?.auth_user_id]);
 
   /**
    * Updates the quantity of a specific service item

@@ -31,7 +31,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         onClick={() => onChange("promptpay")}
         className={`flex-1 flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors cursor-pointer ${
           method === "promptpay"
-            ? "border-blue-600 bg-blue-50"
+            ? "border-blue-600 bg-blue-600 text-white"
             : "border-gray-300 bg-white hover:border-gray-400"
         }`}
       >

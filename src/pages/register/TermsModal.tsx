@@ -1,0 +1,126 @@
+import { X, FileText } from "lucide-react";
+
+interface TermsModalProps {
+  onClose: () => void;
+}
+
+export default function TermsModal({ onClose }: TermsModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
+              <FileText className="w-4.5 h-4.5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-[16px] font-bold text-gray-900">
+                ข้อตกลงและเงื่อนไข
+              </h2>
+              <p className="text-[12px] text-gray-400">
+                HomeService Demo Application
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto px-6 py-5 space-y-5 text-[13px] text-gray-600 leading-relaxed font-prompt">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <p className="text-[12px] text-amber-700 font-medium">
+              ⚠️ แอปพลิเคชันนี้เป็นโปรเจกต์สาธิต (Demo)
+              จัดทำเพื่อวัตถุประสงค์ทางการศึกษาเท่านั้น
+              ไม่ใช่บริการเชิงพาณิชย์จริง
+            </p>
+          </div>
+
+          <section>
+            <h3 className="text-[14px] font-semibold text-gray-800 mb-2">
+              1. การยอมรับข้อตกลง
+            </h3>
+            <p>
+              การลงทะเบียนหรือใช้งาน HomeService Demo
+              ถือว่าคุณยอมรับข้อตกลงและเงื่อนไขการใช้งานฉบับนี้ หากคุณไม่ยอมรับ
+              กรุณาหยุดการใช้งานแอปพลิเคชัน
+            </p>
+          </section>
+
+          <section>
+            <h3 className="text-[14px] font-semibold text-gray-800 mb-2">
+              2. วัตถุประสงค์การใช้งาน
+            </h3>
+            <p>
+              แอปพลิเคชันนี้จัดทำขึ้นเพื่อสาธิตระบบการจองบริการซ่อมแซมที่พักอาศัย
+              ข้อมูลทั้งหมดที่แสดงในระบบเป็นข้อมูลสมมติ
+              ไม่มีการให้บริการจริงเกิดขึ้น
+            </p>
+          </section>
+
+          <section>
+            <h3 className="text-[14px] font-semibold text-gray-800 mb-2">
+              3. บัญชีผู้ใช้
+            </h3>
+            <p>
+              คุณรับผิดชอบในการรักษาความปลอดภัยของบัญชีและรหัสผ่านของตนเอง
+              กรุณาอย่าเปิดเผยข้อมูลการเข้าสู่ระบบให้ผู้อื่นทราบ
+              ทีมพัฒนาขอสงวนสิทธิ์ในการระงับบัญชีที่มีพฤติกรรมไม่เหมาะสม
+            </p>
+          </section>
+
+          <section>
+            <h3 className="text-[14px] font-semibold text-gray-800 mb-2">
+              4. ข้อจำกัดความรับผิดชอบ
+            </h3>
+            <p>
+              เนื่องจากเป็น Demo Application
+              ทีมพัฒนาไม่รับประกันความต่อเนื่องของการให้บริการ
+              และไม่รับผิดชอบต่อความเสียหายใดๆ
+              ที่อาจเกิดขึ้นจากการใช้งานแอปพลิเคชันนี้
+            </p>
+          </section>
+
+          <section>
+            <h3 className="text-[14px] font-semibold text-gray-800 mb-2">
+              5. การเปลี่ยนแปลงข้อตกลง
+            </h3>
+            <p>
+              ทีมพัฒนาขอสงวนสิทธิ์ในการแก้ไขข้อตกลงและเงื่อนไขได้ทุกเมื่อโดยไม่ต้องแจ้งล่วงหน้า
+              การใช้งานต่อเนื่องหลังจากมีการเปลี่ยนแปลงถือว่าคุณยอมรับข้อตกลงใหม่
+            </p>
+          </section>
+
+          <section>
+            <h3 className="text-[14px] font-semibold text-gray-800 mb-2">
+              6. ติดต่อ
+            </h3>
+            <p>
+              หากมีคำถามเกี่ยวกับข้อตกลงนี้
+              สามารถติดต่อทีมพัฒนาได้ผ่านช่องทางที่กำหนดไว้ในแอปพลิเคชัน
+            </p>
+          </section>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100">
+          <button
+            onClick={onClose}
+            className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
+          >
+            รับทราบและปิด
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

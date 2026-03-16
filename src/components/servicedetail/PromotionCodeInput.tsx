@@ -33,10 +33,16 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
   onApply,
   onRemove,
 }) => {
+  const hasDiscount = discount > 0 && !error;
+
   /**
    * Handles apply button click
    */
   const handleApply = () => {
+    if (hasDiscount && onReset) {
+      onReset();
+      return;
+    }
     onApply(value);
   };
 
