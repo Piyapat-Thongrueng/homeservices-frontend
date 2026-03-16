@@ -35,12 +35,12 @@ interface RegisterData {
 
 interface AuthContextValue {
   state: AuthState;
-  login: (data: LoginData) => Promise<{ error?: string } | void>;
+  login: (data: LoginData) => Promise<{ error?: string; role?: string } | void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
   register: (data: RegisterData) => Promise<{ error?: string } | void>;
   isAuthenticated: boolean;
-  fetchUser: () => Promise<void>;
+  fetchUser: () => Promise<string | undefined>;
 }
 
 interface AuthProviderProps {
@@ -70,7 +70,7 @@ function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
 
   // Fn1: ฟังก์ชันสำหรับดึงข้อมูลผู้ใช้จากเซิร์ฟเวอร์ โดยจะตรวจสอบว่ามี token ใน localStorage หรือไม่ หากไม่มี token จะตั้งสถานะผู้ใช้เป็น null และสถานะการโหลดเป็น false
-  const fetchUser = async (): Promise<void> => {
+  const fetchUser = async (): Promise<string | undefined> => {
     // ดึง token จาก localStorage เพื่อใช้ในการตรวจสอบสิทธิ์ในการเข้าถึงข้อมูลผู้ใช้
     const token = localStorage.getItem("token");
     // หากไม่มี token ให้ตั้งสถานะ user เป็น null และ getUserLoading เป็น false เพื่อแสดงว่าการโหลดข้อมูลผู้ใช้เสร็จสิ้น และออกจากฟังก์ชัน
@@ -104,6 +104,7 @@ function AuthProvider({ children }: AuthProviderProps) {
         user: response.data,
         getUserLoading: false,
       }));
+      return response.data.role;
       // หากเกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้ เช่น token ไม่ถูกต้อง หรือมีปัญหาในการเชื่อมต่อกับ API ให้จับข้อผิดพลาดและตั้งสถานะ error
       // เป็นข้อความที่ได้รับจาก API หรือข้อความทั่วไป และตั้งสถานะ user เป็น null และ getUserLoading เป็น false เพื่อแสดงว่าการโหลดข้อมูลผู้ใช้เสร็จสิ้นแม้จะเกิดข้อผิดพลาด
     } catch (error) {
@@ -131,7 +132,9 @@ function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   // Fn2: ฟังก์ชันสำหรับเข้าสู่ระบบ โดยจะรับข้อมูลการเข้าสู่ระบบจากผู้ใช้และส่งคำขอ POST ไปยัง API เพื่อทำการตรวจสอบข้อมูลการเข้าสู่ระบบ
-  const login = async (data: LoginData): Promise<{ error?: string } | void> => {
+  const login = async (
+    data: LoginData,
+  ): Promise<{ error?: string; role?: string } | void> => {
     // เริ่มต้นการเข้าสู่ระบบโดยตั้งสถานะ loading เป็น true และล้าง error ก่อนที่จะทำการส่งคำขอเข้าสู่ระบบไปยัง API
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
@@ -144,7 +147,8 @@ function AuthProvider({ children }: AuthProviderProps) {
       const token = response.data.access_token;
       localStorage.setItem("token", token);
       // Fetch and set user details
-      await fetchUser();
+      const role = await fetchUser();
+      return { role };
     } catch (error) {
       const axiosError = error as AxiosError<ErrorResponse>;
       const errorMessage = axiosError.response?.data?.error || "Login failed";
@@ -161,6 +165,7 @@ function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  // Fn3: ฟังก์ชันสำหรับเข้าสู่ระบบด้วย Google โดยจะใช้ฟังก์ชัน signInWithOAuth ของ Supabase เพื่อเริ่มกระบวนการเข้าสู่ระบบผ่าน OAuth กับ Google และกำหนด URL สำหรับการเปลี่ยนเส้นทางหลังจากเข้าสู่ระบบสำเร็จ
   const loginWithGoogle = async (): Promise<void> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -171,7 +176,7 @@ function AuthProvider({ children }: AuthProviderProps) {
     if (error) console.error("Google login error:", error);
   };
 
-  // Fn3: ฟังก์ชันสำหรับลงทะเบียน โดยจะรับข้อมูลการลงทะเบียนจากผู้ใช้และส่งคำขอ POST ไปยัง API เพื่อทำการสร้างบัญชีผู้ใช้ใหม่
+  // Fn4: ฟังก์ชันสำหรับลงทะเบียน โดยจะรับข้อมูลการลงทะเบียนจากผู้ใช้และส่งคำขอ POST ไปยัง API เพื่อทำการสร้างบัญชีผู้ใช้ใหม่
   const register = async (
     data: RegisterData,
   ): Promise<{ error?: string } | void> => {
