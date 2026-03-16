@@ -171,7 +171,7 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
       <div className="mt-10 pt-8 border-t border-gray-100">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800">ข้อมูลที่อยู่</h2>
-          <p className="text-sm text-gray-500 mt-1">เพื่อให้เราสามารถส่งของ และเอกสารให้คุณได้</p>
+          <p className="text-sm text-gray-500 mt-1">ให้เราสามารถส่งมอบบริการให้แก่คุณได้</p>
         </div>
 
         <div className="space-y-5">
