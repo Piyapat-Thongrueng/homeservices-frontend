@@ -5,8 +5,8 @@ import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import OrderSidebar from '@/components/repairorder/OrderSidebar';
 import OrderCard from '@/components/repairorder/OrderCard';
-import { useRequireAuth } from '@/contexts/useRequireAuth';
-import { supabase } from '@/lib/supabaseClient';
+import UserProfileForm from '@/components/profile/UserProfileForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 type OrderForCard = {
   id: string;
@@ -346,7 +346,6 @@ export default function RepairDashboard() {
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   );
