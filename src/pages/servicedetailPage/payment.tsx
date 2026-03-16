@@ -15,7 +15,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import axios from "axios";
+import {
+  Elements,
+  useStripe,
+  useElements,
+  CardNumberElement,
+} from "@stripe/react-stripe-js";
+import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import Navbar from "@/components/common/Navbar";
 import ServiceHero from "@/components/servicedetail/ServiceHero";
 import ServiceSummaryCard from "@/components/servicedetail/ServiceSummaryCard";
@@ -507,15 +513,6 @@ export default function Payment() {
   };
 
   /**
-   * Handle removing the applied promotion code
-   */
-  const handleRemovePromotionCode = () => {
-    updatePaymentField("promotionCode", ""); // ล้างข้อความในช่องกรอก
-    setDiscount(0);                          // รีเซ็ตส่วนลดกลับเป็น 0
-    setPromotionError("");                   // ล้างข้อความ Error (ถ้ามี)
-  };
-
-  /**
    * Navigate back to previous page
    */
   const handleBack = () => {
@@ -784,61 +781,77 @@ export default function Payment() {
         currentStep={3}
         imageUrl={selectedService?.image}
       />
-
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 md:px-8 pb-10">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)] gap-6 lg:gap-8">
-          {/* Left Panel - Payment Details */}
-          <section className="card-box bg-utility-white p-5 md:p-8">
-            <h2 className="headline-3 text-gray-700 mb-6">ชำระเงิน</h2>
-
-            <div className="space-y-6">
-              {/* Payment Method Selection */}
-              <PaymentMethodSelector
-                method={paymentData.method}
-                onChange={(method) => updatePaymentField("method", method)}
-              />
-
-              {/* Credit Card Fields - Only show if credit card is selected */}
-              {paymentData.method === "creditcard" && (
-                <CreditCardForm
-                  cardNumber={paymentData.cardNumber}
-                  cardName={paymentData.cardName}
-                  expiryDate={paymentData.expiryDate}
-                  cvv={paymentData.cvv}
-                  onCardNumberChange={(value) =>
-                    updatePaymentField("cardNumber", value)
-                  }
-                  onCardNameChange={(value) =>
-                    updatePaymentField("cardName", value)
-                  }
-                  onExpiryDateChange={(value) =>
-                    updatePaymentField("expiryDate", value)
-                  }
-                  onCvvChange={(value) => updatePaymentField("cvv", value)}
-                />
-              )}
-
-              {/* Promotion Code Input */}
-              <PromotionCodeInput
-                value={paymentData.promotionCode}
-                discount={discount}
-                error={promotionError}
-                onValueChange={handlePromotionCodeChange}
-                onApply={handleApplyPromotionCode}
-                onRemove={handleRemovePromotionCode} // เพิ่มบรรทัดนี้เข้าไป
-              />
-            </div>
-          </section>
-
-          {/* Right Panel - Summary */}
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <ServiceSummaryCard
-              items={serviceItems}
-              total={total}
-              serviceInfo={serviceInfo}
-              promotionCode={paymentData.promotionCode}
-              discount={discount}
+      {paymentData.method === "promptpay" ? (
+        <>
+          {mainContent}
+          <ServiceFooterNav
+            canProceed={isFormValid && !isSubmitting && hasItems}
+            onBack={handleBack}
+            onNext={handleNextPromptPay}
+            nextText={isSubmitting ? "กำลังดำเนินการ..." : "ยืนยันการชำระเงิน"}
+          />
+        </>
+      ) : stripePublishableKey && state.user?.auth_user_id ? (
+        <Elements stripe={getStripePromise(stripePublishableKey)}>
+          <>
+            {mainContent}
+            <StripeFooterInner
+              canProceed={isFormValid && !isSubmitting}
+              isSubmitting={isSubmitting}
+              onBack={handleBack}
+              onCreatePaymentIntent={async () => {
+                const serviceIdRaw = router.query.serviceId;
+                const serviceIdValue =
+                  typeof serviceIdRaw === "string"
+                    ? serviceIdRaw
+                    : serviceIdRaw?.[0];
+                const serviceId = serviceIdValue
+                  ? parseInt(serviceIdValue, 10)
+                  : NaN;
+                if (Number.isNaN(serviceId)) {
+                  throw new Error("ไม่พบรหัสบริการ");
+                }
+                return createPaymentIntent({
+                  authUserId: state.user!.auth_user_id,
+                  promotionId: promotionId ?? undefined,
+                  ...buildIntentAddressParams(serviceInfo),
+                  items: serviceItems.map((item) => ({
+                    serviceId,
+                    name: item.description,
+                    quantity: item.quantity,
+                    price: item.price,
+                  })),
+                  discountAmount: discount,
+                  appointmentDate: serviceInfo?.date || undefined,
+                  appointmentTime: serviceInfo?.time || undefined,
+                  remark: serviceInfo?.additionalInfo || undefined,
+                });
+              }}
+              onSuccess={async (intentOrderId: number) => {
+                try {
+                  await markPaymentIntentPaid({
+                    authUserId: state.user!.auth_user_id,
+                    orderId: intentOrderId,
+                    cartItemId: isFromCart ? cartItemIdParam ?? undefined : undefined,
+                  });
+                } catch (err) {
+                  console.error("Failed to mark order as paid:", err);
+                }
+                const query: Record<string, string> = {
+                  items: JSON.stringify(serviceItems),
+                  total: String(finalTotal),
+                  orderId: String(intentOrderId),
+                };
+                if (serviceInfo) {
+                  query.serviceInfo = JSON.stringify(serviceInfo);
+                }
+                router.push({
+                  pathname: "/servicedetailPage/payment-confirmation",
+                  query,
+                });
+              }}
+              setCheckoutError={setCheckoutError}
+              setIsSubmitting={setIsSubmitting}
             />
           </>
         </Elements>
