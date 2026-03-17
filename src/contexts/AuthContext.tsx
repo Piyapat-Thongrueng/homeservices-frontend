@@ -1,7 +1,7 @@
 import axios, { AxiosError } from "axios";
 import React, { useContext, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/utils/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 interface User {
   id: number;
