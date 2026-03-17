@@ -1,5 +1,6 @@
-import React from 'react';
-import { Calendar, UserCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import axios from 'axios';
+import { Calendar, UserCircle, MapPin, X, Loader2 } from 'lucide-react';
 
 interface OrderType {
   id: number;
@@ -10,63 +11,253 @@ interface OrderType {
   details: string[];
 }
 
+interface OrderDetail {
+  id: number;
+  status: string;
+  created_at: string;
+  total_price: number;
+  net_price: number;
+  services: string[];
+  appointment_date: string | null;
+  appointment_time: string | null;
+  address_line: string | null;
+  district: string | null;
+  province: string | null;
+  postal_code: string | null;
+  technician_name: string | null;
+  technician_phone: string | null;
+}
+
+function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () => void }) {
+  const [detail, setDetail] = useState<OrderDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const res = await axios.get(`${API_URL}/api/orders/${orderId}`);
+        setDetail(res.data);
+      } catch {
+        setError('ไม่สามารถโหลดรายละเอียดได้');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [orderId]);
+
+  const statusColor = () => {
+    if (!detail) return 'bg-gray-100 text-gray-600';
+    const s = detail.status;
+    if (s === 'pending' || s === 'รอดำเนินการ') return 'bg-gray-100 text-gray-700';
+    if (s === 'in_progress' || s === 'กำลังดำเนินการ') return 'bg-yellow-100 text-yellow-700';
+    if (s === 'completed' || s === 'ดำเนินการสำเร็จ') return 'bg-teal-100 text-teal-700';
+    if (s === 'cancelled' || s === 'ยกเลิกคำสั่งซ่อม') return 'bg-red-100 text-red-600';
+    return 'bg-gray-100 text-gray-600';
+  };
+
+  const thaiStatus = (s: string) => {
+    if (s === 'pending') return 'รอดำเนินการ';
+    if (s === 'in_progress') return 'กำลังดำเนินการ';
+    if (s === 'completed') return 'ดำเนินการสำเร็จ';
+    if (s === 'cancelled') return 'ยกเลิกคำสั่งซ่อม';
+    return s;
+  };
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleString('th-TH', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-800">
+            รายละเอียดคำสั่งซ่อม
+          </h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 max-h-[70vh] overflow-y-auto">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin text-blue-500" size={32} />
+            </div>
+          )}
+          {error && (
+            <p className="text-center text-red-500 py-8">{error}</p>
+          )}
+          {detail && (
+            <div className="space-y-5">
+              {/* รหัสและสถานะ */}
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">รหัสคำสั่งซ่อม</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    AD{String(detail.id).padStart(8, '0')}
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium mt-1 ${statusColor()}`}>
+                  {thaiStatus(detail.status)}
+                </span>
+              </div>
+
+              <div className="h-px bg-gray-100" />
+
+              {/* วันที่ */}
+              <div className="flex items-start gap-3">
+                <Calendar size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">วันที่สั่งซ่อม</p>
+                  <p className="text-sm text-gray-800">{formatDate(detail.created_at)}</p>
+                  {detail.appointment_date && (
+                    <p className="text-sm text-blue-600 mt-1">
+                      นัดหมาย: {detail.appointment_date}
+                      {detail.appointment_time ? ` เวลา ${detail.appointment_time}` : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* ช่าง */}
+              <div className="flex items-start gap-3">
+                <UserCircle size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">ช่างผู้รับงาน</p>
+                  <p className="text-sm text-gray-800">
+                    {detail.technician_name || 'ยังไม่ระบุช่าง'}
+                  </p>
+                  {detail.technician_phone && (
+                    <p className="text-sm text-gray-500">{detail.technician_phone}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* ที่อยู่ */}
+              {(detail.address_line || detail.province) && (
+                <div className="flex items-start gap-3">
+                  <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">ที่อยู่นัดซ่อม</p>
+                    <p className="text-sm text-gray-800">
+                      {[detail.address_line, detail.district, detail.province, detail.postal_code]
+                        .filter(Boolean).join(' ')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="h-px bg-gray-100" />
+
+              {/* รายการบริการ */}
+              <div>
+                <p className="text-xs text-gray-400 mb-2">รายการบริการ</p>
+                <ul className="space-y-2">
+                  {(detail.services || []).map((s, i) => (
+                    <li key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-800">• {s}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="h-px bg-gray-100" />
+
+              {/* ราคา */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">ราคารวมทั้งหมด</span>
+                <span className="text-xl font-bold text-gray-900">
+                  {(detail.net_price ?? detail.total_price ?? 0).toLocaleString('th-TH')} ฿
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100">
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            ปิด
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OrderCard({ order }: { order: OrderType }) {
+  const [showModal, setShowModal] = useState(false);
   const isCompleted = order.status === 'ดำเนินการสำเร็จ';
 
-  // กำหนดสีของป้ายสถานะ
-  let statusColor = 'bg-gray-200 text-gray-700'; // รอดำเนินการ
+  let statusColor = 'bg-gray-200 text-gray-700';
   if (order.status === 'กำลังดำเนินการ') statusColor = 'bg-yellow-100 text-yellow-700';
   if (isCompleted) statusColor = 'bg-teal-100 text-teal-700';
   if (order.status === 'ยกเลิกคำสั่งซ่อม') statusColor = 'bg-red-100 text-red-600';
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6">
-      {/* รายละเอียด */}
-      <div className="space-y-3 flex-1">
-        <h3 className="text-lg font-bold text-gray-900">คำสั่งการซ่อมรหัส : AD{String(order.id).padStart(8, '0')}</h3>
-        <div className="text-sm text-gray-500 space-y-1">
-          <div className="flex items-center gap-2">
-            <Calendar size={16} />
-            {/* เปลี่ยนคำตามสถานะ */}
-            <span>{isCompleted ? 'วันเวลาดำเนินการสำเร็จ:' : 'วันเวลาดำเนินการ:'} {order.date}</span>
+    <>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6">
+        <div className="space-y-3 flex-1">
+          <h3 className="text-lg font-bold text-gray-900">
+            คำสั่งการซ่อมรหัส : AD{String(order.id).padStart(8, '0')}
+          </h3>
+          <div className="text-sm text-gray-500 space-y-1">
+            <div className="flex items-center gap-2">
+              <Calendar size={16} />
+              <span>{isCompleted ? 'วันเวลาดำเนินการสำเร็จ:' : 'วันเวลาดำเนินการ:'} {order.date}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <UserCircle size={16} />
+              <span>พนักงาน: {order.worker}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <UserCircle size={16} />
-            <span>พนักงาน: {order.worker}</span>
+          <div className="pt-2">
+            <p className="text-sm text-gray-500 mb-1">รายการ:</p>
+            <ul className="text-sm text-gray-800">
+              {order.details.map((detail, index) => (
+                <li key={index}>• {detail}</li>
+              ))}
+            </ul>
           </div>
-        </div>
-        
-        <div className="pt-2">
-          <p className="text-sm text-gray-500 mb-1">รายการ:</p>
-          <ul className="text-sm text-gray-800">
-            {order.details.map((detail, index) => (
-              <li key={index}>• {detail}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* สถานะ และ ราคา */}
-      <div className="flex flex-col items-start lg:items-end justify-between min-w-[200px]">
-        <div className="flex items-center gap-2 w-full justify-between lg:justify-end mb-4 lg:mb-0">
-          <span className="text-sm text-gray-500">สถานะ:</span>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-            {order.status}
-          </span>
-        </div>
-        
-        <div className="flex items-center gap-2 w-full justify-between lg:justify-end mt-2 lg:mt-0">
-           <span className="text-sm text-gray-500">ราคารวม:</span>
-           <span className="text-lg font-bold text-gray-900">{order.price.toLocaleString('th-TH')} ฿</span>
         </div>
 
-        {/* ซ่อนปุ่มถ้าซ่อมเสร็จแล้ว */}
-        {!isCompleted && (
-          <button className="mt-4 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+        <div className="flex flex-col items-start lg:items-end justify-between min-w-[200px]">
+          <div className="flex items-center gap-2 w-full justify-between lg:justify-end mb-4 lg:mb-0">
+            <span className="text-sm text-gray-500">สถานะ:</span>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+              {order.status}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 w-full justify-between lg:justify-end mt-2 lg:mt-0">
+            <span className="text-sm text-gray-500">ราคารวม:</span>
+            <span className="text-lg font-bold text-gray-900">
+              {order.price.toLocaleString('th-TH')} ฿
+            </span>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="mt-4 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
             ดูรายละเอียด
           </button>
-        )}
+        </div>
       </div>
-    </div>
+
+      {showModal && (
+        <OrderDetailModal orderId={order.id} onClose={() => setShowModal(false)} />
+      )}
+    </>
   );
 }
