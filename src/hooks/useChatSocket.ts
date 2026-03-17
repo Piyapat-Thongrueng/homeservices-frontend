@@ -1,0 +1,145 @@
+import { useEffect } from "react"
+import { socket } from "@/lib/socket"
+
+type Message = {
+  id: string
+  order_id: string
+  sender_id: string
+  message: string
+  image?: string
+  created_at: string
+  is_read?: boolean
+}
+
+type Props = {
+  orderId: string
+  userId: string
+  setMessages: any
+  setTypingUser: any
+  setOnlineUsers: any
+  setUnreadCount: any
+}
+
+export default function useChatSocket({
+  orderId,
+  userId,
+  setMessages,
+  setTypingUser,
+  setOnlineUsers,
+  setUnreadCount
+}: Props) {
+
+  useEffect(() => {
+
+    if (!orderId) return
+
+    // =============================
+    // RECEIVE MESSAGE
+    // =============================
+
+    const receiveMessage = (msg: Message) => {
+
+      setMessages((prev: Message[]) => {
+
+        // ป้องกัน message ซ้ำ
+        if (prev.some(m => m.id === msg.id)) {
+          return prev
+        }
+
+        return [...prev, msg]
+
+      })
+
+      // unread badge
+      if (
+        msg.sender_id !== userId &&
+        document.hidden
+      ) {
+
+        setUnreadCount((prev: number) => prev + 1)
+
+      }
+
+    }
+
+    // =============================
+    // TYPING
+    // =============================
+
+    const typing = ({ userId: typingId }: any) => {
+
+      if (typingId !== userId) {
+
+        setTypingUser(typingId)
+
+      }
+
+    }
+
+    const stopTyping = () => {
+
+      setTypingUser(null)
+
+    }
+
+    // =============================
+    // ONLINE USERS
+    // =============================
+
+    const onlineUsers = (users: string[]) => {
+
+      setOnlineUsers(users)
+
+    }
+
+    // =============================
+    // CHAT CLOSED EVENT
+    // =============================
+
+    const chatClosed = () => {
+
+      alert("งานนี้ถูกปิดแล้ว แชทถูกปิด")
+
+      window.location.reload()
+
+    }
+
+    // =============================
+    // REGISTER SOCKET EVENTS
+    // =============================
+
+    socket.on("receive_message", receiveMessage)
+    socket.on("typing", typing)
+    socket.on("stop_typing", stopTyping)
+    socket.on("online_users", onlineUsers)
+    socket.on("chat_closed", chatClosed)
+
+    // =============================
+    // USER ONLINE
+    // =============================
+
+    socket.emit("user_online", { userId })
+
+    // =============================
+    // JOIN ROOM
+    // =============================
+
+    socket.emit("join_room", orderId)
+
+    // =============================
+    // CLEANUP EVENTS
+    // =============================
+
+    return () => {
+
+      socket.off("receive_message", receiveMessage)
+      socket.off("typing", typing)
+      socket.off("stop_typing", stopTyping)
+      socket.off("online_users", onlineUsers)
+      socket.off("chat_closed", chatClosed)
+
+    }
+
+  }, [orderId, userId])
+
+}
