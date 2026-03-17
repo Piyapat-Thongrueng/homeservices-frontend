@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import LocationSelectors from '@/components/servicedetail/LocationSelectors';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserProfileFormProps {
   user: any; 
@@ -9,18 +10,12 @@ interface UserProfileFormProps {
 
 export default function UserProfileForm({ user }: UserProfileFormProps) {
   const router = useRouter();
+  const { fetchUser } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
-  
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
   
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -38,8 +33,8 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
     if (!user) return;
     const fetchProfileData = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL;
-        const response = await axios.get(`${API_URL}/api/users/${user.id}/address`);
+        const API_URL = "http://localhost:4000";
+        const response = await axios.get(`${API_URL}/api/users/${user.auth_user_id}/address`);
         
         if (response.data) {
           setEmail(response.data.email || user.email || "");
@@ -101,8 +96,8 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
       formData.append("province", province || "");
       formData.append("postal_code", postalCode || "");
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL;
-      const response = await axios.post(`${API_URL}/api/users/${user.id}/update-profile`, formData, {
+      const API_URL = 'http://localhost:4000';
+      const response = await axios.post(`${API_URL}/api/users/${user.auth_user_id}/update-profile`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -110,13 +105,14 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
         setAvatarUrl(response.data.profilePicUrl);
       }
       
-      showToast("บันทึกข้อมูลสำเร็จ", "success");
+      await fetchUser(); // re-sync AuthContext ให้ Navbar อัปเดตรูปทันที
+      alert("บันทึกข้อมูลสำเร็จ ✅");
       
       setSelectedFile(null);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
     } catch (error: any) {
-      showToast("เกิดข้อผิดพลาด: " + error.message, "error");
+      alert("เกิดข้อผิดพลาด: " + error.message);
     } finally {
       setSavingProfile(false);
     }
@@ -171,7 +167,7 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
       <div className="mt-10 pt-8 border-t border-gray-100">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-800">ข้อมูลที่อยู่</h2>
-          <p className="text-sm text-gray-500 mt-1">ให้เราสามารถส่งมอบบริการให้แก่คุณได้</p>
+          <p className="text-sm text-gray-500 mt-1">เพื่อให้เราสามารถส่งของ และเอกสารให้คุณได้</p>
         </div>
 
         <div className="space-y-5">
@@ -228,14 +224,6 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
           <i className="fa-solid fa-lock text-sm"></i>เปลี่ยนรหัสผ่าน
         </button>
       </div>
-      {/* Toast notification */}
-      {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg text-white text-sm font-medium transition-all animate-fade-in
-          ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
-          <span>{toast.type === 'success' ? '✅' : '❌'}</span>
-          <span>{toast.message}</span>
-        </div>
-      )}
     </div>
   );
-}  
+}

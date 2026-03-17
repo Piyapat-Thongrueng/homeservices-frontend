@@ -2,11 +2,11 @@ import React from 'react';
 import { Calendar, UserCircle } from 'lucide-react';
 
 interface OrderType {
-  id: string;
+  id: number;
   status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ' | 'ยกเลิกคำสั่งซ่อม';
   date: string;
   worker: string;
-  price: string;
+  price: number;
   details: string[];
 }
 
@@ -16,13 +16,14 @@ export default function OrderCard({ order }: { order: OrderType }) {
   // กำหนดสีของป้ายสถานะ
   let statusColor = 'bg-gray-200 text-gray-700'; // รอดำเนินการ
   if (order.status === 'กำลังดำเนินการ') statusColor = 'bg-yellow-100 text-yellow-700';
-  if (isCompleted) statusColor = 'bg-teal-100 text-teal-700'; // ดำเนินการสำเร็จ (สีเขียวอมฟ้าตามรูป)
+  if (isCompleted) statusColor = 'bg-teal-100 text-teal-700';
+  if (order.status === 'ยกเลิกคำสั่งซ่อม') statusColor = 'bg-red-100 text-red-600';
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6">
       {/* รายละเอียด */}
       <div className="space-y-3 flex-1">
-        <h3 className="text-lg font-bold text-gray-900">คำสั่งการซ่อมรหัส : {order.id}</h3>
+        <h3 className="text-lg font-bold text-gray-900">คำสั่งการซ่อมรหัส : AD{String(order.id).padStart(8, '0')}</h3>
         <div className="text-sm text-gray-500 space-y-1">
           <div className="flex items-center gap-2">
             <Calendar size={16} />
@@ -56,7 +57,7 @@ export default function OrderCard({ order }: { order: OrderType }) {
         
         <div className="flex items-center gap-2 w-full justify-between lg:justify-end mt-2 lg:mt-0">
            <span className="text-sm text-gray-500">ราคารวม:</span>
-           <span className="text-lg font-bold text-gray-900">{order.price} ฿</span>
+           <span className="text-lg font-bold text-gray-900">{order.price.toLocaleString('th-TH')} ฿</span>
         </div>
 
         {/* ซ่อนปุ่มถ้าซ่อมเสร็จแล้ว */}
