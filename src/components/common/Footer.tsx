@@ -73,13 +73,10 @@ export default function Footer() {
               >
                 นโยบายความเป็นส่วนตัว
               </Link>
-                {t("footer.terms")}
-              </a>
               <a
                 href="#"
                 className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
               >
-                {t("footer.privacy")}
               </a>
             </div>
 
