@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Calendar, UserCircle, MapPin, X, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/router';
+
+import ChatBadge from '@/components/chat/ChatBadge';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface OrderType {
   id: number;
-  status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ' | 'ยกเลิกคำสั่งซ่อม';
+  display_id?: string;
+  status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ' | 'ยกเลิกคำสั่งซ่อม' | 'paid';
   date: string;
   worker: string;
   price: number;
@@ -69,126 +74,89 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleString('th-TH', {
       timeZone: 'Asia/Bangkok',
-      year: 'numeric', month: 'long', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-800">
-            รายละเอียดคำสั่งซ่อม
-          </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+          <h2 className="text-lg font-semibold text-gray-800">รายละเอียดคำสั่งซ่อม</h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">
             <X size={20} className="text-gray-500" />
           </button>
         </div>
 
-        {/* Body */}
         <div className="px-6 py-5 max-h-[70vh] overflow-y-auto">
           {loading && (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex justify-center py-12">
               <Loader2 className="animate-spin text-blue-500" size={32} />
             </div>
           )}
-          {error && (
-            <p className="text-center text-red-500 py-8">{error}</p>
-          )}
+
+          {error && <p className="text-center text-red-500 py-8">{error}</p>}
+
           {detail && (
             <div className="space-y-5">
-              {/* รหัสและสถานะ */}
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">รหัสคำสั่งซ่อม</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    AD{String(detail.id).padStart(8, '0')}
-                  </p>
+                  <p className="text-xs text-gray-400">รหัสคำสั่งซ่อม</p>
+                  <p className="text-xl font-bold">AD{String(detail.id).padStart(8, '0')}</p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium mt-1 ${statusColor()}`}>
+                <span className={`px-3 py-1 rounded-full text-xs ${statusColor()}`}>
                   {thaiStatus(detail.status)}
                 </span>
               </div>
 
               <div className="h-px bg-gray-100" />
 
-              {/* วันที่ */}
-              <div className="flex items-start gap-3">
-                <Calendar size={16} className="text-gray-400 mt-0.5 shrink-0" />
+              <div className="flex gap-3">
+                <Calendar size={16} />
                 <div>
-                  <p className="text-xs text-gray-400 mb-0.5">วันที่สั่งซ่อม</p>
-                  <p className="text-sm text-gray-800">{formatDate(detail.created_at)}</p>
-                  {detail.appointment_date && (
-                    <p className="text-sm text-blue-600 mt-1">
-                      นัดหมาย: {detail.appointment_date}
-                      {detail.appointment_time ? ` เวลา ${detail.appointment_time}` : ''}
-                    </p>
-                  )}
+                  <p className="text-sm">{formatDate(detail.created_at)}</p>
                 </div>
               </div>
 
-              {/* ช่าง */}
-              <div className="flex items-start gap-3">
-                <UserCircle size={16} className="text-gray-400 mt-0.5 shrink-0" />
+              <div className="flex gap-3">
+                <UserCircle size={16} />
                 <div>
-                  <p className="text-xs text-gray-400 mb-0.5">ช่างผู้รับงาน</p>
-                  <p className="text-sm text-gray-800">
-                    {detail.technician_name || 'ยังไม่ระบุช่าง'}
-                  </p>
-                  {detail.technician_phone && (
-                    <p className="text-sm text-gray-500">{detail.technician_phone}</p>
-                  )}
+                  <p>{detail.technician_name || 'ยังไม่ระบุช่าง'}</p>
                 </div>
               </div>
 
-              {/* ที่อยู่ */}
               {(detail.address_line || detail.province) && (
-                <div className="flex items-start gap-3">
-                  <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-400 mb-0.5">ที่อยู่นัดซ่อม</p>
-                    <p className="text-sm text-gray-800">
-                      {[detail.address_line, detail.district, detail.province, detail.postal_code]
-                        .filter(Boolean).join(' ')}
-                    </p>
-                  </div>
+                <div className="flex gap-3">
+                  <MapPin size={16} />
+                  <p>
+                    {[detail.address_line, detail.district, detail.province, detail.postal_code]
+                      .filter(Boolean)
+                      .join(' ')}
+                  </p>
                 </div>
               )}
 
               <div className="h-px bg-gray-100" />
 
-              {/* รายการบริการ */}
-              <div>
-                <p className="text-xs text-gray-400 mb-2">รายการบริการ</p>
-                <ul className="space-y-2">
-                  {(detail.services || []).map((s, i) => (
-                    <li key={i} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-800">• {s}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ul>
+                {(detail.services || []).map((s, i) => (
+                  <li key={i}>• {s}</li>
+                ))}
+              </ul>
 
-              <div className="h-px bg-gray-100" />
-
-              {/* ราคา */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">ราคารวมทั้งหมด</span>
-                <span className="text-xl font-bold text-gray-900">
-                  {(detail.net_price ?? detail.total_price ?? 0).toLocaleString('th-TH')} ฿
-                </span>
+              <div className="flex justify-between">
+                <span>ราคารวม</span>
+                <span>{(detail.net_price ?? detail.total_price ?? 0).toLocaleString()} ฿</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100">
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-          >
+        <div className="px-6 py-4 border-t">
+          <button onClick={onClose} className="w-full py-2 border rounded-lg">
             ปิด
           </button>
         </div>
@@ -199,38 +167,42 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 
 export default function OrderCard({ order }: { order: OrderType }) {
   const [showModal, setShowModal] = useState(false);
+  const router = useRouter();
+
+  const { state } = useAuth();
+  const userId = state.user?.id?.toString() || "";
+
+  const isChatAvailable = order.status === 'paid';
   const isCompleted = order.status === 'ดำเนินการสำเร็จ';
 
   let statusColor = 'bg-gray-200 text-gray-700';
-  if (order.status === 'กำลังดำเนินการ') statusColor = 'bg-yellow-100 text-yellow-700';
-  if (isCompleted) statusColor = 'bg-teal-100 text-teal-700';
-  if (order.status === 'ยกเลิกคำสั่งซ่อม') statusColor = 'bg-red-100 text-red-600';
+
+  if (order.status === 'กำลังดำเนินการ') {
+    statusColor = 'bg-yellow-100 text-yellow-700';
+  }
+  if (isCompleted) {
+    statusColor = 'bg-teal-100 text-teal-700';
+  }
+  if (order.status === 'ยกเลิกคำสั่งซ่อม') {
+    statusColor = 'bg-red-100 text-red-600';
+  }
+  if (order.status === 'paid') {
+    statusColor = 'bg-green-100 text-green-700';
+  }
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6">
-        <div className="space-y-3 flex-1">
-          <h3 className="text-lg font-bold text-gray-900">
-            คำสั่งการซ่อมรหัส : AD{String(order.id).padStart(8, '0')}
-          </h3>
-          <div className="text-sm text-gray-500 space-y-1">
-            <div className="flex items-center gap-2">
-              <Calendar size={16} />
-              <span>{isCompleted ? 'วันเวลาดำเนินการสำเร็จ:' : 'วันเวลาดำเนินการ:'} {order.date}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <UserCircle size={16} />
-              <span>พนักงาน: {order.worker}</span>
-            </div>
-          </div>
-          <div className="pt-2">
-            <p className="text-sm text-gray-500 mb-1">รายการ:</p>
-            <ul className="text-sm text-gray-800">
-              {order.details.map((detail, index) => (
-                <li key={index}>• {detail}</li>
-              ))}
-            </ul>
-          </div>
+      <div className="relative bg-white rounded-xl shadow-sm border p-6 flex justify-between">
+        <div>
+          <h3 className="font-bold">คำสั่งการซ่อมรหัส : {order.id}</h3>
+          <p>{order.date}</p>
+          <p>{order.worker}</p>
+
+          <ul>
+            {order.details.map((d, i) => (
+              <li key={i}>• {d}</li>
+            ))}
+          </ul>
         </div>
 
         <div className="flex flex-col items-start lg:items-end justify-between min-w-[200px]">
@@ -240,23 +212,47 @@ export default function OrderCard({ order }: { order: OrderType }) {
               {order.status}
             </span>
           </div>
+
           <div className="flex items-center gap-2 w-full justify-between lg:justify-end mt-2 lg:mt-0">
             <span className="text-sm text-gray-500">ราคารวม:</span>
             <span className="text-lg font-bold text-gray-900">
               {order.price.toLocaleString('th-TH')} ฿
             </span>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="mt-4 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            ดูรายละเอียด
-          </button>
+
+          {!isCompleted && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="mt-4 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              ดูรายละเอียด
+            </button>
+          )}
         </div>
+
+        {/* CHAT */}
+        {userId && isChatAvailable && (
+          <div className="absolute bottom-4 right-4">
+            <button
+              onClick={() => router.push(`/chat/${order.id}`)}
+              className="relative w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+            >
+              💬
+              <div className="absolute -top-1 -right-1">
+              <ChatBadge orderId={order.id.toString()} userId={userId} />
+
+              </div>
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* MODAL */}
       {showModal && (
-        <OrderDetailModal orderId={order.id} onClose={() => setShowModal(false)} />
+        <OrderDetailModal
+          orderId={order.id}
+          onClose={() => setShowModal(false)}
+        />
       )}
     </>
   );
