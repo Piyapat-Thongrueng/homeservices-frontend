@@ -1,15 +1,4 @@
-/**
- * PromotionCodeInput Component
- * 
- * A component for entering and applying promotion codes with validation.
- * 
- * Features:
- * - Promotion code input field
- * - Apply button
- * - Error message display
- * - Success message display
- * - Enter key support
- */
+import { useTranslation } from "next-i18next";
 
 interface PromotionCodeInputProps {
   /** Current promotion code value */
@@ -34,6 +23,7 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
   onApply,
   onReset,
 }) => {
+  const { t } = useTranslation("common");
   const hasDiscount = discount > 0 && !error;
 
   /**
@@ -59,7 +49,7 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
   return (
     <div>
       <label className="block headline-5 text-gray-900 mb-2">
-        Promotion Code
+        {t("payment.promo_label")}
       </label>
       <div className="flex gap-2">
         {/* Promotion Code Input */}
@@ -74,7 +64,7 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
               ? "border-gray-300 bg-gray-100 text-gray-800 disabled:opacity-100"
               : "border-gray-300 focus:border-blue-600 bg-white"
           }`}
-          placeholder="กรุณากรอกโค้ดส่วนลด (ถ้ามี)"
+          placeholder={t("payment.promo_placeholder")}
           onKeyPress={handleKeyPress}
           disabled={hasDiscount}
         />
@@ -88,7 +78,7 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
           }`}
           onClick={handleApply}
         >
-          {hasDiscount ? "เปลี่ยนโค้ด" : "ใช้โค้ด"}
+          {hasDiscount ? t("payment.btn_change") : t("payment.btn_apply")}
         </button>
       </div>
       {/* Error Message */}
@@ -96,11 +86,11 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
       {/* Success Message */}
       {hasDiscount && (
         <p className="mt-2 body-3 text-green-600">
-          ใช้โค้ดส่วนลดสำเร็จ!
+          {t("payment.msg_promo_success")}
         </p>
       )}
     </div>
   );
 };
 
-export default PromotionCodeInput;
+export default PromotionCodeInput;

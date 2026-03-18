@@ -3,6 +3,7 @@ import {
   CardExpiryElement,
   CardCvcElement,
 } from "@stripe/react-stripe-js";
+import { useTranslation } from "next-i18next";
 
 /**
  * CreditCardForm Component
@@ -31,12 +32,14 @@ const inputWrapperClass =
   "w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 focus-within:border-blue-600 bg-white";
 
 const CreditCardForm: React.FC = () => {
+  const { t } = useTranslation("common");
+
   return (
     <div className="space-y-5">
       {/* Card Number */}
       <div>
         <label className="block headline-5 text-gray-900 mb-2">
-          หมายเลขบัตรเครดิต<span className="text-red-500">*</span>
+          {t("payment.card_number")}<span className="text-red-500 ml-1">*</span>
         </label>
         <div className={inputWrapperClass}>
           <CardNumberElement options={elementOptions} />
@@ -47,7 +50,7 @@ const CreditCardForm: React.FC = () => {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block headline-5 text-gray-900 mb-2">
-            วันหมดอายุ<span className="text-red-500">*</span>
+            {t("payment.card_expiry")}<span className="text-red-500 ml-1">*</span>
           </label>
           <div className={inputWrapperClass}>
             <CardExpiryElement options={elementOptions} />
@@ -55,7 +58,7 @@ const CreditCardForm: React.FC = () => {
         </div>
         <div>
           <label className="block headline-5 text-gray-900 mb-2">
-            รหัส CVC / CVV<span className="text-red-500">*</span>
+            {t("payment.card_cvc")}<span className="text-red-500 ml-1">*</span>
           </label>
           <div className={inputWrapperClass}>
             <CardCvcElement options={elementOptions} />

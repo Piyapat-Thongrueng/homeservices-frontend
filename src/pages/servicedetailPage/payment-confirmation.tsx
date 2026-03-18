@@ -13,15 +13,19 @@ import { useRouter } from "next/router";
 import { Check } from "lucide-react";
 import Navbar from "@/components/common/Navbar";
 import type { ServiceItem } from "@/components/servicedetail/types";
-import { formatDateToThai, formatTimeToThai } from "@/utils/date-formatters";
+import { formatDateLocale, formatTimeLocale } from "@/utils/date-formatters";
 import {
   parseServiceItemsFromQuery,
   parseServiceInfoFromQuery,
 } from "@/utils/router-helpers";
 import { getCheckoutSession } from "@/services/paymentApi";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 
 export default function PaymentConfirmation() {
   const router = useRouter();
+  const { locale } = router;
+  const { t } = useTranslation("common");
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [serviceInfo, setServiceInfo] = useState<any>(null);
   const [total, setTotal] = useState(0);
@@ -62,7 +66,7 @@ export default function PaymentConfirmation() {
           setLoading(false);
         })
         .catch((err) => {
-          setError(err instanceof Error ? err.message : "โหลดข้อมูลไม่สำเร็จ");
+          setError(err instanceof Error ? err.message : t("payment_confirm.error_load"));
           setLoading(false);
         });
       return;
@@ -81,7 +85,7 @@ export default function PaymentConfirmation() {
       setTotal(parseFloat(router.query.total as string));
     }
     setLoading(false);
-  }, [router.query, router.query.session_id]);
+  }, [router.query, router.query.session_id, t]);
 
   /**
    * Calculate total quantity of selected items
@@ -129,7 +133,7 @@ export default function PaymentConfirmation() {
       <div className="min-h-screen bg-utility-bg font-prompt pb-32">
         <Navbar />
         <main className="max-w-2xl mx-auto px-4 md:px-8 pb-10 pt-8 flex justify-center items-center min-h-[40vh]">
-          <p className="body-2 text-gray-600">กำลังโหลด...</p>
+          <p className="body-2 text-gray-600">{t("payment_confirm.loading")}</p>
         </main>
       </div>
     );
@@ -147,7 +151,7 @@ export default function PaymentConfirmation() {
               onClick={() => router.push("/")}
               className="btn-primary px-6 py-2 cursor-pointer"
             >
-              กลับหน้าหลัก
+              {t("payment_confirm.btn_home")}
             </button>
           </div>
         </main>
@@ -168,17 +172,17 @@ export default function PaymentConfirmation() {
           </div>
 
           {/* Confirmation Message */}
-          <h1 className="headline-1 text-gray-900 mb-8">ชำระเงินเรียบร้อย !</h1>
+          <h1 className="headline-1 text-gray-900 mb-8">{t("payment_confirm.success")}</h1>
 
           {/* Service Details */}
           <div className="text-left space-y-4 mb-6">
             {/* Service Item Description and Quantity */}
             <div className="flex items-center justify-between gap-4">
               <p className="body-2 text-gray-700 flex-1">
-                {serviceItems[0]?.description ?? "บริการ"}
+                {serviceItems[0]?.description ?? t("payment_confirm.default_service")}
               </p>
               <p className="body-2 text-gray-600 whitespace-nowrap">
-                {totalQuantity} รายการ
+                {totalQuantity} {t("payment_confirm.items")}
               </p>
             </div>
 
@@ -187,9 +191,9 @@ export default function PaymentConfirmation() {
               {/* Date */}
               {serviceInfo?.date && (
                 <div className="flex items-start justify-between gap-4">
-                  <span className="body-2 text-gray-600">วันที่:</span>
+                  <span className="body-2 text-gray-600">{t("payment_confirm.date")}</span>
                   <span className="body-2 text-gray-900 text-right">
-                    {formatDateToThai(serviceInfo.date)}
+                    {formatDateLocale(serviceInfo.date, locale)}
                   </span>
                 </div>
               )}
@@ -197,9 +201,9 @@ export default function PaymentConfirmation() {
               {/* Time */}
               {serviceInfo?.time && (
                 <div className="flex items-start justify-between gap-4">
-                  <span className="body-2 text-gray-600">เวลา:</span>
+                  <span className="body-2 text-gray-600">{t("payment_confirm.time")}</span>
                   <span className="body-2 text-gray-900 text-right">
-                    {formatTimeToThai(serviceInfo.time)}
+                    {formatTimeLocale(serviceInfo.time, locale)}
                   </span>
                 </div>
               )}
@@ -212,7 +216,7 @@ export default function PaymentConfirmation() {
                 serviceInfo?.province) && (
                 <div className="flex items-start justify-between gap-4">
                   <span className="body-2 text-gray-600 whitespace-nowrap">
-                    สถานที่:
+                    {t("payment_confirm.location")}
                   </span>
                   <span
                     className="body-2 text-gray-900 text-right flex-1"
@@ -227,7 +231,7 @@ export default function PaymentConfirmation() {
               {serviceInfo?.additionalInfo && (
                 <div className="flex items-start justify-between gap-4">
                   <span className="body-2 text-gray-600 whitespace-nowrap">
-                    หมายเหตุ:
+                    {t("payment_confirm.note")}
                   </span>
                   <span
                     className="body-2 text-gray-900 text-right flex-1"
@@ -242,7 +246,7 @@ export default function PaymentConfirmation() {
             {/* Total Amount */}
             <div className="border-t border-gray-300 pt-4">
               <div className="flex items-center justify-between">
-                <span className="body-2 text-gray-700">รวม</span>
+                <span className="body-2 text-gray-700">{t("payment_confirm.total")}</span>
                 <span className="headline-4 font-medium text-gray-900">
                   {total.toFixed(2)} ฿
                 </span>
@@ -253,13 +257,21 @@ export default function PaymentConfirmation() {
           {/* Action Button - Navigate to Home */}
           <button
             type="button"
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/History")}
             className="btn-primary w-full px-8 py-3 mt-6 cursor-pointer"
           >
-            เช็ครายการซ่อม
+            {t("payment_confirm.btn_check_order")}
           </button>
         </div>
       </main>
     </div>
   );
 }
+
+export const getServerSideProps = async ({ locale }: { locale: string }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
+};

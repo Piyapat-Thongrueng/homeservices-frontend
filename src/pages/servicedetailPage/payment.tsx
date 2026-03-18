@@ -57,6 +57,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { getCart, addToCart, updateCart } from "@/services/cartApi";
 import { ShoppingCart } from "lucide-react";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 
 /** When serviceInfo has addressId, pass only addressId so backend reuses row (no duplicate insert). */
 function buildIntentAddressParams(
@@ -126,6 +128,8 @@ const defaultPaymentData: PaymentData = {
 };
 export default function Payment() {
   const router = useRouter();
+  const { locale } = router;
+  const { t } = useTranslation("common");
   const { state } = useAuth();
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
   const [serviceInfo, setServiceInfo] = useState<any>(null);
@@ -185,9 +189,9 @@ export default function Payment() {
       })
       .catch((err) => {
         console.error("Failed to load Stripe config:", err);
-        setCheckoutError("ไม่สามารถโหลดการตั้งค่าการชำระเงินได้");
+        setCheckoutError(t("payment.error_load_config"));
       });
-  }, []);
+  }, [t]);
 
   /** When coming from cart: load cart item and set serviceItems, serviceInfo, selectedService */
   const cartItemIdParam =
@@ -234,6 +238,8 @@ export default function Payment() {
         setSelectedService({
           id: item.serviceId,
           name: item.serviceName,
+          name_en: item.serviceName, // Assuming same for mock if not provided
+          name_th: item.serviceName,
           image: item.serviceImage ?? "",
           description: "",
           price: null,
@@ -413,17 +419,15 @@ export default function Payment() {
    */
   const handleNextPromptPay = async () => {
     if (!isFormValid || !state.user?.auth_user_id) {
-      setCheckoutError("กรุณาเข้าสู่ระบบก่อนชำระเงิน");
+      setCheckoutError(t("payment.error_login_required"));
       return;
     }
     if (!hasItems) {
-      setCheckoutError(
-        "ไม่พบรายการบริการที่ต้องชำระ กรุณากลับไปเลือกบริการอีกครั้ง",
-      );
+      setCheckoutError(t("payment.error_no_items"));
       return;
     }
     if (!stripePublishableKey) {
-      setCheckoutError("ระบบชำระเงินยังไม่พร้อม กรุณารีเฟรชหน้า");
+      setCheckoutError(t("payment.error_not_ready"));
       return;
     }
 
@@ -436,7 +440,7 @@ export default function Payment() {
           ? parseInt(router.query.serviceId, 10)
           : Number(router.query.serviceId?.[0]);
       if (Number.isNaN(serviceId)) {
-        setCheckoutError("ไม่พบรหัสบริการ");
+        setCheckoutError(t("payment.error_no_id"));
         setIsSubmitting(false);
         return;
       }
@@ -460,7 +464,7 @@ export default function Payment() {
 
       const stripeInstance = await getStripePromise(stripePublishableKey);
       if (!stripeInstance) {
-        setCheckoutError("ไม่สามารถโหลด Stripe ได้");
+        setCheckoutError(t("payment.error_stripe_load"));
         setIsSubmitting(false);
         return;
       }
@@ -475,7 +479,7 @@ export default function Payment() {
         });
 
       if (error) {
-        setCheckoutError(error.message ?? "การชำระเงินล้มเหลว");
+        setCheckoutError(error.message ?? t("payment.error_payment_failed"));
         setIsSubmitting(false);
         return;
       }
@@ -501,11 +505,11 @@ export default function Payment() {
           query,
         });
       } else {
-        setCheckoutError("การชำระเงินยังไม่สำเร็จ");
+        setCheckoutError(t("payment.error_not_succeeded"));
       }
     } catch (err) {
       setCheckoutError(
-        err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการชำระเงิน",
+        err instanceof Error ? err.message : t("payment.error_general"),
       );
     } finally {
       setIsSubmitting(false);
@@ -596,7 +600,7 @@ export default function Payment() {
           ...basePayload,
           ...addressPayload,
         });
-        setCartActionSuccess("อัปเดตตะกร้าแล้ว");
+        setCartActionSuccess(t("booking_info.msg_cart_updated"));
       } else {
         const addressPayload =
           serviceInfo?.addressId != null
@@ -617,12 +621,12 @@ export default function Payment() {
           serviceId,
           ...addressPayload,
         });
-        setCartActionSuccess("เพิ่มลงตะกร้าแล้ว");
+        setCartActionSuccess(t("booking_info.msg_cart_added"));
         setCartItemIdForService(res.cartItemId);
       }
     } catch (err) {
       setCartActionError(
-        err instanceof Error ? err.message : "เกิดข้อผิดพลาด"
+        err instanceof Error ? err.message : t("booking_info.msg_error")
       );
     } finally {
       setCartActionLoading(false);
@@ -647,7 +651,7 @@ export default function Payment() {
     const trimmedCode = code.trim().toUpperCase();
 
     if (!trimmedCode) {
-      setPromotionError("กรุณากรอกโค้ดส่วนลด");
+      setPromotionError(t("payment.promo_empty"));
       setDiscount(0);
       return;
     }
@@ -659,7 +663,7 @@ export default function Payment() {
         setPromotionId(null);
         setDiscount(0);
         setPromotionError(
-          result.message ?? "โค้ดส่วนลดไม่ถูกต้องหรือหมดอายุแล้ว",
+          result.message ?? t("payment.promo_invalid"),
         );
         return;
       }
@@ -676,7 +680,7 @@ export default function Payment() {
       console.error("Error validating promotion code:", err);
       setPromotionId(null);
       setDiscount(0);
-      setPromotionError("ไม่สามารถตรวจสอบโค้ดส่วนลดได้");
+      setPromotionError(t("payment.promo_error"));
     }
   };
 
@@ -704,7 +708,7 @@ export default function Payment() {
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)] gap-6 lg:gap-8">
         {/* Left Panel - Payment Details */}
         <section className="card-box bg-utility-white p-5 md:p-8">
-          <h2 className="headline-3 text-gray-700 mb-6">ชำระเงิน</h2>
+          <h2 className="headline-3 text-gray-700 mb-6">{t("payment.heading")}</h2>
 
           <div className="space-y-6">
             {/* Payment Method Selection */}
@@ -761,10 +765,10 @@ export default function Payment() {
               >
                 <ShoppingCart className="w-5 h-5" />
                 {cartActionLoading
-                  ? "กำลังบันทึก..."
+                  ? t("booking_info.msg_saving")
                   : cartItemIdForService != null
-                    ? "อัปเดตตะกร้า"
-                    : "เพิ่มลงตะกร้า"}
+                    ? t("booking_info.btn_update_cart")
+                    : t("booking_info.btn_add_cart")}
               </button>
             </div>
           )}
@@ -777,7 +781,7 @@ export default function Payment() {
     <div className="min-h-screen bg-utility-bg font-prompt pb-32">
       <Navbar />
       <ServiceHero
-        serviceName={selectedService?.name ?? ""}
+        serviceName={(locale === "en" ? selectedService?.name_en : selectedService?.name_th) || selectedService?.name || ""}
         currentStep={3}
         imageUrl={selectedService?.image}
       />
@@ -788,7 +792,7 @@ export default function Payment() {
             canProceed={isFormValid && !isSubmitting && hasItems}
             onBack={handleBack}
             onNext={handleNextPromptPay}
-            nextText={isSubmitting ? "กำลังดำเนินการ..." : "ยืนยันการชำระเงิน"}
+            nextText={isSubmitting ? t("payment.btn_processing") : t("payment.btn_confirm")}
           />
         </>
       ) : stripePublishableKey && state.user?.auth_user_id ? (
@@ -809,7 +813,7 @@ export default function Payment() {
                   ? parseInt(serviceIdValue, 10)
                   : NaN;
                 if (Number.isNaN(serviceId)) {
-                  throw new Error("ไม่พบรหัสบริการ");
+                  throw new Error(t("payment.error_no_id"));
                 }
                 return createPaymentIntent({
                   authUserId: state.user!.auth_user_id,
@@ -863,28 +867,6 @@ export default function Payment() {
   );
 }
 
-interface StripeElementsFooterProps {
-  clientSecret: string;
-  publishableKey: string;
-  canProceed: boolean;
-  isSubmitting: boolean;
-  onBack: () => void;
-  onSuccess: () => void;
-  setCheckoutError: (msg: string) => void;
-  setIsSubmitting: (value: boolean) => void;
-}
-
-const stripePromiseCache: { [key: string]: Promise<Stripe | null> } = {};
-
-function getStripePromise(publishableKey: string) {
-  if (!stripePromiseCache[publishableKey]) {
-    stripePromiseCache[publishableKey] = loadStripe(publishableKey);
-  }
-  return stripePromiseCache[publishableKey];
-}
-
-const StripeElementsFooter: React.FC<StripeElementsFooterProps> = () => null;
-
 interface StripeFooterInnerProps {
   canProceed: boolean;
   isSubmitting: boolean;
@@ -898,6 +880,15 @@ interface StripeFooterInnerProps {
   setIsSubmitting: (value: boolean) => void;
 }
 
+const stripePromiseCache: { [key: string]: Promise<Stripe | null> } = {};
+
+function getStripePromise(publishableKey: string) {
+  if (!stripePromiseCache[publishableKey]) {
+    stripePromiseCache[publishableKey] = loadStripe(publishableKey);
+  }
+  return stripePromiseCache[publishableKey];
+}
+
 const StripeFooterInner: React.FC<StripeFooterInnerProps> = ({
   canProceed,
   isSubmitting,
@@ -909,18 +900,19 @@ const StripeFooterInner: React.FC<StripeFooterInnerProps> = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const { t } = useTranslation("common");
 
   const handleNext = async () => {
     if (!canProceed) {
       return;
     }
     if (!stripe || !elements) {
-      setCheckoutError("ระบบชำระเงินยังไม่พร้อมใช้งาน");
+      setCheckoutError(t("payment.error_not_ready"));
       return;
     }
     const cardNumberElement = elements.getElement(CardNumberElement);
     if (!cardNumberElement) {
-      setCheckoutError("ไม่พบฟอร์มบัตรเครดิต");
+      setCheckoutError(t("payment.error_stripe_load"));
       return;
     }
 
@@ -936,18 +928,18 @@ const StripeFooterInner: React.FC<StripeFooterInnerProps> = ({
       });
 
       if (result.error) {
-        setCheckoutError(result.error.message ?? "การชำระเงินล้มเหลว");
+        setCheckoutError(result.error.message ?? t("payment.error_payment_failed"));
         return;
       }
 
       if (result.paymentIntent?.status === "succeeded") {
         await onSuccess(orderId);
       } else {
-        setCheckoutError("การชำระเงินยังไม่สำเร็จ");
+        setCheckoutError(t("payment.error_not_succeeded"));
       }
     } catch (err) {
       setCheckoutError(
-        err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการชำระเงิน",
+        err instanceof Error ? err.message : t("payment.error_general"),
       );
     } finally {
       setIsSubmitting(false);
@@ -959,7 +951,15 @@ const StripeFooterInner: React.FC<StripeFooterInnerProps> = ({
       canProceed={canProceed}
       onBack={onBack}
       onNext={handleNext}
-      nextText={isSubmitting ? "กำลังดำเนินการ..." : "ยืนยันการชำระเงิน"}
+      nextText={isSubmitting ? t("payment.btn_processing") : t("payment.btn_confirm")}
     />
   );
+};
+
+export const getServerSideProps = async ({ locale }: { locale: string }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
 };

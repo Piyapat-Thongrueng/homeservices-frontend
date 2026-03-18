@@ -8,7 +8,11 @@ import Footer from "@/components/common/Footer";
 import { Service } from "@/types/serviceListTypes/type";
 import { fetchServices } from "@/services/serviceListsApi/serviceApi";
 
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import { useTranslation } from "next-i18next";
+
 const ServiceListPage = () => {
+  const { t } = useTranslation("common");
   const [serviceLists, setServiceLists] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +55,7 @@ const ServiceListPage = () => {
       <SearchAndFilterBar onResults={setServiceLists} onLoading={setLoading} allServices={serviceLists} />
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <p className="text-gray-500">กำลังค้นหาบริการ...</p>
+          <p className="text-gray-500">{t("service_list.searching")}</p>
         </div>
       ) : (
         <HomeServices
@@ -64,6 +68,14 @@ const ServiceListPage = () => {
       <Footer />
     </div>
   );
+};
+
+export const getStaticProps = async ({ locale }: { locale: string }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
 };
 
 export default ServiceListPage;

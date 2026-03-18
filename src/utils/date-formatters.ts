@@ -57,6 +57,53 @@ export const formatDateToYYYYMMDD = (dateString: string): string => {
 };
 
 /**
+ * Formats a date string (YYYY-MM-DD or input date) with locale support
+ * @param date - Date object or date string
+ * @param locale - Locale code ('en' or 'th')
+ * @returns Formatted date string
+ */
+export const formatDateLocale = (date: Date | string, locale: string = "th"): string => {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+
+  const options: Intl.DateTimeFormatOptions = {
+    day: "numeric",
+    month: "long",
+  };
+
+  const formatter = new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en-US", options);
+  let formatted = formatter.format(d);
+
+  if (locale === "th") {
+    // For Buddhist Era, we usually add 543 to year
+    // Intl.DateTimeFormat with 'th-TH' often includes BE automatically if configured or default
+    // We'll ensure the year is displayed as BE
+    const beYear = d.getFullYear() + 543;
+    formatted = `${formatted} ${beYear}`;
+  } else {
+    formatted = `${formatted} ${d.getFullYear()}`;
+  }
+
+  return formatted;
+};
+
+/**
+ * Formats a time string (HH:MM) with locale support
+ * @param timeString - Time string in HH:MM format
+ * @param locale - Locale code ('en' or 'th')
+ * @returns Formatted time string
+ */
+export const formatTimeLocale = (timeString?: string, locale: string = "th"): string => {
+  if (!timeString) return "";
+  const [hours, minutes] = timeString.split(":");
+  if (locale === "th") {
+    return `${hours}.${minutes} น.`;
+  }
+  return `${hours}:${minutes}`;
+};
+
+/**
  * Validates a date string in DD/MM/YYYY format
  * Returns true if the date is valid, false otherwise
  */

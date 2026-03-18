@@ -66,6 +66,8 @@ import {
   updateAddressCoords,
   type SavedAddress,
 } from "@/services/paymentApi";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 
 /**
  * Service information form data structure
@@ -139,6 +141,8 @@ const stripLocationFromAddressLine = (
 
 export default function ServiceInformation() {
   const router = useRouter();
+  const { locale } = router;
+  const { t } = useTranslation("common");
   const { state } = useAuth();
   const user = state.user;
   const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
@@ -166,39 +170,6 @@ export default function ServiceInformation() {
 
   /** Combined address line — must match how we send to backend / how rows are stored */
   const combinedAddressLine = (f: ServiceInfo) => buildCombinedAddressLine(f);
-
-  /** When "กรอกที่อยู่ใหม่" but data matches a saved row, reuse that row's lat/long */
-  const syncLatLongFromMatchingSaved = (
-    list: SavedAddress[],
-    f: ServiceInfo,
-  ) => {
-    const line = combinedAddressLine(f);
-    if (!line) return;
-    const dis = (f.district || "").trim();
-    const province = (f.province || "").trim();
-    const postal = (f.postalCode || "").trim();
-    const match = list.find((a) => {
-      const al = (a.address_line || "").trim();
-      const ac = (a.district || "").trim();
-      const ap = (a.province || "").trim();
-      const az = (a.postal_code || "").trim();
-      return al === line && ac === dis && ap === province && az === postal;
-    });
-    if (
-      match &&
-      match.latitude != null &&
-      match.longitude != null &&
-      Number.isFinite(Number(match.latitude)) &&
-      Number.isFinite(Number(match.longitude))
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        latitude: Number(match.latitude),
-        longitude: Number(match.longitude),
-        // do not set addressId — user chose "กรอกใหม่"; only reuse coords
-      }));
-    }
-  };
 
   /** Load saved addresses for dropdown when user is logged in */
   useEffect(() => {
@@ -421,7 +392,7 @@ export default function ServiceInformation() {
         pricePerUnit: i.price,
       }));
     if (items.length === 0) {
-      setCartActionError("กรุณาเลือกรายการบริการอย่างน้อย 1 รายการ");
+      setCartActionError(t("booking_info.msg_select_one"));
       setCartActionLoading(false);
       return;
     }
@@ -454,7 +425,7 @@ export default function ServiceInformation() {
           ...basePayload,
           ...addressPayload,
         });
-        setCartActionSuccess("อัปเดตตะกร้าแล้ว");
+        setCartActionSuccess(t("booking_info.msg_cart_updated"));
       } else {
         const addressPayload =
           formData.addressId != null
@@ -475,12 +446,12 @@ export default function ServiceInformation() {
           serviceId: serviceIdNum,
           ...addressPayload,
         });
-        setCartActionSuccess("เพิ่มลงตะกร้าแล้ว");
+        setCartActionSuccess(t("booking_info.msg_cart_added"));
         setCartItemIdForService(res.cartItemId);
       }
     } catch (err) {
       setCartActionError(
-        err instanceof Error ? err.message : "เกิดข้อผิดพลาด"
+        err instanceof Error ? err.message : t("booking_info.msg_error")
       );
     } finally {
       setCartActionLoading(false);
@@ -604,7 +575,7 @@ export default function ServiceInformation() {
     <div className="min-h-screen bg-utility-bg font-prompt pb-32">
       <Navbar />
       <ServiceHero
-        serviceName={selectedService?.name ?? ""}
+        serviceName={(locale === "en" ? selectedService?.name_en : selectedService?.name_th) || selectedService?.name || ""}
         currentStep={2}
         imageUrl={selectedService?.image}
       />
@@ -614,7 +585,7 @@ export default function ServiceInformation() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)] gap-6 lg:gap-8">
           {/* Left Panel - Service Information Form */}
           <section className="card-box bg-utility-white p-5 md:p-8">
-            <h2 className="headline-3 text-gray-700 mb-6">กรอกข้อมูลบริการ</h2>
+            <h2 className="headline-3 text-gray-700 mb-6">{t("booking_info.heading")}</h2>
 
             <div className="space-y-6">
               {/* Date and Time Fields - Side by Side */}
@@ -623,7 +594,7 @@ export default function ServiceInformation() {
                 <DateInput
                   value={formData.date}
                   onChange={(date) => updateFormField("date", date)}
-                  label="วันที่สะดวกใช้บริการ"
+                  label={t("booking_info.date_label")}
                   required
                 />
 
@@ -631,7 +602,7 @@ export default function ServiceInformation() {
                 <TimePicker
                   value={formData.time}
                   onChange={(time) => updateFormField("time", time)}
-                  label="เวลาที่สะดวกใช้บริการ"
+                  label={t("booking_info.time_label")}
                   required
                 />
               </div>
@@ -640,7 +611,7 @@ export default function ServiceInformation() {
               {user?.auth_user_id && savedAddresses.length > 0 && (
                 <div>
                   <label className="block headline-5 text-gray-800 font-medium mb-2">
-                    เลือกที่อยู่ที่บันทึกไว้
+                    {t("booking_info.address_saved")}
                   </label>
                   <div className="relative">
                     <select
@@ -673,7 +644,7 @@ export default function ServiceInformation() {
                         if (addr) applySavedAddress(addr);
                       }}
                     >
-                      <option value="">— กรอกที่อยู่ใหม่ —</option>
+                      <option value="">{t("booking_info.address_new")}</option>
                       {savedAddresses.map((a) => (
                         <option key={a.id} value={a.id}>
                           {[a.address_line, a.province]
@@ -684,10 +655,9 @@ export default function ServiceInformation() {
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                   </div>
-                  {formData.addressId != null && (
+                   {formData.addressId != null && (
                     <p className="mt-2 text-sm text-gray-600">
-                      ใช้ที่อยู่ที่บันทึกแล้ว — เลือก
-                      &quot;กรอกที่อยู่ใหม่&quot; เพื่อเปลี่ยน
+                      {t("booking_info.address_note")}
                     </p>
                   )}
                 </div>
@@ -695,9 +665,9 @@ export default function ServiceInformation() {
 
               {/* Map for saved address — move pin to update lat/long on that saved row */}
               {isUsingSavedAddress && user?.auth_user_id && (
-                <div>
+                 <div>
                   <label className="block headline-5 text-gray-800 font-medium mb-2">
-                    ตำแหน่งบนแผนที่ของที่อยู่นี้ (ลากหมุดเพื่ออัปเดตพิกัด)
+                    {t("booking_info.map_label")}
                   </label>
                   <AddressMapPicker
                     key={`saved-${formData.addressId}-${selectedSaved?.latitude ?? "na"}-${
@@ -729,9 +699,9 @@ export default function ServiceInformation() {
                           authUserId: user.auth_user_id,
                           addressId: formData.addressId,
                           latitude: lat,
-                          longitude: lng,
+                           longitude: lng,
                         });
-                        setCoordsMessage("อัปเดตพิกัดของที่อยู่นี้แล้ว");
+                        setCoordsMessage(t("booking_info.msg_coords_updated"));
                         if (res?.addressId) {
                           setFormData((prev) => ({
                             ...prev,
@@ -742,9 +712,9 @@ export default function ServiceInformation() {
                         setSavedAddresses(list);
                       } catch (err) {
                         setCoordsMessage(
-                          err instanceof Error
+                           err instanceof Error
                             ? err.message
-                            : "ไม่สามารถอัปเดตพิกัดได้",
+                            : t("booking_info.msg_coords_error"),
                         );
                       } finally {
                         setCoordsUpdating(false);
@@ -763,9 +733,9 @@ export default function ServiceInformation() {
               {!isUsingSavedAddress && (
                 <>
                   {/* 1) ที่อยู่ (house/soi/street) */}
-                  <div>
+                   <div>
                     <label className="block headline-5 text-gray-800 font-medium mb-2">
-                      ที่อยู่<span className="text-red-500 ml-1">*</span>
+                      {t("booking_info.address_label")}<span className="text-red-500 ml-1">*</span>
                     </label>
                     <input
                       type="text"
@@ -834,8 +804,7 @@ export default function ServiceInformation() {
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-600">
-                      เลือกจังหวัด เขต และ ตำบล ก่อน
-                      แล้วแผนที่จะแสดงเพื่อให้คุณลากหมุดให้ตรงที่อยู่
+                      {t("booking_info.btn_select_location_first")}
                     </div>
                   )}
                 </>
@@ -844,7 +813,7 @@ export default function ServiceInformation() {
               {/* Additional Information - Full Width */}
               <div>
                 <label className="block headline-5 text-gray-800 font-medium mb-2">
-                  ระบุข้อมูลเพิ่มเติม
+                  {t("booking_info.additional_info_label")}
                 </label>
                 <textarea
                   value={formData.additionalInfo}
@@ -853,7 +822,7 @@ export default function ServiceInformation() {
                   }
                   rows={4}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 resize-none transition-colors"
-                  placeholder="กรุณาระบุข้อมูลเพิ่มเติม"
+                  placeholder={t("booking_info.additional_info_placeholder")}
                 />
               </div>
             </div>
@@ -874,36 +843,44 @@ export default function ServiceInformation() {
             />
             {user?.auth_user_id && (
               <div>
-              <button
-                type="button"
-                disabled={!isFormValid || cartActionLoading}
-                onClick={handleCartAction}
-                className="btn-primary w-full inline-flex items-center justify-center gap-2"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                {cartActionLoading
-                  ? "กำลังบันทึก..."
-                  : cartItemIdForService != null
-                    ? "อัปเดตตะกร้า"
-                    : "เพิ่มลงตะกร้า"}
-              </button>
-              {cartActionSuccess && (
-                <p className="body-3 text-green-600 mb-2">{cartActionSuccess}</p>
-              )}
-              {cartActionError && (
-                <p className="body-3 text-red-600 mb-2">{cartActionError}</p>
-              )}
-            </div>
+                <button
+                  type="button"
+                  disabled={!isFormValid || cartActionLoading}
+                  onClick={handleCartAction}
+                  className="btn-primary w-full inline-flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  {cartActionLoading
+                    ? t("booking_info.msg_saving")
+                    : cartItemIdForService != null
+                      ? t("booking_info.btn_update_cart")
+                      : t("booking_info.btn_add_cart")}
+                </button>
+                {cartActionSuccess && (
+                  <p className="body-3 text-green-600 mt-2">{cartActionSuccess}</p>
+                )}
+                {cartActionError && (
+                  <p className="body-3 text-red-600 mt-2">{cartActionError}</p>
+                )}
+              </div>
             )}
           </div>
         </div>
       </main>
 
-      <ServiceFooterNav
-        canProceed={isFormValid}
+      <ServiceFooterNav 
+        canProceed={isFormValid} 
         onBack={handleBack}
         onNext={handleNext}
       />
     </div>
   );
 }
+
+export const getServerSideProps = async ({ locale }: { locale: string }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
+};

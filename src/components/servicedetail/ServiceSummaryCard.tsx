@@ -12,7 +12,9 @@
  */
 
 import type { ServiceItem } from "./types";
-import { formatDateToThai, formatTimeToThai } from "@/utils/date-formatters";
+import { formatDateLocale, formatTimeLocale } from "@/utils/date-formatters";
+import { useTranslation } from "next-i18next";
+import { useRouter } from "next/router";
 
 interface ServiceInfo {
   date?: string;
@@ -26,24 +28,17 @@ interface ServiceInfo {
 }
 
 interface ServiceSummaryCardProps {
-  /** Card title */
   title?: string;
-  /** List of service items */
   items: ServiceItem[];
-  /** Total price before discount */
   total: number;
-  /** Service information (date, time, location, etc.) */
   serviceInfo?: ServiceInfo;
-  /** When user selected a saved address, show this full address line for สถานที่ */
   savedAddressLine?: string;
-  /** Applied promotion code */
   promotionCode?: string;
-  /** Discount amount */
   discount?: number;
 }
 
 const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
-  title = "สรุปรายการ",
+  title,
   items,
   total,
   serviceInfo,
@@ -51,20 +46,12 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
   promotionCode,
   discount = 0,
 }) => {
-  // Filter to only show items with quantity > 0
+  const { t } = useTranslation("common");
+  const { locale } = useRouter();
+
   const selectedItems = items.filter((item) => item.quantity > 0);
-
-  // Calculate total quantity of selected items
-  const totalQuantity = selectedItems.reduce(
-    (sum, item) => sum + item.quantity,
-    0,
-  );
-
-  // Calculate final total after discount
   const finalTotal = total - discount;
 
-  // Build location line for "สถานที่" – prefer savedAddressLine when provided,
-  // otherwise use all address parts (ที่อยู่ + ตำบล + อำเภอ + จังหวัด + รหัสไปรษณีย์).
   const locationLine =
     savedAddressLine ||
     (serviceInfo
@@ -79,13 +66,14 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
           .join(" ")
       : "");
 
+  const displayTitle = title || t("service_detail.summary_title");
+
   return (
     <aside className="card-box bg-utility-white border border-gray-200 rounded-lg p-5 md:p-7">
-      <h2 className="headline-3 text-gray-700 mb-4">{title}</h2>
+      <h2 className="headline-3 text-gray-700 mb-4">{displayTitle}</h2>
 
       {selectedItems.length > 0 ? (
         <>
-          {/* Service Items List */}
           <div className="space-y-3 mb-4">
             {selectedItems.map((item) => (
               <div
@@ -94,89 +82,84 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
               >
                 <p className="body-3 text-utility-black">{item.description}</p>
                 <p className="body-2 text-gray-900 whitespace-nowrap">
-                  {item.quantity} รายการ
+                  {item.quantity} {t("service_detail.items_unit")}
                 </p>
               </div>
             ))}
           </div>
 
-          {/* Separator Line - only show if there's serviceInfo */}
           {serviceInfo && <div className="border-t border-gray-300 my-4" />}
 
-          {/* Service Info */}
           {serviceInfo && (
-            <>
-              <div className="space-y-2 mb-4">
-                {serviceInfo.date && (
-                  <div className="flex items-start gap-2">
-                    <span className="body-2 text-gray-600 min-w-[60px]">
-                      วันที่:
-                    </span>
-                    <span className="body-2 text-gray-900 text-right flex-1">
-                      {formatDateToThai(serviceInfo.date)}
-                    </span>
-                  </div>
-                )}
-                {serviceInfo.time && (
-                  <div className="flex items-start gap-2">
-                    <span className="body-2 text-gray-600 min-w-[60px]">
-                      เวลา:
-                    </span>
-                    <span className="body-2 text-gray-900 text-right flex-1">
-                      {formatTimeToThai(serviceInfo.time)}
-                    </span>
-                  </div>
-                )}
-                {(locationLine ||
-                  serviceInfo.address ||
-                  serviceInfo.subDistrict ||
-                  serviceInfo.district ||
-                  serviceInfo.province ||
-                  serviceInfo.postalCode) && (
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="body-2 text-gray-600 whitespace-nowrap">
-                      สถานที่:
-                    </span>
-                    <span
-                      className="body-2 text-gray-900 text-right flex-1"
-                      style={{
-                        wordBreak: "break-word",
-                        overflowWrap: "anywhere",
-                        maxWidth: "30ch",
-                        lineHeight: "1.5",
-                        minWidth: 0,
-                        overflow: "hidden",
-                      }}
-                    >
-                      {locationLine}
-                    </span>
-                  </div>
-                )}
-                {serviceInfo.additionalInfo && (
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="body-2 text-gray-600 whitespace-nowrap">
-                      หมายเหตุ:
-                    </span>
-                    <span
-                      className="body-2 text-gray-900 text-right flex-1"
-                      style={{
-                        wordBreak: "break-word",
-                        overflowWrap: "anywhere",
-                        maxWidth: "30ch",
-                        lineHeight: "1.5",
-                        minWidth: 0,
-                        overflow: "hidden",
-                      }}
-                    >
-                      {serviceInfo.additionalInfo}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </>
+            <div className="space-y-2 mb-4">
+              {serviceInfo.date && (
+                <div className="flex items-start gap-2">
+                  <span className="body-2 text-gray-600 min-w-[60px]">
+                    {t("service_detail.summary_date")}
+                  </span>
+                  <span className="body-2 text-gray-900 text-right flex-1">
+                    {formatDateLocale(serviceInfo.date, locale)}
+                  </span>
+                </div>
+              )}
+              {serviceInfo.time && (
+                <div className="flex items-start gap-2">
+                  <span className="body-2 text-gray-600 min-w-[60px]">
+                    {t("service_detail.summary_time")}
+                  </span>
+                  <span className="body-2 text-gray-900 text-right flex-1">
+                    {formatTimeLocale(serviceInfo.time, locale)}
+                  </span>
+                </div>
+              )}
+              {(locationLine ||
+                serviceInfo.address ||
+                serviceInfo.subDistrict ||
+                serviceInfo.district ||
+                serviceInfo.province ||
+                serviceInfo.postalCode) && (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="body-2 text-gray-600 whitespace-nowrap">
+                    {t("service_detail.summary_location")}
+                  </span>
+                  <span
+                    className="body-2 text-gray-900 text-right flex-1"
+                    style={{
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
+                      maxWidth: "30ch",
+                      lineHeight: "1.5",
+                      minWidth: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {locationLine}
+                  </span>
+                </div>
+              )}
+              {serviceInfo.additionalInfo && (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="body-2 text-gray-600 whitespace-nowrap">
+                    {t("service_detail.summary_note")}
+                  </span>
+                  <span
+                    className="body-2 text-gray-900 text-right flex-1"
+                    style={{
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
+                      maxWidth: "30ch",
+                      lineHeight: "1.5",
+                      minWidth: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {serviceInfo.additionalInfo}
+                  </span>
+                </div>
+              )}
+            </div>
           )}
 
-          {/* Promotion Code */}
           {promotionCode && discount > 0 && (
             <div className="mb-2">
               <div className="flex items-center justify-between">
@@ -188,12 +171,10 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
             </div>
           )}
 
-          {/* Separator Line */}
           <div className="border-t border-gray-300 my-4" />
 
-          {/* Total */}
           <div className="flex items-center justify-between">
-            <span className="body-2 text-gray-700">รวม</span>
+            <span className="body-2 text-gray-700">{t("service_detail.summary_total")}</span>
             <span className="headline-5 font-medium text-black">
               {finalTotal.toFixed(2)} ฿
             </span>
@@ -202,7 +183,7 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
       ) : (
         <div className="border-t border-gray-300 pt-4">
           <div className="flex items-center justify-between">
-            <span className="body-2 text-gray-700">รวม</span>
+            <span className="body-2 text-gray-700">{t("service_detail.summary_total")}</span>
             <span className="headline-5 font-medium text-black">
               {total.toFixed(2)} ฿
             </span>

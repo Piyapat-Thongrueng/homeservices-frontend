@@ -11,6 +11,7 @@
  */
 
 import { CreditCard, QrCode } from "lucide-react";
+import { useTranslation } from "next-i18next";
 
 interface PaymentMethodSelectorProps {
   /** Currently selected payment method */
@@ -23,6 +24,8 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   method,
   onChange,
 }) => {
+  const { t } = useTranslation("common");
+
   return (
     <div className="flex gap-4">
       {/* PromptPay Option */}
@@ -36,7 +39,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         }`}
       >
         <QrCode className="w-5 h-5" />
-        <span className="headline-5">พร้อมเพย์</span>
+        <span className="headline-5">{t("payment.method_promptpay")}</span>
       </button>
 
       {/* Credit Card Option */}
@@ -50,7 +53,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         }`}
       >
         <CreditCard className="w-5 h-5" />
-        <span className="headline-5">บัตรเครดิต</span>
+        <span className="headline-5">{t("payment.method_creditcard")}</span>
       </button>
     </div>
   );

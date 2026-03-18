@@ -7,14 +7,15 @@
  */
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "next-i18next";
 
 const MIN = 0;
 const MAX = 2000;
 
 interface PriceRangeDropdownProps {
-  minPrice: number; // ราคาต่ำสุดปัจจุบัน (จาก parent)
-  maxPrice: number; // ราคาสูงสุดปัจจุบัน (จาก parent)
-  onChange: (min: number, max: number) => void; // callback ส่งค่ากลับ parent
+  minPrice: number;
+  maxPrice: number;
+  onChange: (min: number, max: number) => void;
 }
 
 export default function PriceRangeDropdown({
@@ -22,10 +23,10 @@ export default function PriceRangeDropdown({
   maxPrice,
   onChange,
 }: PriceRangeDropdownProps) {
+  const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // ปิด dropdown เมื่อ click นอก
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -51,12 +52,13 @@ export default function PriceRangeDropdown({
 
   return (
     <div className="relative flex-1 sm:flex-none" ref={ref}>
-      {/* Trigger */}
       <div
         className="flex flex-col gap-1 px-3 border-r border-gray-200 sm:px-4 md:px-5 cursor-pointer"
         onClick={() => setOpen((o) => !o)}
       >
-        <span className="text-[12px] text-gray-700 whitespace-nowrap">ราคา</span>
+        <span className="text-[12px] text-gray-700 whitespace-nowrap">
+          {t("service_list.price_label")}
+        </span>
         <button className="flex items-center gap-1 text-[16px] font-medium text-gray-950 whitespace-nowrap">
           {label}
           <ChevronDown
@@ -67,12 +69,10 @@ export default function PriceRangeDropdown({
         </button>
       </div>
 
-      {/* Dropdown Panel */}
       {open && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-5">
           <p className="text-[18px] font-semibold text-gray-900 mb-5">{label}</p>
 
-          {/* Dual Range Slider */}
           <div className="relative h-6 flex items-center mb-4">
             <div className="absolute w-full h-1.5 bg-gray-200 rounded-full" />
             <div

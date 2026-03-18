@@ -9,6 +9,8 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { fetchCategories } from "@/services/serviceListsApi/serviceApi";
 import { Category } from "@/types/serviceListTypes/type";
+import { useTranslation } from "next-i18next";
+import { useRouter } from "next/router";
 
 interface CategoryDropdownProps {
   selectedId: number | null;
@@ -21,13 +23,14 @@ export default function CategoryDropdown({
   selectedLabel,
   onChange,
 }: CategoryDropdownProps) {
+  const { t } = useTranslation("common");
+  const { locale } = useRouter();
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // ดึง categories ตอน mount ครั้งแรก (ไม่ต้องรอกดปุ่มค้นหา)
   const fetchCategoriesData = async () => {
     try {
       const data = await fetchCategories();
@@ -44,7 +47,6 @@ export default function CategoryDropdown({
     fetchCategoriesData();
   }, []);
 
-  // ปิด dropdown เมื่อ click นอก
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node))
@@ -54,17 +56,16 @@ export default function CategoryDropdown({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const displayLabel = selectedLabel || "บริการทั้งหมด";
+  const displayLabel = selectedLabel || t("service_list.all_services");
 
   return (
     <div className="relative flex-1 sm:flex-none" ref={ref}>
-      {/* Trigger */}
       <div
         className="flex flex-col gap-1 pr-3 border-r border-gray-200 sm:px-4 md:px-5 cursor-pointer"
         onClick={() => setOpen((prev) => !prev)}
       >
         <span className="text-[12px] text-gray-700 whitespace-nowrap">
-          หมวดหมู่บริการ
+          {t("service_list.category_label")}
         </span>
         <button className="flex items-center gap-1 text-[16px] font-medium text-gray-950 whitespace-nowrap">
           <span className="sm:hidden">
@@ -81,27 +82,24 @@ export default function CategoryDropdown({
         </button>
       </div>
 
-      {/* Dropdown Panel */}
       {open && (
         <div className="absolute top-full left-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
           {loading ? (
-            // Loading state
             <div className="flex flex-col items-center justify-center gap-2 py-6 px-4">
               <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
               <span className="text-sm text-gray-500">
-                กำลังดาวน์โหลดข้อมูล
+                {t("service_list.loading_data")}
               </span>
             </div>
           ) : error ? (
             <div className="py-4 px-4 text-sm text-red-500 text-center">
-              โหลดข้อมูลไม่สำเร็จ
+              {t("service_list.load_error")}
             </div>
           ) : (
             <div className="p-2">
-              {/* ตัวเลือก "ทั้งหมด" */}
               <button
                 onClick={() => {
-                  onChange(null, "บริการทั้งหมด");
+                  onChange(null, t("service_list.all_services"));
                   setOpen(false);
                 }}
                 className={`w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium transition-colors duration-150
@@ -111,26 +109,29 @@ export default function CategoryDropdown({
                       : "text-gray-800 hover:bg-gray-50"
                   }`}
               >
-                บริการทั้งหมด
+                {t("service_list.all_services")}
               </button>
 
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    onChange(cat.id, cat.name_th);
-                    setOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium transition-colors duration-150
-                    ${
-                      selectedId === cat.id
-                        ? "text-blue-600 bg-blue-50 font-semibold"
-                        : "text-gray-800 hover:bg-gray-50"
-                    }`}
-                >
-                  {cat.name_th}
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const catName = (locale === "en" ? cat.name_en : cat.name_th) || cat.name_th;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      onChange(cat.id, catName);
+                      setOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-[15px] font-medium transition-colors duration-150
+                      ${
+                        selectedId === cat.id
+                          ? "text-blue-600 bg-blue-50 font-semibold"
+                          : "text-gray-800 hover:bg-gray-50"
+                      }`}
+                  >
+                    {catName}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

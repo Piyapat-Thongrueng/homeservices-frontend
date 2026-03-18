@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
-import { formatDateToThai, formatTimeToThai } from "@/utils/date-formatters";
+import { formatDateLocale, formatTimeLocale } from "@/utils/date-formatters";
 import { ShoppingCart, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -17,8 +17,10 @@ import {
   deleteCartItem,
   type CartItem,
 } from "@/services/cartApi";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 
-/** Backend may return time as "HH:MM:SS"; normalize to "HH:MM" for formatTimeToThai */
+/** Backend may return time as "HH:MM:SS"; normalize to "HH:MM" for formatTimeLocale */
 function normalizeTime(time: string | null | undefined): string {
   if (!time) return "";
   const part = String(time).trim();
@@ -41,6 +43,9 @@ function CartItemCard({
   onDelete,
   onCheckout,
 }: CartItemCardProps) {
+  const { t } = useTranslation("common");
+  const { locale } = useRouter();
+  
   return (
     <div
       className="card-box bg-utility-white shadow rounded-lg overflow-hidden animate__animated animate__fadeInUp"
@@ -58,10 +63,10 @@ function CartItemCard({
           <div className="flex items-start justify-between gap-4 pb-2">
             <div>
               <h2 className="headline-2 text-blue-500">{item.serviceName}</h2>
-              <p className="body-3 text-gray-600 mt-1">สรุปรายการ</p>
+              <p className="body-3 text-gray-600 mt-1">{t("cart.summary")}</p>
             </div>
             <p className="headline-5 text-gray-900 whitespace-nowrap">
-              รวม{" "}
+              {t("cart.total_amount")}{" "}
               {item.total.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
               })}{" "}
@@ -92,17 +97,17 @@ function CartItemCard({
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 body-2">
               {item.appointmentDate && (
                 <>
-                  <span className="text-gray-600">วันที่</span>
+                  <span className="text-gray-600">{t("cart.date")}</span>
                   <span className="text-gray-900">
-                    {formatDateToThai(item.appointmentDate)}
+                    {formatDateLocale(item.appointmentDate, locale)}
                   </span>
                 </>
               )}
               {item.appointmentTime && (
                 <>
-                  <span className="text-gray-600">เวลา</span>
+                  <span className="text-gray-600">{t("cart.time")}</span>
                   <span className="text-gray-900">
-                    {formatTimeToThai(normalizeTime(item.appointmentTime))}
+                    {formatTimeLocale(normalizeTime(item.appointmentTime), locale)}
                   </span>
                 </>
               )}
@@ -123,7 +128,7 @@ function CartItemCard({
                 className="btn-primary inline-flex items-center gap-2"
               >
                 <ShoppingCart className="w-5 h-5" />
-                ดำเนินการต่อ
+                {t("cart.btn_checkout")}
               </button>
             </div>
           </div>
@@ -134,11 +139,12 @@ function CartItemCard({
 }
 
 function CartHeader() {
+  const { t } = useTranslation("common");
   return (
     <header className="w-full bg-blue-600 py-4 md:py-5">
       <div className="max-w-6xl mx-auto px-4 md:px-8">
         <h1 className="headline-2 text-utility-white text-center flex items-center justify-center gap-2">
-          <ShoppingCart className="w-10 h-8" /> ตะกร้าสินค้า
+          <ShoppingCart className="w-10 h-8" /> {t("cart.heading")}
         </h1>
       </div>
     </header>
@@ -146,18 +152,19 @@ function CartHeader() {
 }
 
 function UnauthenticatedCartLayout() {
+  const { t } = useTranslation("common");
   return (
     <div className="min-h-screen bg-utility-bg font-prompt flex flex-col">
       <Navbar />
       <header className="w-full bg-blue-600 py-4 md:py-5">
         <div className="max-w-6xl mx-auto px-4 md:px-8">
           <h1 className="headline-2 text-utility-white text-center">
-            ตะกร้าสินค้า
+            {t("cart.heading")}
           </h1>
         </div>
       </header>
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 py-8 flex items-center justify-center">
-        <p className="body-2 text-gray-600">กรุณาเข้าสู่ระบบเพื่อดูตะกร้า</p>
+        <p className="body-2 text-gray-600">{t("cart.login_required")}</p>
       </main>
       <Footer />
     </div>
@@ -167,6 +174,7 @@ function UnauthenticatedCartLayout() {
 export default function CartPage() {
   const router = useRouter();
   const { state } = useAuth();
+  const { t } = useTranslation("common");
   const authUserId = state.user?.auth_user_id ?? null;
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -195,7 +203,7 @@ export default function CartPage() {
       .catch((err) => {
         if (!cancelled)
           setError(
-            err instanceof Error ? err.message : "Failed to load cart",
+            err instanceof Error ? err.message : t("cart.error_load"),
           );
         setCartItems([]);
       })
@@ -205,7 +213,7 @@ export default function CartPage() {
     return () => {
       cancelled = true;
     };
-  }, [authUserId]);
+  }, [authUserId, t]);
 
   const handleProceedToCheckout = (item: CartItem) => {
     router.push({
@@ -249,7 +257,7 @@ export default function CartPage() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
         {loading ? (
           <div className="flex justify-center py-12">
-            <p className="body-2 text-gray-600">กำลังโหลด...</p>
+            <p className="body-2 text-gray-600">{t("cart.loading")}</p>
           </div>
         ) : error ? (
           <div className="flex justify-center py-12">
@@ -257,13 +265,13 @@ export default function CartPage() {
           </div>
         ) : cartItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="body-2 text-gray-600 mb-4">ไม่มีรายการในตะกร้า</p>
+            <p className="body-2 text-gray-600 mb-4">{t("cart.empty")}</p>
             <button
               type="button"
               onClick={() => router.push("/service-lists")}
               className="btn-primary"
             >
-              ไปเลือกบริการ
+              {t("cart.btn_browse")}
             </button>
           </div>
         ) : (
@@ -289,7 +297,7 @@ export default function CartPage() {
                   }
                   className="btn-secondary px-6 py-2 w-full"
                 >
-                  ดูเพิ่มเติม
+                  {t("cart.btn_load_more")}
                 </button>
               </div>
             )}
@@ -301,3 +309,11 @@ export default function CartPage() {
     </div>
   );
 }
+
+export const getServerSideProps = async ({ locale }: { locale: string }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
+};

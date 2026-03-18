@@ -13,13 +13,11 @@
 
 import { Minus, Plus, Tag } from "lucide-react";
 import type { ServiceItem } from "./types";
+import { useTranslation } from "next-i18next";
 
 interface ServiceItemsSectionProps {
-  /** List of service items to display */
   items: ServiceItem[];
-  /** Callback when quantity changes (id, delta) */
   onChangeQuantity: (id: number, delta: number) => void;
-  /** Optional service name to show in heading (from API) */
   serviceName?: string;
 }
 
@@ -28,9 +26,11 @@ const ServiceItemsSection: React.FC<ServiceItemsSectionProps> = ({
   onChangeQuantity,
   serviceName,
 }) => {
+  const { t } = useTranslation("common");
+
   const headingText = serviceName
-    ? `เลือกรายการบริการ ${serviceName}`
-    : "เลือกรายการบริการ";
+    ? `${t("service_detail.select_heading")} ${serviceName}`
+    : t("service_detail.select_heading");
 
   return (
     <section className="card-box bg-utility-white p-5 md:p-8">
@@ -52,7 +52,6 @@ const ServiceItemsSection: React.FC<ServiceItemsSectionProps> = ({
                 </p>
               </div>
 
-              {/* Quantity Selector */}
               <div className="flex items-center justify-end gap-3">
                 <button
                   type="button"
