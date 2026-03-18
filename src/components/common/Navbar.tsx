@@ -272,8 +272,12 @@ export default function Navbar() {
                       onClick={() => setOpen(!open)}
                       className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity"
                     >
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold shrink-0">
-                        {userInitial}
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
+                        {user?.profile_pic ? (
+                          <img src={user.profile_pic} alt={userName} className="w-full h-full object-cover" />
+                        ) : (
+                          userInitial
+                        )}
                       </div>
                       <span className="hidden sm:block text-[14px] font-medium text-gray-700 hover:text-blue-500 max-w-30 truncate">
                         {userName}
@@ -309,6 +313,26 @@ export default function Navbar() {
                           className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
                         >
                           🔒 {locale === "en" ? "Change Password" : "เปลี่ยนรหัสผ่าน"}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setOpen(false);
+                            router.push("/profile?tab=orders");
+                          }}
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                        >
+                          🔧 รายการคำสั่งซ่อม
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setOpen(false);
+                            router.push("/profile?tab=history");
+                          }}
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                        >
+                          📋 ประวัติการซ่อม
                         </button>
 
                         <div className="border-t border-gray-100" />

@@ -1,4 +1,5 @@
 import { Phone, Mail } from "lucide-react";
+import Link from "next/link";
 import { useTranslation } from "next-i18next";
 
 export default function Footer() {
@@ -60,10 +61,18 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-gray-700">
             {/* Links */}
             <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-6 order-1 md:order-2 min-w-0">
-              <a
-                href="#"
+              <Link
+                href="/t&c-privacy/t&c"
                 className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
               >
+                เงื่อนไขและข้อตกลงการใช้งานเว็บไซต์
+              </Link>
+              <Link
+                href="/t&c-privacy/privacy"
+                className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
+              >
+                นโยบายความเป็นส่วนตัว
+              </Link>
                 {t("footer.terms")}
               </a>
               <a
