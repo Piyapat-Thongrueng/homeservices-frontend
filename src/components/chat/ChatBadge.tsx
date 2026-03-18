@@ -11,49 +11,45 @@ export default function ChatBadge({ orderId, userId }: Props) {
   const [count, setCount] = useState(0)
 
   // =========================
-  // LOAD UNREAD
-  // =========================
-  const loadUnread = async () => {
-
-    if (!orderId || !userId) return
-
-    try {
-
-      const res = await fetch(
-        `http://localhost:4000/api/messages/unread/${orderId}/${userId}`
-      )
-
-      if (!res.ok) return
-
-      const data = await res.json()
-
-      setCount(data.count || 0)
-
-    } catch (err) {
-
-      console.error("❌ unread error:", err)
-
-    }
-
-  }
-
-  // =========================
-  // INITIAL LOAD
+  // LOAD INITIAL 
   // =========================
   useEffect(() => {
+
+    const loadUnread = async () => {
+
+      if (!orderId || !userId) return
+
+      try {
+        const res = await fetch(
+          `/api/messages/unread/${orderId}/${userId}`
+        )
+
+        if (!res.ok) return
+
+        const data = await res.json()
+        setCount(data.count || 0)
+
+      } catch (err) {
+        console.error("❌ unread error:", err)
+      }
+    }
+
     loadUnread()
+
   }, [orderId, userId])
 
   // =========================
-  // SOCKET REALTIME
+  // SOCKET REALTIME 
   // =========================
   useEffect(() => {
 
     const handleNewMessage = (msg: any) => {
 
-      // ถ้าเป็น message ของ order นี้ และไม่ใช่ของเรา
-      if (msg.order_id === orderId && msg.sender_id !== userId) {
-        loadUnread()
+      if (
+        msg.order_id === orderId &&
+        msg.sender_id !== userId
+      ) {
+        setCount(prev => prev + 1)
       }
 
     }
@@ -67,26 +63,30 @@ export default function ChatBadge({ orderId, userId }: Props) {
   }, [orderId, userId])
 
   // =========================
+  // RESET เมื่อเปิดหน้า 
+  // =========================
+  useEffect(() => {
+
+    const handleFocus = () => {
+      setCount(0)
+    }
+
+    window.addEventListener("focus", handleFocus)
+
+    return () => {
+      window.removeEventListener("focus", handleFocus)
+    }
+
+  }, [])
+
+  // =========================
   // UI
   // =========================
-
   if (count === 0) return null
 
   return (
-
-    <span
-      style={{
-        background: "red",
-        color: "white",
-        padding: "2px 6px",
-        borderRadius: 10,
-        fontSize: 12,
-        marginLeft: 6
-      }}
-    >
+    <span className="ml-1 px-2 py-[2px] text-xs bg-red-500 text-white rounded-full">
       {count}
     </span>
-
   )
-
 }

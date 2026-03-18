@@ -1,17 +1,18 @@
 import { useRouter } from "next/router"
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import ChatBox from "@/components/chat/ChatBox"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function ChatPage() {
 
   const router = useRouter()
+  const { state: { user } } = useAuth()
 
   const [orderId, setOrderId] = useState<string | null>(null)
 
-  const [role, setRole] =
-    useState<"user" | "technician">("user")
-
-  // รอ router query โหลดก่อน
+  // =========================
+  // GET ORDER ID
+  // =========================
   useEffect(() => {
 
     if (!router.isReady) return
@@ -24,49 +25,29 @@ export default function ChatPage() {
 
   }, [router.isReady, router.query])
 
-  const userId =
-    role === "user"
-      ? "22222222-2222-2222-2222-222222222222"
-      : "a8df9bde-b3e6-45aa-80af-5fb7271cae73"
-
-  // loading ระหว่าง router ยังไม่พร้อม
-  if (!orderId) {
-
+  // =========================
+  // LOADING
+  // =========================
+  if (!orderId || !user) {
     return (
-      <div style={{ padding: 40 }}>
+      <div className="h-screen flex items-center justify-center">
         Loading chat...
       </div>
     )
-
   }
 
+  // =========================
+  // RENDER
+  // =========================
   return (
-
-    <div style={{ padding: 40 }}>
-
-      <div style={{ marginBottom: 20 }}>
-
-        <button onClick={() => setRole("user")}>
-          User
-        </button>
-
-        <button
-          style={{ marginLeft: 10 }}
-          onClick={() => setRole("technician")}
-        >
-          Technician
-        </button>
-
-      </div>
+    <div className="h-screen">
 
       <ChatBox
         orderId={orderId}
-        userId={userId}
-        role={role}
+        userId={String(user.id)}
+        role={user.role as "user" | "technician"} // "user" | "technician"
       />
 
     </div>
-
   )
-
 }

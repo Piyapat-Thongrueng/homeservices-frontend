@@ -31,23 +31,20 @@ export default function useChatSocket({
 
   useEffect(() => {
 
-    if (!orderId) return
+    if (!orderId || !userId) return
 
     // =============================
     // RECEIVE MESSAGE
     // =============================
-
     const receiveMessage = (msg: Message) => {
 
       setMessages((prev: Message[]) => {
 
-        // ป้องกัน message ซ้ำ
         if (prev.some(m => m.id === msg.id)) {
           return prev
         }
 
         return [...prev, msg]
-
       })
 
       // unread badge
@@ -55,91 +52,67 @@ export default function useChatSocket({
         msg.sender_id !== userId &&
         document.hidden
       ) {
-
         setUnreadCount((prev: number) => prev + 1)
-
       }
-
-    }
-
-    // =============================
-    // TYPING
-    // =============================
-
-    const typing = ({ userId: typingId }: any) => {
-
-      if (typingId !== userId) {
-
-        setTypingUser(typingId)
-
-      }
-
-    }
-
-    const stopTyping = () => {
-
-      setTypingUser(null)
-
     }
 
     // =============================
     // ONLINE USERS
     // =============================
-
-    const onlineUsers = (users: string[]) => {
-
+    const handleOnlineUsers = (users: string[]) => {
       setOnlineUsers(users)
-
     }
 
     // =============================
-    // CHAT CLOSED EVENT
+    // CHAT CLOSED
     // =============================
-
     const chatClosed = () => {
-
       alert("งานนี้ถูกปิดแล้ว แชทถูกปิด")
-
       window.location.reload()
-
     }
 
     // =============================
-    // REGISTER SOCKET EVENTS
+    // REGISTER EVENTS
     // =============================
-
     socket.on("receive_message", receiveMessage)
-    socket.on("typing", typing)
-    socket.on("stop_typing", stopTyping)
-    socket.on("online_users", onlineUsers)
+    socket.on("online_users", handleOnlineUsers)
     socket.on("chat_closed", chatClosed)
 
     // =============================
     // USER ONLINE
     // =============================
-
     socket.emit("user_online", { userId })
 
     // =============================
-    // JOIN ROOM
+    // JOIN ROOM 
     // =============================
-
-    socket.emit("join_room", orderId)
+    socket.emit("join_room", {
+      orderId,
+      userId
+    })
 
     // =============================
-    // CLEANUP EVENTS
+    // CLEANUP
     // =============================
-
     return () => {
 
       socket.off("receive_message", receiveMessage)
-      socket.off("typing", typing)
-      socket.off("stop_typing", stopTyping)
-      socket.off("online_users", onlineUsers)
+      socket.off("online_users", handleOnlineUsers)
       socket.off("chat_closed", chatClosed)
 
+      // optional: leave room
+      socket.emit("leave_room", {
+        orderId,
+        userId
+      })
     }
 
-  }, [orderId, userId])
-
+  }, [
+    orderId,
+    userId,
+    setMessages,
+    setTypingUser,
+    setOnlineUsers,
+    setUnreadCount
+  ])
 }

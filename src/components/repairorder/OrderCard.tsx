@@ -6,8 +6,8 @@ import ChatBadge from '@/components/chat/ChatBadge';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface OrderType {
-  id: string; // ✅ UUID จริง (ใช้กับ backend)
-  display_id?: string; // ✅ เอาไว้โชว์ ADxxxx
+  id: string;
+  display_id?: string;
   status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ' | 'ยกเลิกคำสั่งซ่อม' | 'paid';
   date: string;
   worker: string;
@@ -22,12 +22,9 @@ export default function OrderCard({ order }: { order: OrderType }) {
   const { state } = useAuth();
   const userId = state.user?.id?.toString() || "";
 
-  // ✅ ใช้ display_id ถ้ามี ไม่งั้น fallback id
   const displayId = order.display_id || order.id;
 
-  // ✅ เปิด chat เมื่อ paid (สำคัญ)
   const isChatAvailable = order.status === 'paid';
-
   const isCompleted = order.status === 'ดำเนินการสำเร็จ';
 
   let statusColor = 'bg-gray-200 text-gray-700';
@@ -36,7 +33,7 @@ export default function OrderCard({ order }: { order: OrderType }) {
   if (order.status === 'paid') statusColor = 'bg-green-100 text-green-700';
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6">
+    <div className="relative bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6">
 
       {/* LEFT */}
       <div className="space-y-3 flex-1">
@@ -44,10 +41,9 @@ export default function OrderCard({ order }: { order: OrderType }) {
         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
           คำสั่งการซ่อมรหัส : {displayId}
 
-          {/* ✅ แสดง badge เฉพาะตอน chat ใช้ได้ */}
           {userId && isChatAvailable && (
             <ChatBadge
-              orderId={order.id} // ✅ UUID จริง
+              orderId={order.id}
               userId={userId}
             />
           )}
@@ -97,7 +93,6 @@ export default function OrderCard({ order }: { order: OrderType }) {
           <span className="text-lg font-bold text-gray-900">{order.price} ฿</span>
         </div>
 
-        {/* ✅ ปุ่มดูรายละเอียด + chat */}
         {!isCompleted && (
           <button
             onClick={() => router.push(`/orders/${order.id}?role=user`)}
@@ -108,6 +103,29 @@ export default function OrderCard({ order }: { order: OrderType }) {
         )}
 
       </div>
+
+      {/*  FLOATING CHAT BUTTON */}
+      {userId && isChatAvailable && (
+        <div className="absolute bottom-4 right-4">
+
+          <button
+            onClick={() => router.push(`/chat/${order.id}`)}
+            className="relative w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-lg transition active:scale-95"
+          >
+            💬
+
+            <div className="absolute -top-1 -right-1">
+              <ChatBadge
+                orderId={order.id}
+                userId={userId}
+              />
+            </div>
+
+          </button>
+
+        </div>
+      )}
+
     </div>
   );
 }
