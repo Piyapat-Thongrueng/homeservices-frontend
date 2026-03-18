@@ -566,21 +566,12 @@ export default function ServiceInformation() {
     if (!formData.province || !formData.district || !formData.subDistrict) {
       return;
     }
-    const combined = [
-      formData.subDistrict,
-      formData.district,
-      formData.province,
-      formData.postalCode,
-    ]
-      .filter(Boolean)
-      .join(" ");
-    if (!combined) return;
 
     const t = setTimeout(async () => {
       try {
         const params = new URLSearchParams({
-          address_line: combined,
-          dis: formData.district,
+          subdistrict: formData.subDistrict,
+          district: formData.district,
           province: formData.province,
           postal_code: formData.postalCode || "",
         });
