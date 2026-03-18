@@ -5,6 +5,7 @@
  * contact channels, and legal/policy links.
  */
 import { Phone, Mail } from "lucide-react";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -53,18 +54,18 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-gray-700">
             {/* Terms and Privacy Policy Links - Stacked vertically on mobile */}
             <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-6 order-1 md:order-2 min-w-0">
-              <a
-                href="#"
+              <Link
+                href="/t&c-privacy/t&c"
                 className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
               >
                 เงื่อนไขและข้อตกลงการใช้งานเว็บไซต์
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                href="/t&c-privacy/privacy"
                 className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
               >
                 นโยบายความเป็นส่วนตัว
-              </a>
+              </Link>
             </div>
 
             {/* Copyright - Bottom on mobile, Left on desktop */}
