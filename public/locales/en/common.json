@@ -5,7 +5,10 @@
   "navbar": {
     "services": "Services",
     "history": "Order History",
-    "profile": "Profile"
+    "profile": "Profile",
+    "change_password": "Change Password",
+    "orders": "Repair Orders",
+    "repair_history": "Repair History"
   },
   "hero": {
     "title": "Home matters... let us take care of you",

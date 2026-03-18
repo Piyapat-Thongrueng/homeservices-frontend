@@ -9,8 +9,12 @@ import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import { FileText, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 
 export default function TermsAndConditions() {
+  const { locale } = useRouter();
+  const isEn = locale === "en";
+
   return (
     <div className="min-h-screen bg-utility-bg font-prompt flex flex-col">
       <Navbar />
@@ -24,10 +28,10 @@ export default function TermsAndConditions() {
             </div>
             <div>
               <h1 className="headline-2 text-utility-white">
-                ข้อตกลงและเงื่อนไข
+                {isEn ? "Terms and Conditions" : "ข้อตกลงและเงื่อนไข"}
               </h1>
               <p className="body-3 text-blue-100">
-                เงื่อนไขและข้อตกลงการใช้งานเว็บไซต์ HomeServices
+                {isEn ? "Terms and Conditions for using HomeServices website" : "เงื่อนไขและข้อตกลงการใช้งานเว็บไซต์ HomeServices"}
               </p>
             </div>
           </div>
@@ -42,55 +46,58 @@ export default function TermsAndConditions() {
           className="inline-flex items-center gap-2 body-2 text-blue-600 hover:text-blue-700 mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          กลับหน้าหลัก
+          {isEn ? "Back to Home" : "กลับหน้าหลัก"}
         </Link>
 
         <div className="card-box bg-utility-white p-6 md:p-10 space-y-8">
           {/* Demo Notice */}
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
             <p className="body-2 text-amber-700 font-medium">
-              ⚠️ แอปพลิเคชันนี้เป็นโปรเจกต์สาธิต (Demo)
-              จัดทำเพื่อวัตถุประสงค์ทางการศึกษาเท่านั้น
-              ไม่ใช่บริการเชิงพาณิชย์จริง
+              {isEn 
+                ? "⚠️ This application is a Demo project built for educational purposes only. It is not a real commercial service."
+                : "⚠️ แอปพลิเคชันนี้เป็นโปรเจกต์สาธิต (Demo) จัดทำเพื่อวัตถุประสงค์ทางการศึกษาเท่านั้น ไม่ใช่บริการเชิงพาณิชย์จริง"}
             </p>
           </div>
 
           {/* Last Updated */}
           <p className="body-4 text-gray-500">
-            อัปเดตล่าสุด: 1 มกราคม 2569
+            {isEn ? "Last Updated: January 1, 2024" : "อัปเดตล่าสุด: 1 มกราคม 2569"}
           </p>
 
           {/* Section 1 */}
           <section>
             <h2 className="headline-4 text-gray-900 mb-3">
-              1. การยอมรับข้อตกลง
+              {isEn ? "1. Acceptance of Terms" : "1. การยอมรับข้อตกลง"}
             </h2>
             <p className="body-2 text-gray-600 leading-relaxed">
-              การลงทะเบียนหรือใช้งาน HomeService Demo
-              ถือว่าคุณยอมรับข้อตกลงและเงื่อนไขการใช้งานฉบับนี้ หากคุณไม่ยอมรับ
-              กรุณาหยุดการใช้งานแอปพลิเคชัน
-              ข้อตกลงนี้มีผลผูกพันทางกฎหมายระหว่างคุณและทีมพัฒนา
-              HomeService
+              {isEn 
+                ? "By registering or using the HomeService Demo, you agree to these terms and conditions. If you do not agree, please stop using the application. This agreement is legally binding between you and the HomeService development team."
+                : "การลงทะเบียนหรือใช้งาน HomeService Demo ถือว่าคุณยอมรับข้อตกลงและเงื่อนไขการใช้งานฉบับนี้ หากคุณไม่ยอมรับ กรุณาหยุดการใช้งานแอปพลิเคชัน ข้อตกลงนี้มีผลผูกพันทางกฎหมายระหว่างคุณและทีมพัฒนา HomeService"}
             </p>
           </section>
 
           {/* Section 2 */}
           <section>
             <h2 className="headline-4 text-gray-900 mb-3">
-              2. วัตถุประสงค์การใช้งาน
+              {isEn ? "2. Purpose of Use" : "2. วัตถุประสงค์การใช้งาน"}
             </h2>
             <p className="body-2 text-gray-600 leading-relaxed">
-              แอปพลิเคชันนี้จัดทำขึ้นเพื่อสาธิตระบบการจองบริการซ่อมแซมที่พักอาศัย
-              ข้อมูลทั้งหมดที่แสดงในระบบเป็นข้อมูลสมมติ
-              ไม่มีการให้บริการจริงเกิดขึ้น รวมถึง:
+              {isEn 
+                ? "This application is created to demonstrate a home repair booking system. All information shown is fictitious. No actual services will be provided, including:"
+                : "แอปพลิเคชันนี้จัดทำขึ้นเพื่อสาธิตระบบการจองบริการซ่อมแซมที่พักอาศัย ข้อมูลทั้งหมดที่แสดงในระบบเป็นข้อมูลสมมติ ไม่มีการให้บริการจริงเกิดขึ้น รวมถึง:"}
             </p>
             <ul className="mt-3 space-y-2 pl-4">
-              {[
+              {(isEn ? [
+                "Service lists and prices are sample data",
+                "Service booking is entirely simulated",
+                "No actual charges will be made",
+                "There are no real technicians or service providers",
+              ] : [
                 "รายการบริการและราคาเป็นข้อมูลตัวอย่าง",
                 "การจองบริการเป็นการจำลองเท่านั้น",
                 "ไม่มีการเรียกเก็บเงินจริง",
                 "ไม่มีช่างหรือผู้ให้บริการจริง",
-              ].map((item) => (
+              ]).map((item) => (
                 <li
                   key={item}
                   className="flex items-start gap-3 body-2 text-gray-600"
@@ -104,20 +111,26 @@ export default function TermsAndConditions() {
 
           {/* Section 3 */}
           <section>
-            <h2 className="headline-4 text-gray-900 mb-3">3. บัญชีผู้ใช้</h2>
+            <h2 className="headline-4 text-gray-900 mb-3">
+              {isEn ? "3. User Accounts" : "3. บัญชีผู้ใช้"}
+            </h2>
             <p className="body-2 text-gray-600 leading-relaxed">
-              คุณรับผิดชอบในการรักษาความปลอดภัยของบัญชีและรหัสผ่านของตนเอง
-              กรุณาอย่าเปิดเผยข้อมูลการเข้าสู่ระบบให้ผู้อื่นทราบ
-              ทีมพัฒนาขอสงวนสิทธิ์ในการระงับบัญชีที่มีพฤติกรรมไม่เหมาะสม
-              รวมถึงการกระทำดังต่อไปนี้:
+              {isEn 
+                ? "You are responsible for the security of your account and password. Please do not disclose your login information to others. The development team reserves the right to suspend accounts that behave inappropriately, including the following actions:"
+                : "คุณรับผิดชอบในการรักษาความปลอดภัยของบัญชีและรหัสผ่านของตนเอง กรุณาอย่าเปิดเผยข้อมูลการเข้าสู่ระบบให้ผู้อื่นทราบ ทีมพัฒนาขอสงวนสิทธิ์ในการระงับบัญชีที่มีพฤติกรรมไม่เหมาะสม รวมถึงการกระทำดังต่อไปนี้:"}
             </p>
             <ul className="mt-3 space-y-2 pl-4">
-              {[
+              {(isEn ? [
+                "Attempting to access the system without authorization",
+                "Use that may cause damage to the system",
+                "Impersonating another person",
+                "Using false information during registration",
+              ] : [
                 "การพยายามเข้าถึงระบบโดยไม่ได้รับอนุญาต",
                 "การใช้งานที่อาจก่อให้เกิดความเสียหายต่อระบบ",
                 "การแอบอ้างเป็นบุคคลอื่น",
                 "การใช้ข้อมูลเท็จในการลงทะเบียน",
-              ].map((item) => (
+              ]).map((item) => (
                 <li
                   key={item}
                   className="flex items-start gap-3 body-2 text-gray-600"
@@ -132,33 +145,37 @@ export default function TermsAndConditions() {
           {/* Section 4 */}
           <section>
             <h2 className="headline-4 text-gray-900 mb-3">
-              4. ทรัพย์สินทางปัญญา
+              {isEn ? "4. Intellectual Property" : "4. ทรัพย์สินทางปัญญา"}
             </h2>
             <p className="body-2 text-gray-600 leading-relaxed">
-              เนื้อหา การออกแบบ โลโก้ และส่วนประกอบทั้งหมดของแอปพลิเคชันนี้
-              เป็นทรัพย์สินทางปัญญาของทีมพัฒนา HomeService
-              ห้ามทำซ้ำ ดัดแปลง หรือนำไปใช้เชิงพาณิชย์โดยไม่ได้รับอนุญาต
+              {isEn 
+                ? "All content, designs, logos, and components of this application are the intellectual property of the HomeService development team. Do not copy, modify, or use for commercial purposes without permission."
+                : "เนื้อหา การออกแบบ โลโก้ และส่วนประกอบทั้งหมดของแอปพลิเคชันนี้ เป็นทรัพย์สินทางปัญญาของทีมพัฒนา HomeService ห้ามทำซ้ำ ดัดแปลง หรือนำไปใช้เชิงพาณิชย์โดยไม่ได้รับอนุญาต"}
             </p>
           </section>
 
           {/* Section 5 */}
           <section>
             <h2 className="headline-4 text-gray-900 mb-3">
-              5. ข้อจำกัดความรับผิดชอบ
+              {isEn ? "5. Disclaimer of Liability" : "5. ข้อจำกัดความรับผิดชอบ"}
             </h2>
             <p className="body-2 text-gray-600 leading-relaxed">
-              เนื่องจากเป็น Demo Application
-              ทีมพัฒนาไม่รับประกันความต่อเนื่องของการให้บริการ
-              และไม่รับผิดชอบต่อความเสียหายใดๆ
-              ที่อาจเกิดขึ้นจากการใช้งานแอปพลิเคชันนี้ รวมถึง:
+              {isEn 
+                ? "Since it is a Demo Application, the development team does not guarantee continuous service availability and is not liable for any damages that may arise from using this application, including:"
+                : "เนื่องจากเป็น Demo Application ทีมพัฒนาไม่รับประกันความต่อเนื่องของการให้บริการ และไม่รับผิดชอบต่อความเสียหายใดๆ ที่อาจเกิดขึ้นจากการใช้งานแอปพลิเคชันนี้ รวมถึง:"}
             </p>
             <ul className="mt-3 space-y-2 pl-4">
-              {[
+              {(isEn ? [
+                "Loss of data",
+                "Service interruption",
+                "Technical errors",
+                "Indirect or special damages",
+              ] : [
                 "การสูญหายของข้อมูล",
                 "การหยุดชะงักของบริการ",
                 "ข้อผิดพลาดทางเทคนิค",
                 "ความเสียหายทางอ้อมหรือความเสียหายพิเศษ",
-              ].map((item) => (
+              ]).map((item) => (
                 <li
                   key={item}
                   className="flex items-start gap-3 body-2 text-gray-600"
@@ -173,44 +190,46 @@ export default function TermsAndConditions() {
           {/* Section 6 */}
           <section>
             <h2 className="headline-4 text-gray-900 mb-3">
-              6. การเปลี่ยนแปลงข้อตกลง
+              {isEn ? "6. Modifications to This Agreement" : "6. การเปลี่ยนแปลงข้อตกลง"}
             </h2>
             <p className="body-2 text-gray-600 leading-relaxed">
-              ทีมพัฒนาขอสงวนสิทธิ์ในการแก้ไขข้อตกลงและเงื่อนไขได้ทุกเมื่อโดยไม่ต้องแจ้งล่วงหน้า
-              การใช้งานต่อเนื่องหลังจากมีการเปลี่ยนแปลงถือว่าคุณยอมรับข้อตกลงใหม่
-              เราแนะนำให้คุณตรวจสอบหน้านี้เป็นระยะเพื่อติดตามการเปลี่ยนแปลง
+              {isEn 
+                ? "The development team reserves the right to amend the terms and conditions at any time without prior notice. Continued use after changes implies your acceptance of the new agreement. We recommend checking this page periodically."
+                : "ทีมพัฒนาขอสงวนสิทธิ์ในการแก้ไขข้อตกลงและเงื่อนไขได้ทุกเมื่อโดยไม่ต้องแจ้งล่วงหน้า การใช้งานต่อเนื่องหลังจากมีการเปลี่ยนแปลงถือว่าคุณยอมรับข้อตกลงใหม่ เราแนะนำให้คุณตรวจสอบหน้านี้เป็นระยะเพื่อติดตามการเปลี่ยนแปลง"}
             </p>
           </section>
 
           {/* Section 7 */}
           <section>
             <h2 className="headline-4 text-gray-900 mb-3">
-              7. กฎหมายที่ใช้บังคับ
+              {isEn ? "7. Governing Law" : "7. กฎหมายที่ใช้บังคับ"}
             </h2>
             <p className="body-2 text-gray-600 leading-relaxed">
-              ข้อตกลงนี้อยู่ภายใต้กฎหมายของราชอาณาจักรไทย
-              ข้อพิพาทใดๆ ที่เกิดขึ้นจะอยู่ในเขตอำนาจศาลไทย
+              {isEn 
+                ? "This agreement is governed by the laws of the Kingdom of Thailand. Any disputes arising shall be under the jurisdiction of Thai courts."
+                : "ข้อตกลงนี้อยู่ภายใต้กฎหมายของราชอาณาจักรไทย ข้อพิพาทใดๆ ที่เกิดขึ้นจะอยู่ในเขตอำนาจศาลไทย"}
             </p>
           </section>
 
           {/* Section 8 */}
           <section>
-            <h2 className="headline-4 text-gray-900 mb-3">8. ติดต่อเรา</h2>
+            <h2 className="headline-4 text-gray-900 mb-3">
+              {isEn ? "8. Contact Us" : "8. ติดต่อเรา"}
+            </h2>
             <p className="body-2 text-gray-600 leading-relaxed mb-4">
-              หากมีคำถามเกี่ยวกับข้อตกลงนี้
-              สามารถติดต่อทีมพัฒนาได้ผ่านช่องทางต่อไปนี้:
+              {isEn 
+                ? "If you have questions about this agreement, you can contact the development team via the following channels:"
+                : "หากมีคำถามเกี่ยวกับข้อตกลงนี้ สามารถติดต่อทีมพัฒนาได้ผ่านช่องทางต่อไปนี้:"}
             </p>
             <div className="bg-gray-50 rounded-xl p-5 space-y-2">
               <p className="body-2 text-gray-700">
-                <span className="font-medium">บริษัท:</span> โฮมเซอร์วิสเซส
-                จำกัด
+                <span className="font-medium">{isEn ? "Company:" : "บริษัท:"}</span> HomeServices Co., Ltd.
               </p>
               <p className="body-2 text-gray-700">
-                <span className="font-medium">ที่อยู่:</span> 452 ซอยสุขุมวิท 79
-                แขวงพระโขนงเหนือ เขตวัฒนา กรุงเทพมหานคร 10260
+                <span className="font-medium">{isEn ? "Address:" : "ที่อยู่:"}</span> 452 Sukhumvit 79, Phra Khanong Nuea, Watthana, Bangkok 10260
               </p>
               <p className="body-2 text-gray-700">
-                <span className="font-medium">โทรศัพท์:</span>{" "}
+                <span className="font-medium">{isEn ? "Phone:" : "โทรศัพท์:"}</span>{" "}
                 <a
                   href="tel:080-540-6357"
                   className="text-blue-600 hover:text-blue-700"
@@ -219,7 +238,7 @@ export default function TermsAndConditions() {
                 </a>
               </p>
               <p className="body-2 text-gray-700">
-                <span className="font-medium">อีเมล:</span>{" "}
+                <span className="font-medium">{isEn ? "Email:" : "อีเมล:"}</span>{" "}
                 <a
                   href="mailto:contact@homeservices.co"
                   className="text-blue-600 hover:text-blue-700"

@@ -312,7 +312,7 @@ export default function Navbar() {
                           }}
                           className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
                         >
-                          🔒 {locale === "en" ? "Change Password" : "เปลี่ยนรหัสผ่าน"}
+                          🔒 {t("navbar.change_password")}
                         </button>
 
                         <button
@@ -322,7 +322,7 @@ export default function Navbar() {
                           }}
                           className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
                         >
-                          🔧 รายการคำสั่งซ่อม
+                          🔧 {t("navbar.orders")}
                         </button>
 
                         <button
@@ -332,7 +332,7 @@ export default function Navbar() {
                           }}
                           className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
                         >
-                          📋 ประวัติการซ่อม
+                          📋 {t("navbar.repair_history")}
                         </button>
 
                         <div className="border-t border-gray-100" />

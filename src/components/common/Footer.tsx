@@ -65,13 +65,13 @@ export default function Footer() {
                 href="/t&c-privacy/t&c"
                 className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
               >
-                เงื่อนไขและข้อตกลงการใช้งานเว็บไซต์
+                {t("footer.terms")}
               </Link>
               <Link
                 href="/t&c-privacy/privacy"
                 className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
               >
-                นโยบายความเป็นส่วนตัว
+                {t("footer.privacy")}
               </Link>
               <a
                 href="#"
