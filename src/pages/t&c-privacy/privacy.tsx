@@ -5,6 +5,7 @@
  * Uses global CSS classes for consistent styling.
  */
 
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
@@ -312,4 +313,12 @@ export default function PrivacyPolicy() {
       <Footer />
     </div>
   );
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ['common'])),
+    },
+  };
 }

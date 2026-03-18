@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import OrderSidebar from '@/components/repairorder/OrderSidebar';
@@ -40,7 +41,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     // รอให้ AuthContext โหลดเสร็จก่อน แล้วค่อยเช็ค
-    if (!state.getUserLoading && !isAuthenticated) {
+    if (state.getUserLoading === false && !isAuthenticated) {
       router.push('/login');
     }
   }, [state.getUserLoading, isAuthenticated]);
@@ -122,4 +123,12 @@ export default function ProfilePage() {
       <Footer />
     </div>
   );
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ['common'])),
+    },
+  };
 }

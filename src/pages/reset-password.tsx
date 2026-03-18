@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import OrderSidebar from "@/components/repairorder/OrderSidebar";
@@ -12,7 +13,7 @@ export default function ResetPasswordPage() {
   const { user, getUserLoading: authLoading } = state;
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (authLoading === false && !isAuthenticated) {
       router.replace('/login');
     }
   }, [authLoading, isAuthenticated, router]);
@@ -233,4 +234,12 @@ export default function ResetPasswordPage() {
       )}
     </div>
   );
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ['common'])),
+    },
+  };
 }
