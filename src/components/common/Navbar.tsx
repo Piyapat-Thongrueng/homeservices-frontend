@@ -2,11 +2,14 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Globe } from "lucide-react";
 import { getCart } from "@/services/cartApi";
+import { useTranslation } from "next-i18next";
 
 export default function Navbar() {
   const router = useRouter();
+  const { pathname, asPath, query, locale } = router;
+  const { t } = useTranslation("common");
   const { state, isAuthenticated, logout } = useAuth();
 
   const [open, setOpen] = useState<boolean>(false);
@@ -73,6 +76,11 @@ export default function Navbar() {
     setShowLogoutModal(false);
   };
 
+  const toggleLanguage = () => {
+    const nextLocale = locale === "th" ? "en" : "th";
+    router.push({ pathname, query }, asPath, { locale: nextLocale });
+  };
+
   return (
     <>
       {/* LOGOUT MODAL */}
@@ -97,10 +105,12 @@ export default function Navbar() {
             </div>
 
             <h2 className="text-[18px] sm:text-[20px] font-semibold text-[#101828] mb-2">
-              ออกจากระบบ
+              {t("logout")}
             </h2>
             <p className="text-[13px] sm:text-[14px] text-[#667085] mb-8">
-              คุณยืนยันที่จะออกจากระบบใช่หรือไม่?
+              {locale === "en"
+                ? "Are you sure you want to logout?"
+                : "คุณยืนยันที่จะออกจากระบบใช่หรือไม่?"}
             </p>
 
             {/* ปุ่ม */}
@@ -109,13 +119,13 @@ export default function Navbar() {
                 onClick={handleLogoutCancel}
                 className="flex-1 h-11 text-[14px] font-medium border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
               >
-                ยกเลิก
+                {locale === "en" ? "Cancel" : "ยกเลิก"}
               </button>
               <button
                 onClick={handleLogoutConfirm}
                 className="flex-1 h-11 text-[14px] font-medium bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors cursor-pointer"
               >
-                ยืนยัน
+                {locale === "en" ? "Confirm" : "ยืนยัน"}
               </button>
             </div>
           </div>
@@ -138,12 +148,24 @@ export default function Navbar() {
                 href="/service-lists"
                 className="text-[14px] sm:text-[15px] font-medium text-black hover:text-blue-600 transition-colors whitespace-nowrap"
               >
-                บริการของเรา
+                {t("navbar.services")}
               </Link>
             </div>
 
             {/* RIGHT */}
             <div className="flex items-center gap-3 relative">
+              {/* LANGUAGE SWITCHER */}
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center gap-1.5 px-2 py-1.5 text-gray-600 hover:text-blue-600 transition-colors text-[13px] sm:text-[14px] font-medium cursor-pointer"
+                title={locale === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย"}
+              >
+                <Globe className="w-4 h-4" />
+                <span>{locale === "th" ? "EN" : "TH"}</span>
+              </button>
+
+              <span className="w-px h-5 bg-gray-200" aria-hidden />
+
               {state.getUserLoading ? null : isAuthenticated && user ? (
                 <>
                   {/* NOTIFICATION BELL */}
@@ -195,7 +217,7 @@ export default function Navbar() {
                           }}
                           className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
                         >
-                          👤 โปรไฟล์
+                          👤 {t("navbar.profile")}
                         </button>
 
                         <button
@@ -205,7 +227,7 @@ export default function Navbar() {
                           }}
                           className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
                         >
-                          🔒 เปลี่ยนรหัสผ่าน
+                          🔒 {locale === "en" ? "Change Password" : "เปลี่ยนรหัสผ่าน"}
                         </button>
 
                         <div className="border-t border-gray-100" />
@@ -215,7 +237,7 @@ export default function Navbar() {
                           onClick={handleLogoutClick}
                           className="w-full px-4 py-3 text-[14px] text-red-600 hover:bg-red-50 text-left cursor-pointer flex items-center gap-2"
                         >
-                          🚪 ออกจากระบบ
+                          🚪 {t("logout")}
                         </button>
                       </div>
                     )}
@@ -241,7 +263,7 @@ export default function Navbar() {
                   onClick={() => router.push("/login")}
                   className="border border-blue-600 text-blue-600 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[13px] sm:text-[14px] font-medium hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
                 >
-                  เข้าสู่ระบบ
+                  {t("login")}
                 </button>
               )}
             </div>

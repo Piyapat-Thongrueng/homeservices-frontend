@@ -1,21 +1,13 @@
-/**
- * HomeServices Component
- *
- * Renders a responsive grid of service cards for either the landing page
- * (showing a limited, "popular" subset) or the full service list, and
- * handles navigation and login gating before entering the booking flow.
- */
 import { ArrowRight, Tag } from "lucide-react";
 import { useRouter } from "next/router";
 import { getCategoryColor } from "@/components/serviceCard/CategoryColors";
 import { Service } from "@/types/serviceListTypes/type";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "next-i18next";
 
 interface HomeServicesProps {
   serviceLists: Service[];
-  // mode: "landing" = แสดง 3 รายการ + ปุ่มดูทั้งหมด, "full" = แสดงทั้งหมด
   mode?: "landing" | "full";
-  // callback เมื่อ user กด category badge บนการ์ด
   onCategoryClick?: (categoryId: number, categoryNameTh: string) => void;
 }
 
@@ -25,20 +17,19 @@ export default function HomeServices({
   onCategoryClick,
 }: HomeServicesProps) {
   const router = useRouter();
+  const { locale } = router;
+  const { t } = useTranslation("common");
   const { state } = useAuth();
 
-  // ถ้า mode="landing" แสดงแค่ 3 รายการแรก (ยอดนิยม ควร sort มาจาก API แล้ว)
   const displayList =
     mode === "landing" ? serviceLists.slice(0, 3) : serviceLists;
 
   const handleSelectService = (service: Service) => {
-    // ถ้ายังไม่ได้ login ให้ไปหน้า login ก่อน
     if (!state.user) {
       router.push("/login");
       return;
     }
 
-    // ถ้า login แล้ว → ไปหน้า Service Details พร้อมส่ง serviceId ไปใน query
     router.push({
       pathname: "/servicedetailPage/ServiceDetails",
       query: { serviceId: service.id },
@@ -48,24 +39,25 @@ export default function HomeServices({
   return (
     <div className="w-full bg-gray-50 py-16 text-gray-900 font-prompt overflow-hidden">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10">
-        {/* หัวข้อ */}
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold text-gray-900">
-            {mode === "landing" ? "บริการยอดนิยมของเรา" : "บริการของเรา"}
+            {mode === "landing" ? t("landing.popular_title") : t("landing.all_services_title")}
           </h2>
         </div>
 
-        {/* Grid การ์ด */}
         {displayList.length === 0 ? (
           <div className="flex justify-center items-center py-20">
             <p className="text-gray-400 text-lg">
-              ไม่พบบริการที่ตรงกับการค้นหา
+              {t("landing.not_found")}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {displayList.map((service) => {
               const color = getCategoryColor(service.category_name);
+              const displayName = (locale === "en" ? service.name_en : service.name_th) || service.name;
+              const displayCategory = (locale === "en" ? service.category_name_en : service.category_name_th) || service.category_name_th;
+
               return (
                 <div
                   key={service.id}
@@ -74,13 +66,12 @@ export default function HomeServices({
                   <div className="h-48 overflow-hidden">
                     <img
                       src={service.image}
-                      alt={service.name}
+                      alt={displayName}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                     />
                   </div>
 
                   <div className="p-6 flex flex-col grow">
-                    {/* category badge กดได้ + สีต่างกันตาม category */}
                     <button
                       onClick={() =>
                         onCategoryClick?.(
@@ -92,11 +83,11 @@ export default function HomeServices({
                         ${color.bg} ${color.text}
                         ${onCategoryClick ? "cursor-pointer" : "cursor-default"}`}
                     >
-                      {service.category_name_th}
+                      {displayCategory}
                     </button>
 
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {service.name}
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                      {displayName}
                     </h3>
 
                     <div className="flex items-center gap-2 text-gray-500 mb-6 grow">
@@ -114,7 +105,7 @@ export default function HomeServices({
                       onClick={() => handleSelectService(service)}
                       className="text-blue-600 hover:text-blue-800 font-bold transition-colors cursor-pointer self-start underline underline-offset-4 decoration-blue-600/30 hover:decoration-blue-800 text-base"
                     >
-                      เลือกบริการ
+                      {t("landing.select_service")}
                     </button>
                   </div>
                 </div>
@@ -123,14 +114,13 @@ export default function HomeServices({
           </div>
         )}
 
-        {/* ปุ่ม "ดูบริการทั้งหมด" แสดงเฉพาะ mode="landing" */}
         {mode === "landing" && (
           <div className="mt-16 flex justify-center">
             <button
               onClick={() => router.push("/service-lists")}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-10 rounded-xl transition-all hover:shadow-lg flex items-center gap-2 cursor-pointer text-lg"
             >
-              ดูบริการทั้งหมด <ArrowRight className="w-5 h-5" />
+              {t("landing.view_all")} <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useRouter } from "next/router"
 import { supabase } from "@/lib/supabaseClient"
 import Navbar from "@/components/common/Navbar"
@@ -89,4 +90,12 @@ export default function Home() {
       <Footer />
     </div>
   )
+}
+
+export async function getStaticProps({ locale }: any) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ['common'])),
+    },
+  };
 }
