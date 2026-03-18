@@ -2,8 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { ShoppingCart, Globe } from "lucide-react";
+import { ShoppingCart, Bell, Globe } from "lucide-react";
 import { getCart } from "@/services/cartApi";
+import { useNotification } from "@/hooks/useNotification";
 import { useTranslation } from "next-i18next";
 
 export default function Navbar() {
@@ -16,14 +17,20 @@ export default function Navbar() {
   const [showLogoutModal, setShowLogoutModal] = useState<boolean>(false);
   const [cartCount, setCartCount] = useState<number>(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const { notifications, unreadCount, markAllAsRead } = useNotification(
+    state.user?.id || null,
+  );
 
   // ← ปิด dropdown เมื่อคลิกข้างนอก
   useEffect(() => {
-    const handler = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+    const handler = (e: MouseEvent) => {
+      if (!notifRef.current?.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+      if (!dropdownRef.current?.contains(e.target as Node)) {
         setOpen(false);
       }
     };
@@ -74,6 +81,22 @@ export default function Navbar() {
   // ← กดยกเลิก ให้ปิด modal โดยไม่ทำอะไร
   const handleLogoutCancel = (): void => {
     setShowLogoutModal(false);
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString("th-TH", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getNotifIcon = (type: string) => {
+    if (type === "order_accepted") return "🔧";
+    if (type === "order_completed") return "✅";
+    return "🔔";
   };
 
   const toggleLanguage = () => {
@@ -168,22 +191,80 @@ export default function Navbar() {
 
               {state.getUserLoading ? null : isAuthenticated && user ? (
                 <>
-                  {/* NOTIFICATION BELL */}
-                  <button className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors">
-                    <svg
-                      className="w-5 h-5 sm:w-6 sm:h-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
+                  {/* ✅ NOTIFICATION BELL */}
+                  <div ref={notifRef} className="relative">
+                    <button
+                      onClick={() => {
+                        setNotifOpen(!notifOpen);
+                        if (!notifOpen && unreadCount > 0) {
+                          markAllAsRead();
+                        }
+                      }}
+                      className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                      />
-                    </svg>
-                  </button>
+                      <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
+                      {/* Badge จำนวนที่ยังไม่อ่าน */}
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center leading-none">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Notification Dropdown */}
+                    {notifOpen && (
+                      <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden">
+                        {/* Header */}
+                        <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+                          <span className="text-[14px] font-semibold text-gray-800">
+                            การแจ้งเตือน
+                          </span>
+                          {unreadCount > 0 && (
+                            <span className="text-[12px] text-blue-600">
+                              ยังไม่อ่าน {unreadCount} รายการ
+                            </span>
+                          )}
+                        </div>
+
+                        {/* List */}
+                        <div className="max-h-80 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="px-4 py-8 text-center text-gray-400 text-[13px]">
+                              ไม่มีการแจ้งเตือน
+                            </div>
+                          ) : (
+                            notifications.map((notif) => (
+                              <div
+                                key={notif.id}
+                                className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                                  !notif.is_read ? "bg-blue-50" : ""
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  {/* Icon */}
+                                  <span className="text-[18px] shrink-0 mt-0.5">
+                                    {getNotifIcon(notif.type)}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[13px] text-gray-800 leading-relaxed">
+                                      {notif.message}
+                                    </p>
+                                    <p className="text-[11px] text-gray-400 mt-1">
+                                      {formatDate(notif.created_at)}
+                                    </p>
+                                  </div>
+                                  {/* Unread dot */}
+                                  {!notif.is_read && (
+                                    <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* PROFILE DROPDOWN */}
                   <div ref={dropdownRef} className="relative">
