@@ -17,7 +17,8 @@ const initialErrors: FormErrors = {
 };
 
 export default function LoginPage() {
-  const { login, state, isAuthenticated, loginWithGoogle } = useAuth();
+  const { login, state, isAuthenticated, loginWithGoogle, fetchUser } =
+    useAuth();
 
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -60,9 +61,16 @@ export default function LoginPage() {
     if (result?.error) {
       setApiError(result.error);
       setModalType("error");
-    } else {
-      setModalType("success");
+      return;
     }
+    if (result?.role !== "user") {
+      localStorage.removeItem("token");
+      await fetchUser();
+      setApiError("บัญชีนี้ไม่สามารถเข้าใช้งานระบบนี้ได้");
+      setModalType("error");
+      return;
+    }
+    setModalType("success");
   };
 
   const handleCloseModal = (): void => {

@@ -1,0 +1,34 @@
+{
+  "login": "Login",
+  "welcome": "Welcome to HomeServices",
+  "logout": "Logout",
+  "navbar": {
+    "services": "Services",
+    "history": "Order History",
+    "profile": "Profile"
+  },
+  "hero": {
+    "title": "Home matters... let us take care of you",
+    "subtitle": "\"Convenient, Value, Reliable\"",
+    "description": "Appliance repair, AC service, and home cleaning by professional handymen and maids.",
+    "cta": "Check Service Prices"
+  },
+  "landing": {
+    "popular_title": "Our Popular Services",
+    "all_services_title": "Our Services",
+    "not_found": "No services found matching your search.",
+    "select_service": "Select Service",
+    "view_all": "View All Services"
+  },
+  "landing_footer": {
+    "title": "Join as a technician\nwith HomeServices",
+    "subtitle": "Get standard training for free!\nAnd earn more than before.",
+    "contact": "Contact us at email:"
+  },
+  "footer": {
+    "company_name": "HomeServices Co., Ltd.",
+    "address": "452 Sukhumvit 79, Phra Khanong Nuea, Watthana, Bangkok 10260",
+    "terms": "Terms and Conditions",
+    "privacy": "Privacy Policy"
+  }
+}

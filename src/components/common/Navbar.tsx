@@ -2,25 +2,35 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Bell, Globe } from "lucide-react";
 import { getCart } from "@/services/cartApi";
+import { useNotification } from "@/hooks/useNotification";
+import { useTranslation } from "next-i18next";
 
 export default function Navbar() {
   const router = useRouter();
+  const { pathname, asPath, query, locale } = router;
+  const { t } = useTranslation("common");
   const { state, isAuthenticated, logout } = useAuth();
 
   const [open, setOpen] = useState<boolean>(false);
   const [showLogoutModal, setShowLogoutModal] = useState<boolean>(false);
   const [cartCount, setCartCount] = useState<number>(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const { notifications, unreadCount, markAllAsRead } = useNotification(
+    state.user?.id || null,
+  );
 
   // ← ปิด dropdown เมื่อคลิกข้างนอก
   useEffect(() => {
-    const handler = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+    const handler = (e: MouseEvent) => {
+      if (!notifRef.current?.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+      if (!dropdownRef.current?.contains(e.target as Node)) {
         setOpen(false);
       }
     };
@@ -73,6 +83,27 @@ export default function Navbar() {
     setShowLogoutModal(false);
   };
 
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString("th-TH", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getNotifIcon = (type: string) => {
+    if (type === "order_accepted") return "🔧";
+    if (type === "order_completed") return "✅";
+    return "🔔";
+  };
+
+  const toggleLanguage = () => {
+    const nextLocale = locale === "th" ? "en" : "th";
+    router.push({ pathname, query }, asPath, { locale: nextLocale });
+  };
+
   return (
     <>
       {/* LOGOUT MODAL */}
@@ -97,10 +128,12 @@ export default function Navbar() {
             </div>
 
             <h2 className="text-[18px] sm:text-[20px] font-semibold text-[#101828] mb-2">
-              ออกจากระบบ
+              {t("logout")}
             </h2>
             <p className="text-[13px] sm:text-[14px] text-[#667085] mb-8">
-              คุณยืนยันที่จะออกจากระบบใช่หรือไม่?
+              {locale === "en"
+                ? "Are you sure you want to logout?"
+                : "คุณยืนยันที่จะออกจากระบบใช่หรือไม่?"}
             </p>
 
             {/* ปุ่ม */}
@@ -109,13 +142,13 @@ export default function Navbar() {
                 onClick={handleLogoutCancel}
                 className="flex-1 h-11 text-[14px] font-medium border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
               >
-                ยกเลิก
+                {locale === "en" ? "Cancel" : "ยกเลิก"}
               </button>
               <button
                 onClick={handleLogoutConfirm}
                 className="flex-1 h-11 text-[14px] font-medium bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors cursor-pointer"
               >
-                ยืนยัน
+                {locale === "en" ? "Confirm" : "ยืนยัน"}
               </button>
             </div>
           </div>
@@ -138,30 +171,100 @@ export default function Navbar() {
                 href="/service-lists"
                 className="text-[14px] sm:text-[15px] font-medium text-black hover:text-blue-600 transition-colors whitespace-nowrap"
               >
-                บริการของเรา
+                {t("navbar.services")}
               </Link>
             </div>
 
             {/* RIGHT */}
             <div className="flex items-center gap-3 relative">
+              {/* LANGUAGE SWITCHER */}
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center gap-1.5 px-2 py-1.5 text-gray-600 hover:text-blue-600 transition-colors text-[13px] sm:text-[14px] font-medium cursor-pointer"
+                title={locale === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย"}
+              >
+                <Globe className="w-4 h-4" />
+                <span>{locale === "th" ? "EN" : "TH"}</span>
+              </button>
+
+              <span className="w-px h-5 bg-gray-200" aria-hidden />
+
               {state.getUserLoading ? null : isAuthenticated && user ? (
                 <>
-                  {/* NOTIFICATION BELL */}
-                  <button className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors">
-                    <svg
-                      className="w-5 h-5 sm:w-6 sm:h-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
+                  {/* ✅ NOTIFICATION BELL */}
+                  <div ref={notifRef} className="relative">
+                    <button
+                      onClick={() => {
+                        setNotifOpen(!notifOpen);
+                        if (!notifOpen && unreadCount > 0) {
+                          markAllAsRead();
+                        }
+                      }}
+                      className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                      />
-                    </svg>
-                  </button>
+                      <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
+                      {/* Badge จำนวนที่ยังไม่อ่าน */}
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center leading-none">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Notification Dropdown */}
+                    {notifOpen && (
+                      <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden">
+                        {/* Header */}
+                        <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+                          <span className="text-[14px] font-semibold text-gray-800">
+                            การแจ้งเตือน
+                          </span>
+                          {unreadCount > 0 && (
+                            <span className="text-[12px] text-blue-600">
+                              ยังไม่อ่าน {unreadCount} รายการ
+                            </span>
+                          )}
+                        </div>
+
+                        {/* List */}
+                        <div className="max-h-80 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="px-4 py-8 text-center text-gray-400 text-[13px]">
+                              ไม่มีการแจ้งเตือน
+                            </div>
+                          ) : (
+                            notifications.map((notif) => (
+                              <div
+                                key={notif.id}
+                                className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                                  !notif.is_read ? "bg-blue-50" : ""
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  {/* Icon */}
+                                  <span className="text-[18px] shrink-0 mt-0.5">
+                                    {getNotifIcon(notif.type)}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[13px] text-gray-800 leading-relaxed">
+                                      {notif.message}
+                                    </p>
+                                    <p className="text-[11px] text-gray-400 mt-1">
+                                      {formatDate(notif.created_at)}
+                                    </p>
+                                  </div>
+                                  {/* Unread dot */}
+                                  {!notif.is_read && (
+                                    <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* PROFILE DROPDOWN */}
                   <div ref={dropdownRef} className="relative">
@@ -169,8 +272,12 @@ export default function Navbar() {
                       onClick={() => setOpen(!open)}
                       className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity"
                     >
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold shrink-0">
-                        {userInitial}
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
+                        {user?.profile_pic ? (
+                          <img src={user.profile_pic} alt={userName} className="w-full h-full object-cover" />
+                        ) : (
+                          userInitial
+                        )}
                       </div>
                       <span className="hidden sm:block text-[14px] font-medium text-gray-700 hover:text-blue-500 max-w-30 truncate">
                         {userName}
@@ -195,7 +302,7 @@ export default function Navbar() {
                           }}
                           className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
                         >
-                          👤 โปรไฟล์
+                          👤 {t("navbar.profile")}
                         </button>
 
                         <button
@@ -205,7 +312,27 @@ export default function Navbar() {
                           }}
                           className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
                         >
-                          🔒 เปลี่ยนรหัสผ่าน
+                          🔒 {locale === "en" ? "Change Password" : "เปลี่ยนรหัสผ่าน"}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setOpen(false);
+                            router.push("/profile?tab=orders");
+                          }}
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                        >
+                          🔧 รายการคำสั่งซ่อม
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setOpen(false);
+                            router.push("/profile?tab=history");
+                          }}
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                        >
+                          📋 ประวัติการซ่อม
                         </button>
 
                         <div className="border-t border-gray-100" />
@@ -215,7 +342,7 @@ export default function Navbar() {
                           onClick={handleLogoutClick}
                           className="w-full px-4 py-3 text-[14px] text-red-600 hover:bg-red-50 text-left cursor-pointer flex items-center gap-2"
                         >
-                          🚪 ออกจากระบบ
+                          🚪 {t("logout")}
                         </button>
                       </div>
                     )}
@@ -241,7 +368,7 @@ export default function Navbar() {
                   onClick={() => router.push("/login")}
                   className="border border-blue-600 text-blue-600 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[13px] sm:text-[14px] font-medium hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
                 >
-                  เข้าสู่ระบบ
+                  {t("login")}
                 </button>
               )}
             </div>
