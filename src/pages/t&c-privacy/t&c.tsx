@@ -57,7 +57,7 @@ export default function TermsAndConditions() {
 
           {/* Last Updated */}
           <p className="body-4 text-gray-500">
-            อัปเดตล่าสุด: 1 มกราคม 2568
+            อัปเดตล่าสุด: 1 มกราคม 2569
           </p>
 
           {/* Section 1 */}
