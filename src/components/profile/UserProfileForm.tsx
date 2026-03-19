@@ -9,7 +9,7 @@ import { useTranslation } from 'next-i18next';
 // โหลด AddressMapPicker แบบ dynamic (ไม่ SSR เพราะ Leaflet ต้องการ browser)
 const AddressMapPicker = dynamic(
   () => import('@/components/servicedetail/AddressMapPicker'),
-  { ssr: false, loading: () => <div className="w-full h-[280px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">กำลังโหลดแผนที่...</div> }
+  { ssr: false, loading: () => <div className="w-full h-[280px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">Loading map / กำลังโหลดแผนที่...</div> }
 );
 
 interface UserProfileFormProps {

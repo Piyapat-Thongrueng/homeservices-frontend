@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import { useTranslation } from "next-i18next";
 
 interface LoginModalProps {
   type: "success" | "error";
@@ -13,6 +14,7 @@ export default function LoginModal({
   onClose,
 }: LoginModalProps) {
   const router = useRouter();
+  const { t } = useTranslation("common");
 
   // auto redirect หลัง 3 วินาที กรณี success
   useEffect(() => {
@@ -51,20 +53,20 @@ export default function LoginModal({
             </div>
 
             <h2 className="text-[18px] sm:text-[22px] font-semibold text-[#101828] mb-2">
-              เข้าสู่ระบบสำเร็จ!
+              {t("auth.modal_success_title", "เข้าสู่ระบบสำเร็จ!")}
             </h2>
             <p className="text-[13px] sm:text-[14px] text-[#667085] mb-2">
-              กำลังนำท่านไปสู่หน้าเว็บไซต์
+              {t("auth.modal_success_desc1", "กำลังนำท่านไปสู่หน้าเว็บไซต์")}
             </p>
             <p className="text-[12px] text-[#98A2B3] mb-6">
-              หรือระบบจะนำท่านไปอัตโนมัติใน 3 วินาที
+              {t("auth.modal_success_desc2", "หรือระบบจะนำท่านไปอัตโนมัติใน 3 วินาที")}
             </p>
 
             <button
               onClick={handleGoToHome}
               className="btn-primary w-full h-11 text-[14px]"
             >
-              ไปยังหน้าเว็บไซต์
+              {t("auth.btn_go_to_home", "ไปยังหน้าเว็บไซต์")}
             </button>
           </>
         ) : (
@@ -87,13 +89,13 @@ export default function LoginModal({
             </div>
 
             <h2 className="text-[18px] sm:text-[22px] font-semibold text-[#101828] mb-2">
-              เกิดข้อผิดพลาด
+              {t("auth.modal_error_title", "เกิดข้อผิดพลาด")}
             </h2>
             <p className="text-[13px] sm:text-[14px] text-[#667085] mb-2">
-              เกิดข้อผิดพลาดในการเข้าสู่ระบบ
+              {t("auth.modal_error_desc", "เกิดข้อผิดพลาดในการเข้าสู่ระบบ")}
             </p>
             <p className="text-[13px] sm:text-[14px] text-[#667085] mb-6">
-              กรุณาลองใหม่อีกครั้ง
+              {t("auth.modal_error_retry", "กรุณาลองใหม่อีกครั้ง")}
             </p>
 
             {errorMessage && (
@@ -106,7 +108,7 @@ export default function LoginModal({
               onClick={onClose}
               className="btn-primary w-full h-11 text-[14px]"
             >
-              กลับไปเข้าสู่ระบบ
+              {t("auth.btn_back_to_login", "กลับไปเข้าสู่ระบบ")}
             </button>
           </>
         )}
