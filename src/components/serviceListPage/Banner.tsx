@@ -13,7 +13,7 @@ const Banner = () => {
     <div>
       <section className="relative w-full h-42 overflow-hidden md:h-60">
         <img
-          src="./banner.jpg"
+          src="/banner.jpg"
           alt="Banner"
           className="absolute inset-0 w-full h-full object-cover opacity-95"
         />
