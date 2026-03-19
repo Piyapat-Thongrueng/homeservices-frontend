@@ -346,25 +346,26 @@
     @apply border-border outline-ring/50;
   }
 
-  /* Ensure interactive controls always show pointer cursor */
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
+  /* Force pointer for interactive controls app-wide */
+  button,
+  [role="button"],
   a[href],
   summary,
-  input[type="button"]:not(:disabled),
-  input[type="submit"]:not(:disabled),
-  input[type="reset"]:not(:disabled),
-  select:not(:disabled),
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  select,
   label[for] {
-    cursor: pointer;
+    cursor: pointer !important;
   }
 
   button:disabled,
+  [role="button"][aria-disabled="true"],
   input[type="button"]:disabled,
   input[type="submit"]:disabled,
   input[type="reset"]:disabled,
   select:disabled {
-    cursor: not-allowed;
+    cursor: not-allowed !important;
   }
 
   body {

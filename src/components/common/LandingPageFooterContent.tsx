@@ -31,7 +31,7 @@ export default function LandingPageFooterContent() {
               <span>{t("landing_footer.contact")} </span>
               <a
                 href="mailto:job@homeservices.co"
-                className="hover:text-blue-200 transition-colors break-all cursor-pointer"
+                className="hover:text-blue-200 transition-colors break-all"
               >
                 job@homeservices.co
               </a>

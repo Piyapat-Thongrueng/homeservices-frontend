@@ -275,14 +275,14 @@ export default function RegisterPage() {
                   ยอมรับ{" "}
                   <span
                     onClick={() => setShowTerms(true)}
-                    className="text-blue-600 font-medium hover:underline cursor-pointer"
+                    className="text-blue-600 font-medium hover:underline"
                   >
                     ข้อตกลงและเงื่อนไข
                   </span>{" "}
                   และ{" "}
                   <span
                     onClick={() => setShowPrivacy(true)}
-                    className="text-blue-600 font-medium hover:underline cursor-pointer"
+                    className="text-blue-600 font-medium hover:underline"
                   >
                     นโยบายความเป็นส่วนตัว
                   </span>

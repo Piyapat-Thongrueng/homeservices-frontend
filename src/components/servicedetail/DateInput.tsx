@@ -133,7 +133,7 @@ const DateInput: React.FC<DateInputProps> = ({
         <button
           type="button"
           onClick={handleOpenCalendar}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer z-10"
+          className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-gray-600 z-10"
         >
           <Calendar className="w-5 h-5" />
         </button>
