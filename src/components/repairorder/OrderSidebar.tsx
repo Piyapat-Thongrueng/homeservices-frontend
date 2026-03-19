@@ -1,5 +1,6 @@
 import React from 'react';
 import { User, ClipboardList, History } from 'lucide-react';
+import { useTranslation } from 'next-i18next';
 
 interface SidebarProps {
   activeTab: 'profile' | 'orders' | 'history';
@@ -8,6 +9,7 @@ interface SidebarProps {
 }
 
 export default function OrderSidebar({ activeTab, onTabChange }: SidebarProps) {
+  const { t } = useTranslation('common');
   
   // ฟังก์ชันเช็กเงื่อนไขก่อนเปลี่ยนหน้า
   const handleClick = (tab: 'profile' | 'orders' | 'history') => {
@@ -18,7 +20,9 @@ export default function OrderSidebar({ activeTab, onTabChange }: SidebarProps) {
 
   return (
     <aside className="w-full md:w-64 bg-white rounded-xl shadow-sm border border-gray-100 p-4 h-fit shrink-0">
-      <h2 className="text-gray-500 font-semibold mb-4 border-b border-gray-100 pb-2">บัญชีผู้ใช้</h2>
+      <h2 className="text-gray-500 font-semibold mb-4 border-b border-gray-100 pb-2">
+        {t('profile.user_account', 'บัญชีผู้ใช้')}
+      </h2>
       <nav className="flex flex-col space-y-2">
         
         <button 
@@ -28,7 +32,7 @@ export default function OrderSidebar({ activeTab, onTabChange }: SidebarProps) {
           }`}
         >
           <User size={20} />
-          <span>ข้อมูลผู้ใช้งาน</span>
+          <span>{t('profile.title_profile', 'ข้อมูลผู้ใช้งาน')}</span>
         </button>
         
         <button 
@@ -38,7 +42,7 @@ export default function OrderSidebar({ activeTab, onTabChange }: SidebarProps) {
           }`}
         >
           <ClipboardList size={20} />
-          <span>รายการคำสั่งซ่อม</span>
+          <span>{t('profile.title_orders', 'รายการคำสั่งซ่อม')}</span>
         </button>
 
         <button 
@@ -48,7 +52,7 @@ export default function OrderSidebar({ activeTab, onTabChange }: SidebarProps) {
           }`}
         >
           <History size={20} />
-          <span>ประวัติการซ่อม</span>
+          <span>{t('profile.title_history', 'ประวัติการซ่อม')}</span>
         </button>
         
       </nav>

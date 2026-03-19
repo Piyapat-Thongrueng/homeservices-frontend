@@ -16,6 +16,7 @@ import {
   getDistrictsByProvince,
   getSubDistrictsByDistrict,
 } from "@/utils/thailand-locations";
+import { useRouter } from "next/router";
 
 interface LocationSelectorsProps {
   /** Selected province */
@@ -43,6 +44,8 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
   onDistrictChange,
   onSubDistrictChange,
 }) => {
+  const { locale } = useRouter();
+  const isEn = locale === "en";
   // Get available options based on current selections
   const provinces = getProvinces();
   const districts = province ? getDistrictsByProvince(province) : [];
@@ -73,7 +76,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
       {/* Province Field - Full Width */}
       <div>
         <label className="block headline-5 text-gray-800 font-medium mb-2">
-          จังหวัด<span className="text-red-500 ml-1">*</span>
+          {isEn ? "Province" : "จังหวัด"}<span className="text-red-500 ml-1">*</span>
         </label>
         <div className="relative">
           <select
@@ -83,7 +86,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
             className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
             <option value="" className="text-gray-400">
-              เลือกจังหวัด
+              {isEn ? "Select Province" : "เลือกจังหวัด"}
             </option>
             {provinces.map((prov) => (
               <option key={prov} value={prov} className="text-gray-900">
@@ -100,7 +103,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
         {/* District Field */}
         <div>
           <label className="block headline-5 text-gray-800 font-medium mb-2">
-            เขต / อำเภอ<span className="text-red-500 ml-1">*</span>
+            {isEn ? "District" : "เขต / อำเภอ"}<span className="text-red-500 ml-1">*</span>
           </label>
           <div className="relative">
             <select
@@ -110,7 +113,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
               className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed cursor-pointer"
             >
               <option value="" className="text-gray-400">
-                เลือกเขต / อำเภอ
+                {isEn ? "Select District" : "เลือกเขต / อำเภอ"}
               </option>
               {districts.map((dist) => (
                 <option key={dist} value={dist} className="text-gray-900">
@@ -125,7 +128,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
         {/* Sub-district Field */}
         <div>
           <label className="block headline-5 text-gray-800 font-medium mb-2">
-            แขวง / ตำบล<span className="text-red-500 ml-1">*</span>
+            {isEn ? "Sub-district" : "แขวง / ตำบล"}<span className="text-red-500 ml-1">*</span>
           </label>
           <div className="relative">
             <select
@@ -135,7 +138,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
               className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed cursor-pointer"
             >
               <option value="" className="text-gray-400">
-                เลือกแขวง / ตำบล
+                {isEn ? "Select Sub-district" : "เลือกแขวง / ตำบล"}
               </option>
               {subDistricts.map((subDist) => (
                 <option key={subDist} value={subDist} className="text-gray-900">

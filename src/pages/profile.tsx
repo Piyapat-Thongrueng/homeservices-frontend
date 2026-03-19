@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
 import OrderSidebar from '@/components/repairorder/OrderSidebar';
@@ -8,6 +7,8 @@ import OrderCard from '@/components/repairorder/OrderCard';
 import UserProfileForm from '@/components/profile/UserProfileForm';
 import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
+import { useTranslation } from 'next-i18next';
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 
 // กำหนดประเภทข้อมูลให้ตรงกับที่ OrderCard ต้องการ
 interface OrderType {
@@ -23,6 +24,7 @@ interface OrderType {
 export default function ProfilePage() {
   const router = useRouter();
   const { state, isAuthenticated } = useAuth();
+  const { t } = useTranslation('common');
   const [currentTab, setCurrentTab] = useState<'profile' | 'orders' | 'history'>('profile');
 
   // รับ tab จาก query string เช่น /profile?tab=orders
@@ -41,10 +43,10 @@ export default function ProfilePage() {
 
   useEffect(() => {
     // รอให้ AuthContext โหลดเสร็จก่อน แล้วค่อยเช็ค
-    if (state.getUserLoading === false && !isAuthenticated) {
+    if (!state.getUserLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [state.getUserLoading, isAuthenticated]);
+  }, [state.getUserLoading, isAuthenticated, router]);
 
   // 🌟 เพิ่ม useEffect สำหรับดึงข้อมูลออเดอร์เมื่อเปลี่ยน Tab
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function ProfilePage() {
     fetchOrders();
   }, [currentTab, state.user, state.getUserLoading]);
 
-  if (state.getUserLoading) return <div className="min-h-screen flex items-center justify-center font-prompt">กำลังโหลด...</div>;
+  if (state.getUserLoading) return <div className="min-h-screen flex items-center justify-center font-prompt">{t('profile.loading', 'กำลังโหลด...')}</div>;
   if (!isAuthenticated || !state.user) return null;
 
   // 🌟 กรองข้อมูลตามสถานะแท็บ
@@ -87,8 +89,8 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50 flex flex-col font-prompt">
       <Navbar />
       <div className="bg-blue-600 text-white text-center py-8 text-2xl font-bold shadow-inner">
-        {currentTab === 'profile' ? 'ข้อมูลผู้ใช้งาน' : 
-         currentTab === 'orders' ? 'รายการคำสั่งซ่อม' : 'ประวัติการซ่อม'}
+        {currentTab === 'profile' ? t('profile.title_profile', 'ข้อมูลผู้ใช้งาน') : 
+         currentTab === 'orders' ? t('profile.title_orders', 'รายการคำสั่งซ่อม') : t('profile.title_history', 'ประวัติการซ่อม')}
       </div>
       <main className="flex-grow max-w-7xl mx-auto w-full px-4 py-8 flex flex-col md:flex-row gap-8">
         
@@ -105,7 +107,7 @@ export default function ProfilePage() {
             // 🌟 ส่วนแสดงรายการซ่อม
             <div className="flex flex-col gap-4">
               {loadingOrders ? (
-                <div className="text-center py-10 text-gray-500">กำลังโหลดรายการ...</div>
+                <div className="text-center py-10 text-gray-500">{t('profile.loading_items', 'กำลังโหลดรายการ...')}</div>
               ) : displayOrders.length > 0 ? (
                 displayOrders.map(order => (
                   <OrderCard key={order.id} order={order} />
@@ -113,7 +115,7 @@ export default function ProfilePage() {
               ) : (
                 <div className="text-center py-10 bg-white rounded-xl shadow-sm border border-gray-100">
                   <i className="fa-regular fa-clipboard text-4xl text-gray-300 mb-3 block"></i>
-                  <p className="text-gray-500">ไม่มีประวัติคำสั่งซ่อม</p>
+                  <p className="text-gray-500">{t('profile.no_history', 'ไม่มีประวัติคำสั่งซ่อม')}</p>
                 </div>
               )}
             </div>

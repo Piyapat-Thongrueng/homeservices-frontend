@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Calendar, UserCircle, MapPin, X, Loader2 } from 'lucide-react';
+import { useTranslation } from 'next-i18next';
 
 interface OrderType {
   id: number;
@@ -29,6 +30,7 @@ interface OrderDetail {
 }
 
 function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () => void }) {
+  const { t } = useTranslation('common');
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,7 +42,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
         const res = await axios.get(`${API_URL}/api/orders/${orderId}`);
         setDetail(res.data);
       } catch {
-        setError('ไม่สามารถโหลดรายละเอียดได้');
+        setError(t('order.error_load', 'ไม่สามารถโหลดรายละเอียดได้'));
       } finally {
         setLoading(false);
       }
@@ -58,11 +60,11 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
     return 'bg-gray-100 text-gray-600';
   };
 
-  const thaiStatus = (s: string) => {
-    if (s === 'pending') return 'รอดำเนินการ';
-    if (s === 'in_progress') return 'กำลังดำเนินการ';
-    if (s === 'completed') return 'ดำเนินการสำเร็จ';
-    if (s === 'cancelled') return 'ยกเลิกคำสั่งซ่อม';
+  const translatedStatus = (s: string) => {
+    if (s === 'pending' || s === 'รอดำเนินการ') return t('order.status_pending', 'รอดำเนินการ');
+    if (s === 'in_progress' || s === 'กำลังดำเนินการ') return t('order.status_in_progress', 'กำลังดำเนินการ');
+    if (s === 'completed' || s === 'ดำเนินการสำเร็จ') return t('order.status_completed', 'ดำเนินการสำเร็จ');
+    if (s === 'cancelled' || s === 'ยกเลิกคำสั่งซ่อม') return t('order.status_cancelled', 'ยกเลิกคำสั่งซ่อม');
     return s;
   };
 
@@ -79,7 +81,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-800">
-            รายละเอียดคำสั่งซ่อม
+            {t('order.modal_title', 'รายละเอียดคำสั่งซ่อม')}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
             <X size={20} className="text-gray-500" />
@@ -101,13 +103,13 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
               {/* รหัสและสถานะ */}
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">รหัสคำสั่งซ่อม</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('order.order_id', 'รหัสคำสั่งซ่อม')}</p>
                   <p className="text-xl font-bold text-gray-900">
                     AD{String(detail.id).padStart(8, '0')}
                   </p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium mt-1 ${statusColor()}`}>
-                  {thaiStatus(detail.status)}
+                  {translatedStatus(detail.status)}
                 </span>
               </div>
 
@@ -117,12 +119,12 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
               <div className="flex items-start gap-3">
                 <Calendar size={16} className="text-gray-400 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-xs text-gray-400 mb-0.5">วันที่สั่งซ่อม</p>
+                  <p className="text-xs text-gray-400 mb-0.5">{t('order.order_date', 'วันที่สั่งซ่อม')}</p>
                   <p className="text-sm text-gray-800">{formatDate(detail.created_at)}</p>
                   {detail.appointment_date && (
                     <p className="text-sm text-blue-600 mt-1">
-                      นัดหมาย: {detail.appointment_date}
-                      {detail.appointment_time ? ` เวลา ${detail.appointment_time}` : ''}
+                      {t('order.appointment', 'นัดหมาย:')} {detail.appointment_date}
+                      {detail.appointment_time ? ` ${t('order.time', 'เวลา')} ${detail.appointment_time}` : ''}
                     </p>
                   )}
                 </div>
@@ -132,9 +134,9 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
               <div className="flex items-start gap-3">
                 <UserCircle size={16} className="text-gray-400 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-xs text-gray-400 mb-0.5">ช่างผู้รับงาน</p>
+                  <p className="text-xs text-gray-400 mb-0.5">{t('order.technician', 'ช่างผู้รับงาน')}</p>
                   <p className="text-sm text-gray-800">
-                    {detail.technician_name || 'ยังไม่ระบุช่าง'}
+                    {detail.technician_name || t('order.tech_unassigned', 'ยังไม่ระบุช่าง')}
                   </p>
                   {detail.technician_phone && (
                     <p className="text-sm text-gray-500">{detail.technician_phone}</p>
@@ -147,7 +149,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
                 <div className="flex items-start gap-3">
                   <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-400 mb-0.5">ที่อยู่นัดซ่อม</p>
+                    <p className="text-xs text-gray-400 mb-0.5">{t('order.service_address', 'ที่อยู่นัดซ่อม')}</p>
                     <p className="text-sm text-gray-800">
                       {[detail.address_line, detail.district, detail.province, detail.postal_code]
                         .filter(Boolean).join(' ')}
@@ -160,7 +162,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 
               {/* รายการบริการ */}
               <div>
-                <p className="text-xs text-gray-400 mb-2">รายการบริการ</p>
+                <p className="text-xs text-gray-400 mb-2">{t('order.service_items', 'รายการบริการ')}</p>
                 <ul className="space-y-2">
                   {(detail.services || []).map((s, i) => (
                     <li key={i} className="flex items-center justify-between text-sm">
@@ -174,7 +176,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 
               {/* ราคา */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">ราคารวมทั้งหมด</span>
+                <span className="text-sm text-gray-500">{t('order.total_price', 'ราคารวมทั้งหมด')}</span>
                 <span className="text-xl font-bold text-gray-900">
                   {(detail.net_price ?? detail.total_price ?? 0).toLocaleString('th-TH')} ฿
                 </span>
@@ -189,7 +191,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
             onClick={onClose}
             className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
           >
-            ปิด
+            {t('order.btn_close', 'ปิด')}
           </button>
         </div>
       </div>
@@ -198,6 +200,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 }
 
 export default function OrderCard({ order }: { order: OrderType }) {
+  const { t } = useTranslation('common');
   const [showModal, setShowModal] = useState(false);
   const isCompleted = order.status === 'ดำเนินการสำเร็จ';
 
@@ -206,25 +209,33 @@ export default function OrderCard({ order }: { order: OrderType }) {
   if (isCompleted) statusColor = 'bg-teal-100 text-teal-700';
   if (order.status === 'ยกเลิกคำสั่งซ่อม') statusColor = 'bg-red-100 text-red-600';
 
+  const translatedStatus = (s: string) => {
+    if (s === 'pending' || s === 'รอดำเนินการ') return t('order.status_pending', 'รอดำเนินการ');
+    if (s === 'in_progress' || s === 'กำลังดำเนินการ') return t('order.status_in_progress', 'กำลังดำเนินการ');
+    if (s === 'completed' || s === 'ดำเนินการสำเร็จ') return t('order.status_completed', 'ดำเนินการสำเร็จ');
+    if (s === 'cancelled' || s === 'ยกเลิกคำสั่งซ่อม') return t('order.status_cancelled', 'ยกเลิกคำสั่งซ่อม');
+    return s;
+  };
+
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6">
         <div className="space-y-3 flex-1">
           <h3 className="text-lg font-bold text-gray-900">
-            คำสั่งการซ่อมรหัส : AD{String(order.id).padStart(8, '0')}
+            {t('order.order_id_prefix', 'คำสั่งการซ่อมรหัส :')} AD{String(order.id).padStart(8, '0')}
           </h3>
           <div className="text-sm text-gray-500 space-y-1">
             <div className="flex items-center gap-2">
               <Calendar size={16} />
-              <span>{isCompleted ? 'วันเวลาดำเนินการสำเร็จ:' : 'วันเวลาดำเนินการ:'} {order.date}</span>
+              <span>{isCompleted ? t('order.completed_datetime', 'วันเวลาดำเนินการสำเร็จ:') : t('order.service_datetime', 'วันเวลาดำเนินการ:')} {order.date}</span>
             </div>
             <div className="flex items-center gap-2">
               <UserCircle size={16} />
-              <span>พนักงาน: {order.worker}</span>
+              <span>{t('order.staff', 'พนักงาน:')} {order.worker}</span>
             </div>
           </div>
           <div className="pt-2">
-            <p className="text-sm text-gray-500 mb-1">รายการ:</p>
+            <p className="text-sm text-gray-500 mb-1">{t('order.items_label', 'รายการ:')}</p>
             <ul className="text-sm text-gray-800">
               {order.details.map((detail, index) => (
                 <li key={index}>• {detail}</li>
@@ -235,13 +246,13 @@ export default function OrderCard({ order }: { order: OrderType }) {
 
         <div className="flex flex-col items-start lg:items-end justify-between min-w-[200px]">
           <div className="flex items-center gap-2 w-full justify-between lg:justify-end mb-4 lg:mb-0">
-            <span className="text-sm text-gray-500">สถานะ:</span>
+            <span className="text-sm text-gray-500">{t('order.status_label', 'สถานะ:')}</span>
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-              {order.status}
+              {translatedStatus(order.status)}
             </span>
           </div>
           <div className="flex items-center gap-2 w-full justify-between lg:justify-end mt-2 lg:mt-0">
-            <span className="text-sm text-gray-500">ราคารวม:</span>
+            <span className="text-sm text-gray-500">{t('order.total_label', 'ราคารวม:')}</span>
             <span className="text-lg font-bold text-gray-900">
               {order.price.toLocaleString('th-TH')} ฿
             </span>
@@ -250,7 +261,7 @@ export default function OrderCard({ order }: { order: OrderType }) {
             onClick={() => setShowModal(true)}
             className="mt-4 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            ดูรายละเอียด
+            {t('order.btn_view_details', 'ดูรายละเอียด')}
           </button>
         </div>
       </div>
