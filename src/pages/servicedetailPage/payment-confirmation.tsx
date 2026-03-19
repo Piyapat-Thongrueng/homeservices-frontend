@@ -171,7 +171,7 @@ export default function PaymentConfirmation() {
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="btn-primary px-6 py-2 cursor-pointer"
+              className="btn-primary px-6 py-2"
             >
               {t("payment_confirm.btn_home")}
             </button>
@@ -310,7 +310,7 @@ export default function PaymentConfirmation() {
           <button
             type="button"
             onClick={() => router.push("/profile?tab=orders")}
-            className="btn-primary w-full px-8 py-3 mt-6 cursor-pointer"
+            className="btn-primary w-full px-8 py-3 mt-6"
           >
             {t("payment_confirm.btn_check_order")}
           </button>

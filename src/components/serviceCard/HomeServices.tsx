@@ -79,7 +79,7 @@ export default function HomeServices({
                           service.category_name_th,
                         )
                       }
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold w-max mb-4 transition-opacity hover:opacity-75 cursor-pointer
+                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold w-max mb-4 transition-opacity hover:opacity-75
                         ${color.bg} ${color.text}
                         ${onCategoryClick ? "cursor-pointer" : "cursor-default"}`}
                     >
@@ -104,7 +104,7 @@ export default function HomeServices({
 
                     <button
                       onClick={() => handleSelectService(service)}
-                      className="text-blue-600 hover:text-blue-800 font-bold transition-colors cursor-pointer self-start underline underline-offset-4 decoration-blue-600/30 hover:decoration-blue-800 text-base"
+                      className="text-blue-600 hover:text-blue-800 font-bold transition-colors self-start underline underline-offset-4 decoration-blue-600/30 hover:decoration-blue-800 text-base"
                     >
                       {t("landing.select_service")}
                     </button>
@@ -119,7 +119,7 @@ export default function HomeServices({
           <div className="mt-16 flex justify-center">
             <button
               onClick={() => router.push("/service-lists")}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-10 rounded-xl transition-all hover:shadow-lg flex items-center gap-2 cursor-pointer text-lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-10 rounded-xl transition-all hover:shadow-lg flex items-center gap-2 text-lg"
             >
               {t("landing.view_all")} <ArrowRight className="w-5 h-5" />
             </button>

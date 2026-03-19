@@ -345,6 +345,29 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* Force pointer for interactive controls app-wide */
+  button,
+  [role="button"],
+  a[href],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  select,
+  label[for] {
+    cursor: pointer !important;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  input[type="button"]:disabled,
+  input[type="submit"]:disabled,
+  input[type="reset"]:disabled,
+  select:disabled {
+    cursor: not-allowed !important;
+  }
+
   body {
     @apply bg-background text-foreground;
   }

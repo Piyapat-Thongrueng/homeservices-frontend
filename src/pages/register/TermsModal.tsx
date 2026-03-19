@@ -33,7 +33,7 @@ export default function TermsModal({ onClose }: TermsModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4 text-gray-500" />
           </button>
@@ -196,7 +196,7 @@ export default function TermsModal({ onClose }: TermsModalProps) {
         <div className="px-6 py-4 border-t border-gray-100">
           <button
             onClick={onClose}
-            className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
+            className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-xl transition-colors"
           >
             {isEn ? "Acknowledge and Close" : "รับทราบและปิด"}
           </button>

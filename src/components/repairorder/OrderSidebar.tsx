@@ -27,7 +27,7 @@ export default function OrderSidebar({ activeTab, onTabChange }: SidebarProps) {
         
         <button 
           onClick={() => handleClick('profile')}
-          className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+          className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
             activeTab === 'profile' ? 'text-blue-600 font-medium bg-blue-50' : 'text-gray-600 hover:bg-gray-50'
           }`}
         >
@@ -37,7 +37,7 @@ export default function OrderSidebar({ activeTab, onTabChange }: SidebarProps) {
         
         <button 
           onClick={() => handleClick('orders')}
-          className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+          className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
             activeTab === 'orders' ? 'text-blue-600 font-medium bg-blue-50' : 'text-gray-600 hover:bg-gray-50'
           }`}
         >
@@ -47,7 +47,7 @@ export default function OrderSidebar({ activeTab, onTabChange }: SidebarProps) {
 
         <button 
           onClick={() => handleClick('history')}
-          className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+          className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
             activeTab === 'history' ? 'text-blue-600 font-medium bg-blue-50' : 'text-gray-600 hover:bg-gray-50'
           }`}
         >

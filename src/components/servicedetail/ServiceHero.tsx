@@ -60,7 +60,7 @@ const ServiceHero: React.FC<ServiceHeroProps> = ({
         <div className="inline-flex items-center gap-3 bg-utility-white shadow px-4 md:px-8 py-2.5 mb-14 rounded-lg w-full md:w-auto">
           <button
             type="button"
-            className="headline-5 text-gray-700 hover:text-blue-600 transition-colors duration-300 ease-out cursor-pointer whitespace-nowrap"
+            className="headline-5 text-gray-700 hover:text-blue-600 transition-colors duration-300 ease-out whitespace-nowrap"
           >
             {t("service_detail.breadcrumb")}
           </button>

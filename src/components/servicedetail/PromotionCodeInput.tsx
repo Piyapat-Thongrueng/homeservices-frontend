@@ -71,7 +71,7 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
         {/* Apply Button */}
         <button
           type="button"
-          className={`px-6 cursor-pointer rounded-lg font-medium transition-colors ${
+          className={`px-6 rounded-lg font-medium transition-colors ${
             hasDiscount
               ? "bg-yellow-500 text-white hover:bg-yellow-400"
               : "btn-primary"
@@ -93,4 +93,4 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
   );
 };
 
-export default PromotionCodeInput;
+export default PromotionCodeInput;
