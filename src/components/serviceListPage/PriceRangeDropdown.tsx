@@ -10,26 +10,29 @@ import { ChevronDown } from "lucide-react";
 import { useTranslation } from "next-i18next";
 
 const MIN = 0;
-const MAX = 2000;
 
 interface PriceRangeDropdownProps {
   minPrice: number;
   maxPrice: number;
+  absoluteMax: number;
   onChange: (min: number, max: number) => void;
 }
 
 export default function PriceRangeDropdown({
   minPrice,
   maxPrice,
+  absoluteMax,
   onChange,
 }: PriceRangeDropdownProps) {
+  const MAX = absoluteMax;
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -71,7 +74,9 @@ export default function PriceRangeDropdown({
 
       {open && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-5">
-          <p className="text-[18px] font-semibold text-gray-900 mb-5">{label}</p>
+          <p className="text-[18px] font-semibold text-gray-900 mb-5">
+            {label}
+          </p>
 
           <div className="relative h-6 flex items-center mb-4">
             <div className="absolute w-full h-1.5 bg-gray-200 rounded-full" />
@@ -80,7 +85,11 @@ export default function PriceRangeDropdown({
               style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
             />
             <input
-              type="range" min={MIN} max={MAX} step={100} value={minPrice}
+              type="range"
+              min={MIN}
+              max={MAX}
+              step={100}
+              value={minPrice}
               onChange={handleMinChange}
               className="absolute w-full appearance-none bg-transparent pointer-events-none
                 [&::-webkit-slider-thumb]:pointer-events-auto
@@ -91,7 +100,11 @@ export default function PriceRangeDropdown({
                 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
             />
             <input
-              type="range" min={MIN} max={MAX} step={100} value={maxPrice}
+              type="range"
+              min={MIN}
+              max={MAX}
+              step={100}
+              value={maxPrice}
               onChange={handleMaxChange}
               className="absolute w-full appearance-none bg-transparent pointer-events-none
                 [&::-webkit-slider-thumb]:pointer-events-auto
