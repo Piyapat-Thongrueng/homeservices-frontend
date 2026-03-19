@@ -154,7 +154,7 @@ export default function SearchAndFilterBar({
               {searchText && (
                 <button
                   onClick={handleClear}
-                  className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                  className="text-gray-400 hover:text-gray-600 transition-colors shrink-0 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>

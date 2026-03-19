@@ -36,7 +36,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           method === "promptpay"
             ? "border-blue-600 bg-blue-600 text-white"
             : "border-gray-300 bg-white hover:border-gray-400"
-        }`}
+        } cursor-pointer`}
       >
         <QrCode className="w-5 h-5" />
         <span className="headline-5">{t("payment.method_promptpay")}</span>
@@ -50,7 +50,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           method === "creditcard"
             ? "border-blue-600 bg-blue-600 text-white"
             : "border-gray-300 bg-white hover:border-gray-400"
-        }`}
+        } cursor-pointer`}
       >
         <CreditCard className="w-5 h-5" />
         <span className="headline-5">{t("payment.method_creditcard")}</span>

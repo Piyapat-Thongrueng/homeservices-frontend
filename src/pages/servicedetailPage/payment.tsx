@@ -759,7 +759,7 @@ export default function Payment() {
                 type="button"
                 disabled={!hasItems || cartActionLoading}
                 onClick={handleCartAction}
-                className="btn-primary w-full inline-flex items-center justify-center gap-2"
+                className="btn-primary w-full inline-flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShoppingCart className="w-5 h-5" />
                 {cartActionLoading

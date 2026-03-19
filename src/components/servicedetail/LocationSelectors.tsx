@@ -83,7 +83,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
             value={province}
             onChange={(e) => handleProvinceChange(e.target.value)}
             disabled={disabled}
-            className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
             <option value="" className="text-gray-400">
               {isEn ? "Select Province" : "เลือกจังหวัด"}
@@ -110,7 +110,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
               value={district}
               onChange={(e) => handleDistrictChange(e.target.value)}
               disabled={disabled || !province}
-              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
             >
               <option value="" className="text-gray-400">
                 {isEn ? "Select District" : "เลือกเขต / อำเภอ"}
@@ -135,7 +135,7 @@ const LocationSelectors: React.FC<LocationSelectorsProps> = ({
               value={subDistrict}
               onChange={(e) => onSubDistrictChange(e.target.value)}
               disabled={disabled || !district}
-              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
             >
               <option value="" className="text-gray-400">
                 {isEn ? "Select Sub-district" : "เลือกแขวง / ตำบล"}

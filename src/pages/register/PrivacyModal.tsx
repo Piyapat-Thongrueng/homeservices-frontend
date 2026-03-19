@@ -12,7 +12,7 @@ export default function PrivacyModal({ onClose }: PrivacyModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm cursor-pointer"
         onClick={onClose}
       />
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
@@ -33,7 +33,7 @@ export default function PrivacyModal({ onClose }: PrivacyModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4 text-gray-500" />
           </button>
@@ -225,7 +225,7 @@ export default function PrivacyModal({ onClose }: PrivacyModalProps) {
         <div className="px-6 py-4 border-t border-gray-100">
           <button
             onClick={onClose}
-            className="w-full h-10 bg-green-600 hover:bg-green-700 text-white text-[13px] font-semibold rounded-xl transition-colors"
+            className="w-full h-10 bg-green-600 hover:bg-green-700 text-white text-[13px] font-semibold rounded-xl transition-colors cursor-pointer"
           >
             {isEn ? "Acknowledge and Close" : "รับทราบและปิด"}
           </button>

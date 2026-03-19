@@ -64,7 +64,7 @@ export default function LoginModal({
 
             <button
               onClick={handleGoToHome}
-              className="btn-primary w-full h-11 text-[14px]"
+              className="btn-primary w-full h-11 text-[14px] cursor-pointer"
             >
               {t("auth.btn_go_to_home", "ไปยังหน้าเว็บไซต์")}
             </button>
@@ -106,7 +106,7 @@ export default function LoginModal({
 
             <button
               onClick={onClose}
-              className="btn-primary w-full h-11 text-[14px]"
+              className="btn-primary w-full h-11 text-[14px] cursor-pointer"
             >
               {t("auth.btn_back_to_login", "กลับไปเข้าสู่ระบบ")}
             </button>

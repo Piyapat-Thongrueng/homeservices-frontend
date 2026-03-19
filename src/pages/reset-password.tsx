@@ -170,7 +170,7 @@ export default function ResetPasswordPage() {
                 <button
                   onClick={() => { if(validate()) setShowConfirm(true) }}
                   disabled={saving}
-                  className="mt-6 btn-primary w-full sm:w-auto px-8 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+                  className="mt-6 btn-primary w-full sm:w-auto px-8 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all cursor-pointer"
                 >
                   ยืนยันการเปลี่ยนรหัสผ่าน
                 </button>
@@ -196,14 +196,14 @@ export default function ResetPasswordPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition-all"
+                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition-all cursor-pointer"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={handleResetPassword}
                 disabled={saving}
-                className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
+                className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all cursor-pointer"
               >
                 {saving ? "กำลังบันทึก..." : "ยืนยัน"}
               </button>
@@ -225,7 +225,7 @@ export default function ResetPasswordPage() {
             </p>
             <button
               onClick={handleGoLogin}
-              className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-black shadow-xl transition-all"
+              className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-black shadow-xl transition-all cursor-pointer"
             >
               ตกลง (ไปที่หน้าล็อกอิน)
             </button>

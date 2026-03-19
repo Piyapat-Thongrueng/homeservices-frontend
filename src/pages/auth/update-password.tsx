@@ -140,7 +140,7 @@ export default function UpdatePasswordPage() {
         <button
           onClick={handleUpdatePassword}
           disabled={saving}
-          className="btn-primary w-full h-[44px] flex items-center justify-center gap-2 mb-3"
+          className="btn-primary w-full h-[44px] flex items-center justify-center gap-2 mb-3 cursor-pointer"
         >
           {saving ? "Saving..." : "Update password"}
         </button>
