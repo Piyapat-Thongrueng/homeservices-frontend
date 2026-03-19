@@ -37,7 +37,7 @@ const ServiceFooterNav: React.FC<ServiceFooterNavProps> = ({
           <button
             type="button"
             onClick={onBack}
-            className="btn-secondary w-auto h-[44px] px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 sm:absolute sm:top-[24px] sm:left-0 cursor-pointer"
+            className="btn-secondary w-auto h-[44px] px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 sm:absolute sm:top-[24px] sm:left-0"
           >
             <span>{"<"}</span>
             <span>{t("service_detail.nav_back")}</span>
@@ -47,7 +47,7 @@ const ServiceFooterNav: React.FC<ServiceFooterNavProps> = ({
             type="button"
             disabled={!canProceed}
             onClick={onNext}
-            className="btn-primary w-auto h-[44px] px-6 py-2.5 rounded-lg flex items-center justify-center gap-2.5 sm:absolute sm:top-[24px] sm:right-0 cursor-pointer"
+            className="btn-primary w-auto h-[44px] px-6 py-2.5 rounded-lg flex items-center justify-center gap-2.5 sm:absolute sm:top-[24px] sm:right-0"
           >
             <span>{displayNextText}</span>
             <span>{">"}</span>

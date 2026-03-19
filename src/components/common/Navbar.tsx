@@ -140,13 +140,13 @@ export default function Navbar() {
             <div className="flex gap-3 w-full">
               <button
                 onClick={handleLogoutCancel}
-                className="flex-1 h-11 text-[14px] font-medium border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
+                className="flex-1 h-11 text-[14px] font-medium border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
               >
                 {locale === "en" ? "Cancel" : "ยกเลิก"}
               </button>
               <button
                 onClick={handleLogoutConfirm}
-                className="flex-1 h-11 text-[14px] font-medium bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors cursor-pointer"
+                className="flex-1 h-11 text-[14px] font-medium bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
               >
                 {locale === "en" ? "Confirm" : "ยืนยัน"}
               </button>
@@ -180,7 +180,7 @@ export default function Navbar() {
               {/* LANGUAGE SWITCHER */}
               <button
                 onClick={toggleLanguage}
-                className="flex items-center gap-1.5 px-2 py-1.5 text-gray-600 hover:text-blue-600 transition-colors text-[13px] sm:text-[14px] font-medium cursor-pointer"
+                className="flex items-center gap-1.5 px-2 py-1.5 text-gray-600 hover:text-blue-600 transition-colors text-[13px] sm:text-[14px] font-medium"
                 title={locale === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย"}
               >
                 <Globe className="w-4 h-4" />
@@ -270,7 +270,7 @@ export default function Navbar() {
                   <div ref={dropdownRef} className="relative">
                     <button
                       onClick={() => setOpen(!open)}
-                      className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                      className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity"
                     >
                       <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
                         {user?.profile_pic ? (
@@ -300,7 +300,7 @@ export default function Navbar() {
                             setOpen(false);
                             router.push("/profile");
                           }}
-                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2"
                         >
                           👤 {t("navbar.profile")}
                         </button>
@@ -310,7 +310,7 @@ export default function Navbar() {
                             setOpen(false);
                             router.push("/reset-password");
                           }}
-                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2"
                         >
                           🔒 {t("navbar.change_password")}
                         </button>
@@ -320,7 +320,7 @@ export default function Navbar() {
                             setOpen(false);
                             router.push("/profile?tab=orders");
                           }}
-                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2"
                         >
                           🔧 {t("navbar.orders")}
                         </button>
@@ -330,7 +330,7 @@ export default function Navbar() {
                             setOpen(false);
                             router.push("/profile?tab=history");
                           }}
-                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2"
                         >
                           📋 {t("navbar.repair_history")}
                         </button>
@@ -340,7 +340,7 @@ export default function Navbar() {
                         {/* ← เปลี่ยนมาเรียก handleLogoutClick แทน */}
                         <button
                           onClick={handleLogoutClick}
-                          className="w-full px-4 py-3 text-[14px] text-red-600 hover:bg-red-50 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-red-600 hover:bg-red-50 text-left flex items-center gap-2"
                         >
                           🚪 {t("logout")}
                         </button>
@@ -352,7 +352,7 @@ export default function Navbar() {
                   <span className="w-px h-7 bg-gray-300 shrink-0" aria-hidden />
                   <button
                     onClick={() => router.push("/cartPage/cart")}
-                    className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
+                    className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors"
                     aria-label="ตะกร้าสินค้า"
                   >
                     <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -366,7 +366,7 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => router.push("/login")}
-                  className="border border-blue-600 text-blue-600 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[13px] sm:text-[14px] font-medium hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
+                  className="border border-blue-600 text-blue-600 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[13px] sm:text-[14px] font-medium hover:bg-blue-600 hover:text-white transition-colors"
                 >
                   {t("login")}
                 </button>

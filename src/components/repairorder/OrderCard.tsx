@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { Calendar, UserCircle, MapPin, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
+import { getOrderDetail, type OrderDetailResponse } from '@/services/paymentApi';
 
 interface OrderType {
   id: number;
@@ -12,35 +12,17 @@ interface OrderType {
   details: string[];
 }
 
-interface OrderDetail {
-  id: number;
-  status: string;
-  created_at: string;
-  total_price: number;
-  net_price: number;
-  services: string[];
-  appointment_date: string | null;
-  appointment_time: string | null;
-  address_line: string | null;
-  district: string | null;
-  province: string | null;
-  postal_code: string | null;
-  technician_name: string | null;
-  technician_phone: string | null;
-}
-
 function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () => void }) {
   const { t } = useTranslation('common');
-  const [detail, setDetail] = useState<OrderDetail | null>(null);
+  const [detail, setDetail] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   React.useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const res = await axios.get(`${API_URL}/api/orders/${orderId}`);
-        setDetail(res.data);
+        const data = await getOrderDetail(orderId);
+        setDetail(data);
       } catch {
         setError(t('order.error_load', 'ไม่สามารถโหลดรายละเอียดได้'));
       } finally {
@@ -74,6 +56,32 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
       year: 'numeric', month: 'long', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
+
+  const formatAppointmentDateTime = (appointmentDate: string, appointmentTime: string | null) => {
+    const datePart = appointmentDate.split('T')[0];
+    if (appointmentTime) {
+      const hhmm = appointmentTime.slice(0, 5);
+      return formatDate(`${datePart}T${hhmm}:00`);
+    }
+    return formatDate(appointmentDate);
+  };
+
+  const formatServiceAddress = (
+    addressLine: string | null,
+    subdistrict: string | null,
+    district: string | null,
+    province: string | null,
+    postalCode: string | null,
+  ) => {
+    const base = (addressLine ?? '').trim();
+    const baseCompact = base.replace(/\s+/g, ' ').trim();
+    const extras = [subdistrict, district, province, postalCode]
+      .map((part) => (part ?? '').trim())
+      .filter(Boolean)
+      .filter((part) => !baseCompact.includes(part));
+
+    return [baseCompact, ...extras].filter(Boolean).join(' ').trim();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
@@ -123,8 +131,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
                   <p className="text-sm text-gray-800">{formatDate(detail.created_at)}</p>
                   {detail.appointment_date && (
                     <p className="text-sm text-blue-600 mt-1">
-                      {t('order.appointment', 'นัดหมาย:')} {detail.appointment_date}
-                      {detail.appointment_time ? ` ${t('order.time', 'เวลา')} ${detail.appointment_time}` : ''}
+                      {t('order.appointment', 'นัดหมาย:')} {formatAppointmentDateTime(detail.appointment_date, detail.appointment_time)}
                     </p>
                   )}
                 </div>
@@ -151,9 +158,24 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
                   <div>
                     <p className="text-xs text-gray-400 mb-0.5">{t('order.service_address', 'ที่อยู่นัดซ่อม')}</p>
                     <p className="text-sm text-gray-800">
-                      {[detail.address_line, detail.district, detail.province, detail.postal_code]
-                        .filter(Boolean).join(' ')}
+                      {formatServiceAddress(
+                        detail.address_line,
+                        detail.subdistrict,
+                        detail.district,
+                        detail.province,
+                        detail.postal_code,
+                      )}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {detail.remark && (
+                <div className="flex items-start gap-3">
+                  <div className="w-4 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">{t('payment_confirm.note', 'หมายเหตุ')}</p>
+                    <p className="text-sm text-gray-800">{detail.remark}</p>
                   </div>
                 </div>
               )}
@@ -164,11 +186,32 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
               <div>
                 <p className="text-xs text-gray-400 mb-2">{t('order.service_items', 'รายการบริการ')}</p>
                 <ul className="space-y-2">
-                  {(detail.services || []).map((s, i) => (
-                    <li key={i} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-800">• {s}</span>
+                  {(detail.items || []).length > 0
+                    ? detail.items.map((item, i) => (
+                        <li key={`${item.serviceId}-${item.serviceItemId ?? 'base'}-${i}`} className="flex items-center justify-between text-sm gap-3">
+                          <span className="text-gray-800">
+                            • {item.name} ({item.quantity}{item.unit ? ` ${item.unit}` : ''})
+                          </span>
+                          <span className="text-gray-600 shrink-0">
+                            {(item.price * item.quantity).toLocaleString('th-TH')} ฿
+                          </span>
+                        </li>
+                      ))
+                    : (detail.services || []).map((s, i) => (
+                        <li key={i} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-800">• {s}</span>
+                        </li>
+                      ))}
+                  {detail.promotion_code && detail.discount_amount > 0 && (
+                    <li className="flex items-center justify-between text-sm gap-3">
+                      <span className="text-red-600">
+                        • Promotion Code: {detail.promotion_code}
+                      </span>
+                      <span className="text-red-600 shrink-0">
+                        - {detail.discount_amount.toFixed(2)} ฿
+                      </span>
                     </li>
-                  ))}
+                  )}
                 </ul>
               </div>
 

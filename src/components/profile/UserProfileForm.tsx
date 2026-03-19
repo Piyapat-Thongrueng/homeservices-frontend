@@ -224,7 +224,7 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
               </div>
             )}
           </div>
-          <label className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer shadow-sm transition-all flex items-center gap-2">
+          <label className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2">
             <i className="fa-solid fa-cloud-arrow-up"></i>
             {t('profile.btn_choose_image', 'เลือกรูปภาพใหม่')}
             <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
