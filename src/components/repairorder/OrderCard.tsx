@@ -1,16 +1,8 @@
 import React, { useState } from 'react';
-import { Calendar, UserCircle, MapPin, X, Loader2 } from 'lucide-react';
+import { Calendar, Wrench, MapPin, FileText, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
 import { getOrderDetail, type OrderDetailResponse } from '@/services/paymentApi';
-
-interface OrderType {
-  id: number;
-  status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ' | 'ยกเลิกคำสั่งซ่อม';
-  date: string;
-  worker: string;
-  price: number;
-  details: string[];
-}
+import type { OrderType } from '@/components/repairorder/types';
 
 function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () => void }) {
   const { t } = useTranslation('common');
@@ -84,14 +76,14 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 font-prompt">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-800">
             {t('order.modal_title', 'รายละเอียดคำสั่งซ่อม')}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
             <X size={20} className="text-gray-500" />
           </button>
         </div>
@@ -139,7 +131,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 
               {/* ช่าง */}
               <div className="flex items-start gap-3">
-                <UserCircle size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                <Wrench size={16} className="text-gray-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">{t('order.technician', 'ช่างผู้รับงาน')}</p>
                   <p className="text-sm text-gray-800">
@@ -172,7 +164,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 
               {detail.remark && (
                 <div className="flex items-start gap-3">
-                  <div className="w-4 shrink-0" />
+                  <FileText size={16} className="text-gray-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-xs text-gray-400 mb-0.5">{t('payment_confirm.note', 'หมายเหตุ')}</p>
                     <p className="text-sm text-gray-800">{detail.remark}</p>
@@ -232,7 +224,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
         <div className="px-6 py-4 border-t border-gray-100">
           <button
             onClick={onClose}
-            className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="btn-secondary w-full py-2.5 rounded-lg text-sm"
           >
             {t('order.btn_close', 'ปิด')}
           </button>
@@ -247,6 +239,19 @@ export default function OrderCard({ order }: { order: OrderType }) {
   const [showModal, setShowModal] = useState(false);
   const isCompleted = order.status === 'ดำเนินการสำเร็จ';
 
+  const [cardTechName, setCardTechName] = useState<string | null>(null);
+  const [cardTechPhone, setCardTechPhone] = useState<string | null>(null);
+
+  const formatCardDateTime = (value: string) =>
+    new Date(value).toLocaleString('th-TH', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
   let statusColor = 'bg-gray-200 text-gray-700';
   if (order.status === 'กำลังดำเนินการ') statusColor = 'bg-yellow-100 text-yellow-700';
   if (isCompleted) statusColor = 'bg-teal-100 text-teal-700';
@@ -260,9 +265,25 @@ export default function OrderCard({ order }: { order: OrderType }) {
     return s;
   };
 
+  React.useEffect(() => {
+    let cancelled = false;
+    getOrderDetail(order.id)
+      .then((data) => {
+        if (cancelled) return;
+        setCardTechName(data.technician_name ?? null);
+        setCardTechPhone(data.technician_phone ?? null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.id]);
+
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6 font-prompt">
         <div className="space-y-3 flex-1">
           <h3 className="text-lg font-bold text-gray-900">
             {t('order.order_id_prefix', 'คำสั่งการซ่อมรหัส :')} AD{String(order.id).padStart(8, '0')}
@@ -270,20 +291,35 @@ export default function OrderCard({ order }: { order: OrderType }) {
           <div className="text-sm text-gray-500 space-y-1">
             <div className="flex items-center gap-2">
               <Calendar size={16} />
-              <span>{isCompleted ? t('order.completed_datetime', 'วันเวลาดำเนินการสำเร็จ:') : t('order.service_datetime', 'วันเวลาดำเนินการ:')} {order.date}</span>
+              <span>
+                {isCompleted
+                  ? t('order.completed_datetime', 'วันเวลาดำเนินการสำเร็จ:')
+                  : t('order.service_datetime', 'วันเวลาดำเนินการ:')}{' '}
+                {formatCardDateTime(order.date)}
+              </span>
             </div>
-            <div className="flex items-center gap-2">
-              <UserCircle size={16} />
-              <span>{t('order.staff', 'พนักงาน:')} {order.worker}</span>
+            <div className="flex items-start gap-2 mt-2">
+              <Wrench size={16} className="text-gray-500 shrink-0" />
+              <div className="flex flex-col">
+                <p className="text-xs text-gray-500 mb-0.5">
+                  {t('order.technician', 'ช่างผู้รับงาน')}
+                </p>
+                <p className="text-sm text-gray-800">
+                  {cardTechName?.trim() ||
+                    order.worker?.trim() ||
+                    t('order.tech_unassigned', 'ยังไม่ระบุช่าง')}
+                </p>
+                {cardTechPhone && (
+                  <p className="text-sm text-gray-500">{cardTechPhone}</p>
+                )}
+              </div>
             </div>
           </div>
           <div className="pt-2">
-            <p className="text-sm text-gray-500 mb-1">{t('order.items_label', 'รายการ:')}</p>
-            <ul className="text-sm text-gray-800">
-              {order.details.map((detail, index) => (
-                <li key={index}>• {detail}</li>
-              ))}
-            </ul>
+            <p className="text-sm text-gray-500 mb-1">{t('order.services_label', 'บริการ:')}</p>
+            <p className="text-sm text-gray-800">
+              {order.details[0] ?? '-'}
+            </p>
           </div>
         </div>
 
@@ -294,18 +330,20 @@ export default function OrderCard({ order }: { order: OrderType }) {
               {translatedStatus(order.status)}
             </span>
           </div>
-          <div className="flex items-center gap-2 w-full justify-between lg:justify-end mt-2 lg:mt-0">
-            <span className="text-sm text-gray-500">{t('order.total_label', 'ราคารวม:')}</span>
-            <span className="text-lg font-bold text-gray-900">
-              {order.price.toLocaleString('th-TH')} ฿
-            </span>
+          <div className="w-full mt-4 flex flex-col items-start lg:items-end gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">{t('order.total_label', 'ราคารวม:')}</span>
+              <span className="text-lg font-bold text-gray-900">
+                {order.price.toLocaleString('th-TH')} ฿
+              </span>
+            </div>
+            <button
+              onClick={() => setShowModal(true)}
+              className="btn-primary w-full lg:w-auto px-6 py-2 rounded-lg text-sm"
+            >
+              {t('order.btn_view_details', 'ดูรายละเอียด')}
+            </button>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="mt-4 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            {t('order.btn_view_details', 'ดูรายละเอียด')}
-          </button>
         </div>
       </div>
 

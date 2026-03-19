@@ -152,7 +152,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -201,7 +201,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={loginWithGoogle}
-            className="w-full h-11 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors text-[14px] text-gray-700 font-medium"
+            className="w-full h-11 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors text-[14px] text-gray-700 font-medium cursor-pointer"
           >
             <img
               src="/icons/google_logos_.png"

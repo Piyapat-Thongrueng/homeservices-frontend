@@ -308,7 +308,7 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
 
         <button
           onClick={() => router.push('/reset-password')}
-          className="w-full sm:w-auto px-10 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 hover:text-blue-600 hover:border-blue-400 transition-all shadow-sm flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-10 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 hover:text-blue-600 hover:border-blue-400 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
         >
           <i className="fa-solid fa-lock text-sm"></i>{t('profile.btn_change_password', 'เปลี่ยนรหัสผ่าน')}
         </button>

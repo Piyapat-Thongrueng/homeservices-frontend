@@ -248,7 +248,7 @@ export default function RegisterPage() {
                   />
                   <div
                     onClick={() => setAccept((v) => !v)}
-                    className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                    className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors cursor-pointer ${
                       accept
                         ? "bg-blue-600 border-blue-600"
                         : "bg-white border-gray-300"
@@ -275,14 +275,14 @@ export default function RegisterPage() {
                   ยอมรับ{" "}
                   <span
                     onClick={() => setShowTerms(true)}
-                    className="text-blue-600 font-medium hover:underline"
+                    className="text-blue-600 font-medium hover:underline cursor-pointer"
                   >
                     ข้อตกลงและเงื่อนไข
                   </span>{" "}
                   และ{" "}
                   <span
                     onClick={() => setShowPrivacy(true)}
-                    className="text-blue-600 font-medium hover:underline"
+                    className="text-blue-600 font-medium hover:underline cursor-pointer"
                   >
                     นโยบายความเป็นส่วนตัว
                   </span>
