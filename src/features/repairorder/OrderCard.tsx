@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Calendar, Wrench, MapPin, FileText, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
 import { getOrderDetail, type OrderDetailResponse } from '@/services/paymentApi';
-import type { OrderType } from '@/components/repairorder/types';
+import type { OrderType } from '@/features/repairorder/types';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 
-import ChatBadge from '@/components/chat/ChatBadge';
+import ChatBadge from '@/features/chat/components/ChatBadge';
 import { useAuth } from '@/contexts/AuthContext';
 
 
@@ -117,14 +117,14 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 
           {detail && (
             <div className="space-y-5">
-              <div className="flex justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs text-gray-400 mb-1">{t('order.order_id', 'รหัสคำสั่งซ่อม')}</p>
                   <p className="text-xl font-bold text-gray-900">
                     AD{String(detail.id).padStart(8, '0')}
                   </p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium mt-1 ${statusColor()}`}>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium leading-none ${statusColor()}`}>
                   {translatedStatus(detail.status)}
                 </span>
               </div>

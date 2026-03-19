@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { Check } from "lucide-react";
 import Navbar from "@/components/common/Navbar";
-import type { ServiceItem } from "@/components/servicedetail/types";
+import type { ServiceItem } from "@/features/servicedetail/types";
 import { formatDateLocale, formatTimeLocale } from "@/utils/date-formatters";
 import {
   parseServiceItemsFromQuery,

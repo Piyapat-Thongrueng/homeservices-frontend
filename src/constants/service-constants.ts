@@ -5,7 +5,7 @@
  * including storage keys, default values, and configuration.
  */
 
-import type { ServiceItem } from "@/components/servicedetail/types";
+import type { ServiceItem } from "@/features/servicedetail/types";
 
 // ============================================================================
 // LocalStorage Keys

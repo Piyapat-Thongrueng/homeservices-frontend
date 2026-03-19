@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
-import OrderSidebar from '@/components/repairorder/OrderSidebar';
-import OrderCardOrders from '@/components/repairorder/OrderCardOrders';
-import OrderCardHistory from '@/components/repairorder/OrderCardHistory';
-import type { OrderType } from '@/components/repairorder/types';
-import UserProfileForm from '@/components/profile/UserProfileForm';
+import OrderSidebar from '@/features/repairorder/OrderSidebar';
+import OrderCardOrders from '@/features/repairorder/OrderCardOrders';
+import OrderCardHistory from '@/features/repairorder/OrderCardHistory';
+import type { OrderType } from '@/features/repairorder/types';
+import UserProfileForm from '@/features/profile/UserProfileForm';
 import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 import { useTranslation } from 'next-i18next';
@@ -19,6 +19,8 @@ export default function ProfilePage() {
   const { t } = useTranslation('common');
   const [currentTab, setCurrentTab] = useState<'profile' | 'orders' | 'history'>('profile');
 
+  const pageSize = 5;
+
   // รับ tab จาก query string เช่น /profile?tab=orders
   useEffect(() => {
     const { tab } = router.query;
@@ -30,7 +32,7 @@ export default function ProfilePage() {
   // 🌟 เพิ่ม State สำหรับเก็บข้อมูลรายการซ่อม และสถานะการโหลด
   const [orders, setOrders] = useState<OrderType[]>([]);
   const [loadingOrders, setLoadingOrders] = useState<boolean>(false);
-  const [visibleOrdersCount, setVisibleOrdersCount] = useState<number>(3);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   console.log('state.user full object:', JSON.stringify(state.user, null, 2));
 
@@ -63,13 +65,10 @@ export default function ProfilePage() {
     fetchOrders();
   }, [currentTab, state.user, state.getUserLoading]);
 
-  if (state.getUserLoading) return <div className="min-h-screen flex items-center justify-center font-prompt">{t('profile.loading', 'กำลังโหลด...')}</div>;
-  if (!isAuthenticated || !state.user) return null;
-
   // 🌟 กรองข้อมูลตามสถานะแท็บ
   // - หน้า "รายการคำสั่งซ่อม" (orders): โชว์แค่ที่ยังไม่เสร็จ (รอดำเนินการ, กำลังดำเนินการ)
   // - หน้า "ประวัติการซ่อม" (history): โชว์ที่เสร็จแล้วหรือยกเลิก
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.filter((order) => {
     if (currentTab === 'orders') {
       return order.status === 'รอดำเนินการ' || order.status === 'กำลังดำเนินการ';
     } else if (currentTab === 'history') {
@@ -85,9 +84,22 @@ export default function ProfilePage() {
         )
       : filteredOrders;
 
+  const totalPages = Math.max(1, Math.ceil(displayOrders.length / pageSize));
+  const pagedOrders = displayOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   useEffect(() => {
-    setVisibleOrdersCount(displayOrders.length > 3 ? 3 : displayOrders.length);
-  }, [displayOrders.length, currentTab]);
+    // Reset to page 1 when switching tab or when the list changes.
+    setCurrentPage(1);
+  }, [currentTab, displayOrders.length]);
+
+  if (state.getUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-prompt">
+        {t('profile.loading', 'กำลังโหลด...')}
+      </div>
+    );
+  }
+  if (!isAuthenticated || !state.user) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-prompt">
@@ -114,26 +126,102 @@ export default function ProfilePage() {
                 <div className="text-center py-10 text-gray-500">{t('profile.loading_items', 'กำลังโหลดรายการ...')}</div>
               ) : displayOrders.length > 0 ? (
                 <>
-                  {displayOrders.slice(0, visibleOrdersCount).map(order =>
+                  {pagedOrders.map((order) =>
                     currentTab === 'history' ? (
                       <OrderCardHistory key={order.id} order={order} />
                     ) : (
                       <OrderCardOrders key={order.id} order={order} />
                     ),
                   )}
-                  {visibleOrdersCount < displayOrders.length && (
-                    <div className="flex justify-center pt-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setVisibleOrdersCount((prev) =>
-                            Math.min(prev + 3, displayOrders.length),
-                          )
-                        }
-                        className="btn-secondary px-6 py-2 w-full cursor-pointer"
-                      >
-                        {t('cart.btn_load_more', 'ดูเพิ่มเติม')}
-                      </button>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center pt-4">
+                      <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-xl px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage(1)}
+                          disabled={currentPage === 1}
+                          className="px-2 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          aria-label="หน้าแรก"
+                        >
+                          {'<<'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="px-2 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          aria-label="หน้าก่อนหน้า"
+                        >
+                          {'<'}
+                        </button>
+
+                        {(() => {
+                          // Build pagination items with ellipsis:
+                          // show: 1 ... around current ... total
+                          const items: Array<number | 'ellipsis'> = [];
+                          const first = 1;
+                          const last = totalPages;
+                          const windowSize = 1; // show currentPage +/- 1
+
+                          const start = Math.max(first + 1, currentPage - windowSize);
+                          const end = Math.min(last - 1, currentPage + windowSize);
+
+                          items.push(first);
+
+                          if (start > first + 1) items.push('ellipsis');
+
+                          for (let p = start; p <= end; p += 1) items.push(p);
+
+                          if (end < last - 1) items.push('ellipsis');
+
+                          if (last !== first) items.push(last);
+
+                          return (
+                            <>
+                              {items.map((it, idx) => (
+                                <React.Fragment key={`${it}-${idx}`}>
+                                  {it === 'ellipsis' ? (
+                                    <span className="px-2 text-gray-400 select-none">...</span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setCurrentPage(it)}
+                                      className={`px-3 py-1 rounded-md cursor-pointer ${
+                                        it === currentPage
+                                          ? 'bg-blue-600 text-white'
+                                          : 'hover:bg-gray-50 text-gray-700'
+                                      }`}
+                                      aria-label={`หน้า ${it}`}
+                                    >
+                                      {it}
+                                    </button>
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </>
+                          );
+                        })()}
+
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-2 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          aria-label="หน้าถัดไป"
+                        >
+                          {'>'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage(totalPages)}
+                          disabled={currentPage === totalPages}
+                          className="px-2 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          aria-label="หน้าสุดท้าย"
+                        >
+                          {'>>'}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </>

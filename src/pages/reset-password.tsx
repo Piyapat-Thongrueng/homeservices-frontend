@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
-import OrderSidebar from "@/components/repairorder/OrderSidebar";
+import OrderSidebar from "@/features/repairorder/OrderSidebar";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from '@/contexts/AuthContext';
 

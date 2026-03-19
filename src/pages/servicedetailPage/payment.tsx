@@ -23,13 +23,13 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import Navbar from "@/components/common/Navbar";
-import ServiceHero from "@/components/servicedetail/ServiceHero";
-import ServiceSummaryCard from "@/components/servicedetail/ServiceSummaryCard";
-import ServiceFooterNav from "@/components/servicedetail/ServiceFooterNav";
-import PaymentMethodSelector from "@/components/servicedetail/PaymentMethodSelector";
-import PromotionCodeInput from "@/components/servicedetail/PromotionCodeInput";
-import CreditCardForm from "@/components/servicedetail/CreditCardForm";
-import type { ServiceItem } from "@/components/servicedetail/types";
+import ServiceHero from "@/features/servicedetail/components/ServiceHero";
+import ServiceSummaryCard from "@/features/servicedetail/components/ServiceSummaryCard";
+import ServiceFooterNav from "@/features/servicedetail/components/ServiceFooterNav";
+import PaymentMethodSelector from "@/features/servicedetail/components/PaymentMethodSelector";
+import PromotionCodeInput from "@/features/servicedetail/components/PromotionCodeInput";
+import CreditCardForm from "@/features/servicedetail/components/CreditCardForm";
+import type { ServiceItem } from "@/features/servicedetail/types";
 import type { Service } from "@/types/serviceListTypes/type";
 import {
   PAYMENT_DATA_STORAGE_KEY,

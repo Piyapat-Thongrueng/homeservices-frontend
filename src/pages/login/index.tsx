@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { ChangeEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import AuthenticationRoute from "@/components/auth/AuthenticationRoute";
+import AuthenticationRoute from "@/features/auth/components/AuthenticationRoute";
 import LoginModal from "./LoginModal";
 import { Mail, Lock, Eye, EyeOff, Wrench, ArrowLeft } from "lucide-react";
 import { useTranslation } from "next-i18next";

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useRouter } from "next/router"
-import ChatBox from "@/components/chat/ChatBox"
+import ChatBox from "@/features/chat/components/ChatBox"
 
 export default function ChatPage() {
 

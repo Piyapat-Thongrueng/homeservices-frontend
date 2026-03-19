@@ -17,15 +17,15 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import Navbar from "@/components/common/Navbar";
-import ServiceHero from "@/components/servicedetail/ServiceHero";
-import ServiceSummaryCard from "@/components/servicedetail/ServiceSummaryCard";
-import ServiceFooterNav from "@/components/servicedetail/ServiceFooterNav";
-import DateInput from "@/components/servicedetail/DateInput";
-import TimePicker from "@/components/servicedetail/TimePicker";
-import LocationSelectors from "@/components/servicedetail/LocationSelectors";
+import ServiceHero from "@/features/servicedetail/components/ServiceHero";
+import ServiceSummaryCard from "@/features/servicedetail/components/ServiceSummaryCard";
+import ServiceFooterNav from "@/features/servicedetail/components/ServiceFooterNav";
+import DateInput from "@/features/servicedetail/components/DateInput";
+import TimePicker from "@/features/servicedetail/components/TimePicker";
+import LocationSelectors from "@/features/servicedetail/components/LocationSelectors";
 
 const AddressMapPicker = dynamic(
-  () => import("@/components/servicedetail/AddressMapPicker"),
+  () => import("@/features/servicedetail/components/AddressMapPicker"),
   {
     ssr: false,
     loading: () => (
@@ -35,7 +35,7 @@ const AddressMapPicker = dynamic(
     ),
   },
 );
-import type { ServiceItem } from "@/components/servicedetail/types";
+import type { ServiceItem } from "@/features/servicedetail/types";
 import type { Service } from "@/types/serviceListTypes/type";
 import {
   SERVICE_INFO_STORAGE_KEY,

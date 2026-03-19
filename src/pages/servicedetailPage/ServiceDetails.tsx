@@ -16,11 +16,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import Navbar from "@/components/common/Navbar";
-import ServiceHero from "@/components/servicedetail/ServiceHero";
-import ServiceItemsSection from "@/components/servicedetail/ServiceItemsSection";
-import ServiceSummaryCard from "@/components/servicedetail/ServiceSummaryCard";
-import ServiceFooterNav from "@/components/servicedetail/ServiceFooterNav";
-import type { ServiceItem } from "@/components/servicedetail/types";
+import ServiceHero from "@/features/servicedetail/components/ServiceHero";
+import ServiceItemsSection from "@/features/servicedetail/components/ServiceItemsSection";
+import ServiceSummaryCard from "@/features/servicedetail/components/ServiceSummaryCard";
+import ServiceFooterNav from "@/features/servicedetail/components/ServiceFooterNav";
+import type { ServiceItem } from "@/features/servicedetail/types";
 import type {
   ServiceDetailResponseApi,
 } from "@/types/serviceListTypes/type";

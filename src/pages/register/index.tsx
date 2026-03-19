@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import AuthenticationRoute from "@/components/auth/AuthenticationRoute";
+import AuthenticationRoute from "@/features/auth/components/AuthenticationRoute";
 import RegisterModal from "./RegisterModal";
 import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowLeft } from "lucide-react";
 import TermsModal from "./TermsModal";

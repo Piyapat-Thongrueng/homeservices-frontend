@@ -272,7 +272,7 @@ export default function Navbar() {
                       onClick={() => setOpen(!open)}
                       className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity cursor-pointer"
                     >
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-utility-white text-white flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
                         {user?.profile_pic ? (
                           <img src={user.profile_pic} alt={userName} className="w-full h-full object-cover" />
                         ) : (

@@ -5,7 +5,7 @@
  * and handling navigation logic.
  */
 
-import type { ServiceItem } from "@/components/servicedetail/types";
+import type { ServiceItem } from "@/features/servicedetail/types";
 
 /**
  * Parses service items from router query string

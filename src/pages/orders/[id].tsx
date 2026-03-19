@@ -1,6 +1,6 @@
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
-import ChatBox from "@/components/chat/ChatBox"
+import ChatBox from "@/features/chat/components/ChatBox"
 import { useAuth } from "@/contexts/AuthContext"
 
 type Order = {
