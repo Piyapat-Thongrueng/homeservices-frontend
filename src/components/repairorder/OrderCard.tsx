@@ -3,6 +3,12 @@ import { Calendar, Wrench, MapPin, FileText, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
 import { getOrderDetail, type OrderDetailResponse } from '@/services/paymentApi';
 import type { OrderType } from '@/components/repairorder/types';
+import axios from 'axios';
+import { useRouter } from 'next/router';
+
+import ChatBadge from '@/components/chat/ChatBadge';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () => void }) {
   const { t } = useTranslation('common');
@@ -57,7 +63,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
       minute: '2-digit',
     });
 
-    const isChatAvailable =
+  const isChatAvailable =
     detail?.status === 'in_progress' || detail?.status === 'completed';
 
   const formatAppointmentDateTime = (appointmentDate: string, appointmentTime: string | null) => {
@@ -86,34 +92,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
     return [baseCompact, ...extras].filter(Boolean).join(' ').trim();
   };
 
-  const formatAppointmentDateTime = (appointmentDate: string, appointmentTime: string | null) => {
-    const datePart = appointmentDate.split('T')[0];
-    if (appointmentTime) {
-      const hhmm = appointmentTime.slice(0, 5);
-      return formatDate(`${datePart}T${hhmm}:00`);
-    }
-    return formatDate(appointmentDate);
-  };
-  
-  const isChatAvailable =
-  detail?.status === 'in_progress' || detail?.status === 'completed';
 
-  const formatServiceAddress = (
-    addressLine: string | null,
-    subdistrict: string | null,
-    district: string | null,
-    province: string | null,
-    postalCode: string | null,
-  ) => {
-    const base = (addressLine ?? '').trim();
-    const baseCompact = base.replace(/\s+/g, ' ').trim();
-    const extras = [subdistrict, district, province, postalCode]
-      .map((part) => (part ?? '').trim())
-      .filter(Boolean)
-      .filter((part) => !baseCompact.includes(part));
-
-    return [baseCompact, ...extras].filter(Boolean).join(' ').trim();
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 font-prompt">
@@ -178,17 +157,6 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
                   )}
                 </div>
 
-                {userId && isChatAvailable && (
-                  <button
-                    onClick={() => router.push(`/chat/${orderId}`)}
-                    className="relative w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
-                  >
-                    💬
-                    <div className="absolute -top-1 -right-1">
-                      <ChatBadge orderId={orderId.toString()} userId={userId} />
-                    </div>
-                  </button>
-                )}
               </div>
 
               {(detail.address_line || detail.province) && (
@@ -390,12 +358,25 @@ export default function OrderCard({ order }: { order: OrderType }) {
                 {order.price.toLocaleString('th-TH')} ฿
               </span>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="btn-primary w-full lg:w-auto px-6 py-2 rounded-lg text-sm"
-            >
-              {t('order.btn_view_details', 'ดูรายละเอียด')}
-            </button>
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              {userId && isChatAvailable && (
+                <button
+                  onClick={() => router.push(`/chat/${order.id}`)}
+                  className="relative w-10 h-10 rounded-md bg-green-600 hover:bg-green-700 text-white flex items-center justify-center shrink-0"
+                >
+                  💬
+                  <div className="absolute -top-1 -right-1">
+                    <ChatBadge orderId={order.id.toString()} userId={userId} />
+                  </div>
+                </button>
+              )}
+              <button
+                onClick={() => setShowModal(true)}
+                className="btn-primary flex-1 lg:flex-none px-6 py-2 rounded-lg text-sm"
+              >
+                {t('order.btn_view_details', 'ดูรายละเอียด')}
+              </button>
+            </div>
           </div>
         </div>
       </div>
