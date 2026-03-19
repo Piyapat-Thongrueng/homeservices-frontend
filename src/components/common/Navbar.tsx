@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { ShoppingCart, Bell, Globe } from "lucide-react";
-import { getCart } from "@/services/cartApi";
+import { getCart } from "@/services/cart/cartApi";
 import { useNotification } from "@/hooks/useNotification";
 import { useTranslation } from "next-i18next";
 

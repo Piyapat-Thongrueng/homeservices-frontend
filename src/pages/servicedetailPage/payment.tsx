@@ -23,13 +23,13 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import Navbar from "@/components/common/Navbar";
-import ServiceHero from "@/features/servicedetail/components/ServiceHero";
-import ServiceSummaryCard from "@/features/servicedetail/components/ServiceSummaryCard";
-import ServiceFooterNav from "@/features/servicedetail/components/ServiceFooterNav";
-import PaymentMethodSelector from "@/features/servicedetail/components/PaymentMethodSelector";
-import PromotionCodeInput from "@/features/servicedetail/components/PromotionCodeInput";
-import CreditCardForm from "@/features/servicedetail/components/CreditCardForm";
-import type { ServiceItem } from "@/features/servicedetail/types";
+import ServiceHero from "@/components/servicedetail/ServiceHero";
+import ServiceSummaryCard from "@/components/servicedetail/ServiceSummaryCard";
+import ServiceFooterNav from "@/components/servicedetail/ServiceFooterNav";
+import PaymentMethodSelector from "@/components/servicedetail/PaymentMethodSelector";
+import PromotionCodeInput from "@/components/servicedetail/PromotionCodeInput";
+import CreditCardForm from "@/components/servicedetail/CreditCardForm";
+import type { ServiceItem } from "@/components/servicedetail/types";
 import type { Service } from "@/types/serviceListTypes/type";
 import {
   PAYMENT_DATA_STORAGE_KEY,
@@ -45,7 +45,7 @@ import {
   parseServiceItemsFromQuery,
   parseServiceInfoFromQuery,
 } from "@/utils/router-helpers";
-import { fetchServices } from "@/services/serviceListsApi/serviceApi";
+import { fetchServices } from "@/services/servicesList/serviceApi";
 import {
   createPaymentIntent,
   createPromptPayIntent,
@@ -53,9 +53,9 @@ import {
   validatePromotionCode,
   getStripeConfig,
   type CreatePaymentIntentParams,
-} from "@/services/paymentApi";
+} from "@/services/payment/paymentApi";
 import { useAuth } from "@/contexts/AuthContext";
-import { getCart, addToCart, updateCart } from "@/services/cartApi";
+import { getCart, addToCart, updateCart } from "@/services/cart/cartApi";
 import { ShoppingCart } from "lucide-react";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
@@ -68,8 +68,19 @@ function buildIntentAddressParams(
   if (id != null && Number.isFinite(Number(id))) {
     return { addressId: Number(id) };
   }
-  // For "กรอกที่อยู่ใหม่": persist only "ที่อยู่" in address_line.
-  const addressLine = (serviceInfo?.address ?? "").trim();
+  // For "กรอกที่อยู่ใหม่" keep old behavior: store combined address line.
+  const addressLine = serviceInfo
+    ? [
+        serviceInfo.address,
+        serviceInfo.subDistrict,
+        serviceInfo.district,
+        serviceInfo.province,
+        serviceInfo.postalCode,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+    : "";
   if (!addressLine) return {};
 
   return {
@@ -90,21 +101,6 @@ function buildIntentAddressParams(
         : {}),
     },
   };
-}
-
-function formatSavedAddressLineFromCart(item: {
-  addressLine?: string | null;
-  subdistrict?: string | null;
-  district?: string | null;
-  province?: string | null;
-  postalCode?: string | null;
-}) {
-  const base = (item.addressLine ?? "").replace(/\s+/g, " ").trim();
-  const extras = [item.subdistrict, item.district, item.province, item.postalCode]
-    .map((part) => (part ?? "").trim())
-    .filter(Boolean)
-    .filter((part) => !base.includes(part));
-  return [base, ...extras].filter(Boolean).join(" ").trim();
 }
 
 /**
@@ -237,7 +233,7 @@ export default function Payment() {
           province: item.province ?? "",
           postalCode: item.postalCode ?? "",
           additionalInfo: item.remark ?? "",
-          savedAddressLine: formatSavedAddressLineFromCart(item),
+          savedAddressLine: item.addressLine ?? undefined,
         });
         setSelectedService({
           id: item.serviceId,
@@ -456,7 +452,6 @@ export default function Payment() {
           ...buildIntentAddressParams(serviceInfo),
           items: serviceItems.map((item) => ({
             serviceId,
-            serviceItemId: item.id,
             name: item.description,
             quantity: item.quantity,
             price: item.price,
@@ -504,10 +499,6 @@ export default function Payment() {
           total: String(finalTotal),
           orderId: String(intentOrderId),
         };
-        if (paymentData.promotionCode && discount > 0) {
-          query.promotionCode = paymentData.promotionCode;
-          query.discount = String(discount);
-        }
         if (serviceInfo) query.serviceInfo = JSON.stringify(serviceInfo);
         router.push({
           pathname: "/servicedetailPage/payment-confirmation",
@@ -546,7 +537,18 @@ export default function Payment() {
   };
 
   /** Build address line from serviceInfo for cart API */
-  const addressLine = (serviceInfo?.address ?? "").trim();
+  const combinedAddressLine = serviceInfo
+    ? [
+        serviceInfo.address,
+        serviceInfo.subDistrict,
+        serviceInfo.district,
+        serviceInfo.province,
+        serviceInfo.postalCode,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+    : "";
 
   /**
    * Add to cart or Update cart (below summary card on payment page)
@@ -585,7 +587,7 @@ export default function Payment() {
             ? { addressId: serviceInfo.addressId }
             : {
                 address: {
-                  address_line: addressLine,
+                  address_line: combinedAddressLine,
                   district: serviceInfo?.district,
                   subdistrict: serviceInfo?.subDistrict,
                   province: serviceInfo?.province,
@@ -605,7 +607,7 @@ export default function Payment() {
             ? { addressId: serviceInfo.addressId }
             : {
                 address: {
-                  address_line: addressLine,
+                  address_line: combinedAddressLine,
                   district: serviceInfo?.district,
                   subdistrict: serviceInfo?.subDistrict,
                   province: serviceInfo?.province,
@@ -759,7 +761,7 @@ export default function Payment() {
                 type="button"
                 disabled={!hasItems || cartActionLoading}
                 onClick={handleCartAction}
-                className="btn-primary w-full inline-flex items-center justify-center gap-2 cursor-pointer"
+                className="btn-primary w-full inline-flex items-center justify-center gap-2"
               >
                 <ShoppingCart className="w-5 h-5" />
                 {cartActionLoading
@@ -819,7 +821,6 @@ export default function Payment() {
                   ...buildIntentAddressParams(serviceInfo),
                   items: serviceItems.map((item) => ({
                     serviceId,
-                    serviceItemId: item.id,
                     name: item.description,
                     quantity: item.quantity,
                     price: item.price,
@@ -845,10 +846,6 @@ export default function Payment() {
                   total: String(finalTotal),
                   orderId: String(intentOrderId),
                 };
-                if (paymentData.promotionCode && discount > 0) {
-                  query.promotionCode = paymentData.promotionCode;
-                  query.discount = String(discount);
-                }
                 if (serviceInfo) {
                   query.serviceInfo = JSON.stringify(serviceInfo);
                 }

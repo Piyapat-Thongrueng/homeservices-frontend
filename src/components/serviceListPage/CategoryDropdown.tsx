@@ -7,7 +7,7 @@
  */
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
-import { fetchCategories } from "@/services/serviceListsApi/serviceApi";
+import { fetchCategories } from "@/services/servicesList/serviceApi";
 import { Category } from "@/types/serviceListTypes/type";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";

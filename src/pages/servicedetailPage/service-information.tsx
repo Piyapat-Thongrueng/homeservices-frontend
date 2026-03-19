@@ -56,16 +56,16 @@ import {
   getCart,
   addToCart,
   updateCart,
-} from "@/services/cartApi";
+} from "@/services/cart/cartApi";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-import { fetchServices } from "@/services/serviceListsApi/serviceApi";
+import { fetchServices } from "@/services/servicesList/serviceApi";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getSavedAddresses,
   updateAddressCoords,
   type SavedAddress,
-} from "@/services/paymentApi";
+} from "@/services/payment/paymentApi";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 

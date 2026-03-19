@@ -17,7 +17,7 @@ import SortDropdown from "./SortDropdown";
 import {
   fetchServices,
   fetchPriceRange,
-} from "@/services/serviceListsApi/serviceApi";
+} from "@/services/servicesList/serviceApi";
 import { Service, ServiceFilterParams } from "@/types/serviceListTypes/type";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";

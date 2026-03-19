@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { useTranslation } from "next-i18next";
 import { ShoppingCart, Trash2 } from "lucide-react";
 import { formatDateLocale, formatTimeLocale } from "@/utils/date-formatters";
-import type { CartItem } from "@/services/cartApi";
+import type { CartItem } from "@/services/cart/cartApi";
 
 /** Backend may return time as "HH:MM:SS"; normalize to "HH:MM" for formatTimeLocale */
 function normalizeTime(time: string | null | undefined): string {

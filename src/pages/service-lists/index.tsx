@@ -6,7 +6,7 @@ import SearchAndFilterBar from "@/components/serviceListPage/SearchAndFilterBar"
 import HomeServices from "@/components/serviceCard/HomeServices";
 import Footer from "@/components/common/Footer";
 import { Service } from "@/types/serviceListTypes/type";
-import { fetchServices } from "@/services/serviceListsApi/serviceApi";
+import { fetchServices } from "@/services/servicesList/serviceApi";
 
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { useTranslation } from "next-i18next";

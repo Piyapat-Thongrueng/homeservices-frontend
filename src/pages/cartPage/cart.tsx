@@ -14,7 +14,7 @@ import {
   getCart,
   deleteCartItem,
   type CartItem,
-} from "@/services/cartApi";
+} from "@/services/cart/cartApi";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import CartItemCard from "@/features/cart/components/CartItemCard";

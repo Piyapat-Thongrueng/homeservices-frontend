@@ -7,7 +7,7 @@ import HeroSection from "@/components/herosection/HeroSection"
 import Footer from "@/components/common/Footer"
 import LandingPageFooterContent from "@/components/common/LandingPageFooterContent"
 import HomeServices from "@/components/serviceCard/HomeServices"
-import { fetchServices } from "@/services/serviceListsApi/serviceApi"
+import { fetchServices } from "@/services/servicesList/serviceApi"
 import { Service } from "@/types/serviceListTypes/type"
 
 

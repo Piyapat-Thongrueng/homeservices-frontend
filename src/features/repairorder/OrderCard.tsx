@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Wrench, MapPin, FileText, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
-import { getOrderDetail, type OrderDetailResponse } from '@/services/paymentApi';
+import { getOrderDetail, type OrderDetailResponse } from '@/services/payment/paymentApi';
 import type { OrderType } from '@/features/repairorder/types';
 import axios from 'axios';
 import { useRouter } from 'next/router';

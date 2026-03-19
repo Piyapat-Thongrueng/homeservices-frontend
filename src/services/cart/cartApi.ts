@@ -72,7 +72,7 @@ export interface AddToCartResponse {
 }
 
 export async function addToCart(
-  params: AddToCartParams
+  params: AddToCartParams,
 ): Promise<AddToCartResponse> {
   const res = await fetch(`${API_URL}/api/cart`, {
     method: "POST",
@@ -106,7 +106,7 @@ export interface UpdateCartParams {
 
 export async function updateCart(
   cartItemId: number,
-  params: UpdateCartParams
+  params: UpdateCartParams,
 ): Promise<{ ok: boolean; cartItemId: number }> {
   const res = await fetch(`${API_URL}/api/cart/${cartItemId}`, {
     method: "PUT",
@@ -122,14 +122,18 @@ export async function updateCart(
 
 export async function deleteCartItem(
   cartItemId: number,
-  authUserId: string
+  authUserId: string,
 ): Promise<void> {
   const params = new URLSearchParams({ authUserId });
-  const res = await fetch(`${API_URL}/api/cart/${cartItemId}?${params.toString()}`, {
-    method: "DELETE",
-  });
+  const res = await fetch(
+    `${API_URL}/api/cart/${cartItemId}?${params.toString()}`,
+    {
+      method: "DELETE",
+    },
+  );
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.error ?? "Failed to delete cart item");
   }
 }
+

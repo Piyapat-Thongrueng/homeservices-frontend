@@ -31,9 +31,14 @@ export const fetchServices = async (
   return data;
 };
 
-export const fetchPriceRange = async (): Promise<{ min_price: number; max_price: number }> => {
-  const { data } = await axios.get<{ min_price: number; max_price: number }>(
-    `${API_URL}/api/services/price-range`
-  );
+export const fetchPriceRange = async (): Promise<{
+  min_price: number;
+  max_price: number;
+}> => {
+  const { data } = await axios.get<{
+    min_price: number;
+    max_price: number;
+  }>(`${API_URL}/api/services/price-range`);
   return data;
 };
+

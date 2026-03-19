@@ -18,7 +18,7 @@ import {
   parseServiceItemsFromQuery,
   parseServiceInfoFromQuery,
 } from "@/utils/router-helpers";
-import { getCheckoutSession } from "@/services/paymentApi";
+import { getCheckoutSession } from "@/services/payment/paymentApi";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 
