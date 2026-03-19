@@ -8,57 +8,52 @@ type ChatUser = {
 
 type Props = {
   otherUser: ChatUser | null
-  otherOnline: boolean
+  orderId?: string | number
 }
 
-export default function ChatHeader({ otherUser, otherOnline }: Props) {
+export default function ChatHeader({ otherUser, orderId }: Props) {
 
   const router = useRouter()
 
   const defaultAvatar =
     "https://cdn-icons-png.flaticon.com/512/149/149071.png"
 
-  if (!otherUser) return null
+  // 🔥 FIX: fallback ให้ดูสมจริง
+  const displayName =
+    otherUser?.name && otherUser.name.trim() !== ""
+      ? otherUser.name
+      : "ช่างผู้ให้บริการ" // หรือ "ช่าง" / "ลูกค้า" ก็ได้
 
   return (
 
-    <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 text-white shadow-sm">
+    <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 text-white shadow-md">
 
-      {/* BACK BUTTON */}
+      {/* 🔙 BACK */}
       <button
         onClick={() => router.back()}
-        className="text-lg"
+        className="text-xl font-bold active:scale-90 transition"
       >
         ←
       </button>
 
       {/* AVATAR */}
       <img
-        src={otherUser.avatar || defaultAvatar}
-        className="w-9 h-9 rounded-full object-cover"
+        src={otherUser?.avatar || defaultAvatar}
+        className="w-9 h-9 rounded-full object-cover border border-white"
       />
 
-      {/* NAME + STATUS */}
-      <div className="flex flex-col">
+      {/* INFO */}
+      <div className="flex flex-col leading-tight">
 
+        {/* 🔥 TITLE = งาน */}
         <span className="text-sm font-semibold">
-          {otherUser.name}
+          งาน #{orderId || "-"}
         </span>
 
-        <div className="flex items-center gap-1 text-xs text-blue-100">
-
-          <span
-            className={`
-              w-2 h-2 rounded-full
-              ${otherOnline ? "bg-green-400" : "bg-gray-300"}
-            `}
-          />
-
-          <span>
-            {otherOnline ? "ออนไลน์" : "ออฟไลน์"}
-          </span>
-
-        </div>
+        {/* 🔥 SUBTITLE */}
+        <span className="text-xs text-blue-100">
+          {displayName}
+        </span>
 
       </div>
 

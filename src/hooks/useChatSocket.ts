@@ -1,11 +1,11 @@
 import { useEffect } from "react"
-import { socket } from "@/lib/socket"
+import { getSocket, connectSocket } from "@/lib/socket"
 
 type Message = {
-  id: string
-  order_id: string
-  sender_id: string
-  message: string
+  id: string | number
+  order_id: string | number
+  sender_id: string | number
+  message?: string
   image?: string
   created_at: string
   is_read?: boolean
@@ -33,23 +33,47 @@ export default function useChatSocket({
 
     if (!orderId || !userId) return
 
+    connectSocket()
+
+    const socket = getSocket()
+    if (!socket) return
+
     // =============================
     // RECEIVE MESSAGE
     // =============================
     const receiveMessage = (msg: Message) => {
 
+      if (!msg) return
+
       setMessages((prev: Message[]) => {
 
-        if (prev.some(m => m.id === msg.id)) {
-          return prev
-        }
+        const filtered = prev.filter(m => {
 
-        return [...prev, msg]
+          const mId = String(m.id)
+          const msgSender = String(msg.sender_id)
+          const mSender = String(m.sender_id)
+
+          const isTempMatch =
+            mId.startsWith("temp-") &&
+            m.message === msg.message &&
+            mSender === msgSender
+
+          return !isTempMatch
+        })
+
+        const isDuplicate = filtered.some(
+          m => String(m.id) === String(msg.id)
+        )
+
+        if (isDuplicate) return filtered
+
+        return [...filtered, msg]
       })
 
-      // unread badge
+      // unread
       if (
-        msg.sender_id !== userId &&
+        String(msg.sender_id) !== String(userId) &&
+        typeof document !== "undefined" &&
         document.hidden
       ) {
         setUnreadCount((prev: number) => prev + 1)
@@ -60,7 +84,22 @@ export default function useChatSocket({
     // ONLINE USERS
     // =============================
     const handleOnlineUsers = (users: string[]) => {
-      setOnlineUsers(users)
+      if (!users) return
+      setOnlineUsers(users.map(u => String(u)))
+    }
+
+    // =============================
+    // TYPING
+    // =============================
+    const handleTyping = (typingUserId: string) => {
+      if (String(typingUserId) !== String(userId)) {
+        setTypingUser(String(typingUserId))
+      }
+    }
+
+    // ✅ FIX: stop typing
+    const handleStopTyping = () => {
+      setTypingUser(null)
     }
 
     // =============================
@@ -76,20 +115,28 @@ export default function useChatSocket({
     // =============================
     socket.on("receive_message", receiveMessage)
     socket.on("online_users", handleOnlineUsers)
+    socket.on("typing", handleTyping)
+    socket.on("stop_typing", handleStopTyping) // 🔥 เพิ่ม
     socket.on("chat_closed", chatClosed)
 
     // =============================
-    // USER ONLINE
+    // USER ONLINE (🔥 FIX timing)
     // =============================
-    socket.emit("user_online", { userId })
-
-    // =============================
-    // JOIN ROOM 
-    // =============================
-    socket.emit("join_room", {
-      orderId,
-      userId
-    })
+    if (socket.connected) {
+      socket.emit("user_online", { userId: String(userId) })
+      socket.emit("join_chat", {
+        order_id: String(orderId),
+        user_id: String(userId)
+      })
+    } else {
+      socket.on("connect", () => {
+        socket.emit("user_online", { userId: String(userId) })
+        socket.emit("join_chat", {
+          order_id: String(orderId),
+          user_id: String(userId)
+        })
+      })
+    }
 
     // =============================
     // CLEANUP
@@ -98,12 +145,13 @@ export default function useChatSocket({
 
       socket.off("receive_message", receiveMessage)
       socket.off("online_users", handleOnlineUsers)
+      socket.off("typing", handleTyping)
+      socket.off("stop_typing", handleStopTyping) // 🔥 เพิ่ม
       socket.off("chat_closed", chatClosed)
 
-      // optional: leave room
-      socket.emit("leave_room", {
-        orderId,
-        userId
+      socket.emit("leave_chat", {
+        order_id: String(orderId),
+        user_id: String(userId)
       })
     }
 

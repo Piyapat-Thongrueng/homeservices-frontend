@@ -17,13 +17,15 @@ export default function ChatPage() {
 
     if (!router.isReady) return
 
-    const id = router.query.orderId as string
+    const id = router.query.orderId
 
-    if (id) {
+    // 🔥 กัน undefined / array
+    if (typeof id === "string") {
       setOrderId(id)
     }
 
-  }, [router.isReady, router.query])
+  }, [router.isReady, router.query.orderId])
+
 
   // =========================
   // LOADING
@@ -37,6 +39,11 @@ export default function ChatPage() {
   }
 
   // =========================
+  // VALIDATE ROLE (ฝั่งลูกค้า)
+  // =========================
+  const role: "user" = "user" // 🔥 fix role ให้เป็นลูกค้าเสมอ
+
+  // =========================
   // RENDER
   // =========================
   return (
@@ -45,7 +52,7 @@ export default function ChatPage() {
       <ChatBox
         orderId={orderId}
         userId={String(user.id)}
-        role={user.role as "user" | "technician"} // "user" | "technician"
+        role={role}
       />
 
     </div>

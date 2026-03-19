@@ -34,6 +34,11 @@ interface OrderDetail {
 }
 
 function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () => void }) {
+
+  const router = useRouter(); //  เพิ่ม
+  const { state } = useAuth(); //  เพิ่ม
+  const userId = state.user?.id?.toString() || "";
+
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -81,6 +86,9 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
       minute: '2-digit',
     });
 
+    const isChatAvailable =
+    detail?.status === 'in_progress' || detail?.status === 'completed';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -121,11 +129,24 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <UserCircle size={16} />
-                <div>
+              {/* 🔥 แก้ตรงนี้: เพิ่มปุ่มแชท */}
+              <div className="flex gap-3 items-center justify-between">
+                <div className="flex gap-3 items-center">
+                  <UserCircle size={16} />
                   <p>{detail.technician_name || 'ยังไม่ระบุช่าง'}</p>
                 </div>
+
+                {userId && isChatAvailable && (
+                  <button
+                    onClick={() => router.push(`/chat/${orderId}`)}
+                    className="relative w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+                  >
+                    💬
+                    <div className="absolute -top-1 -right-1">
+                      <ChatBadge orderId={orderId.toString()} userId={userId} />
+                    </div>
+                  </button>
+                )}
               </div>
 
               {(detail.address_line || detail.province) && (
@@ -172,8 +193,8 @@ export default function OrderCard({ order }: { order: OrderType }) {
   const { state } = useAuth();
   const userId = state.user?.id?.toString() || "";
 
-  const isChatAvailable = order.status === 'paid';
-  const isCompleted = order.status === 'ดำเนินการสำเร็จ';
+  const isChatAvailable = !!order.worker;
+    const isCompleted = order.status === 'ดำเนินการสำเร็จ';
 
   let statusColor = 'bg-gray-200 text-gray-700';
 
@@ -229,25 +250,8 @@ export default function OrderCard({ order }: { order: OrderType }) {
             </button>
           )}
         </div>
-
-        {/* CHAT */}
-        {userId && isChatAvailable && (
-          <div className="absolute bottom-4 right-4">
-            <button
-              onClick={() => router.push(`/chat/${order.id}`)}
-              className="relative w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
-            >
-              💬
-              <div className="absolute -top-1 -right-1">
-              <ChatBadge orderId={order.id.toString()} userId={userId} />
-
-              </div>
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* MODAL */}
       {showModal && (
         <OrderDetailModal
           orderId={order.id}

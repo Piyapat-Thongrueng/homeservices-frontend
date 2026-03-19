@@ -4,9 +4,10 @@ const SOCKET_URL =
   process.env.NEXT_PUBLIC_SOCKET_URL ||
   "http://localhost:4000"
 
-  let _socket: Socket | null = null
+let _socket: Socket | null = null
+
 // ==============================
-// GET SOCKET INSTANCE (safe)
+// GET SOCKET INSTANCE (SAFE)
 // ==============================
 export const getSocket = (): Socket => {
 
@@ -24,7 +25,7 @@ export const getSocket = (): Socket => {
     })
 
     // ==============================
-    // DEBUG (เฉพาะ dev)
+    // DEBUG (DEV ONLY)
     // ==============================
     if (process.env.NODE_ENV === "development") {
 
@@ -48,11 +49,11 @@ export const getSocket = (): Socket => {
     _socket = newSocket
   }
 
-  return socket
+  return _socket
 }
 
 // ==============================
-// CONNECT
+// CONNECT SOCKET (MANUAL CONTROL)
 // ==============================
 export const connectSocket = () => {
 
@@ -62,8 +63,3 @@ export const connectSocket = () => {
 
   s.connect()
 }
-
-// ==============================
-// EXPORT SOCKET (lazy-safe)
-// ==============================
-export const socket: Socket = getSocket()

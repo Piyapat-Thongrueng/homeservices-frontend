@@ -3,7 +3,7 @@ import ChatHeader from "./ChatHeader"
 import MessageList from "./MessageList"
 import MessageInput from "./MessageInput"
 import useChatSocket from "@/hooks/useChatSocket"
-import { socket, connectSocket } from "@/lib/socket"
+import { getSocket, connectSocket } from "@/lib/socket"
 
 // =======================
 type Message = {
@@ -26,24 +26,37 @@ type Props = {
   orderId: string
   userId: string
   role: "user" | "technician"
+  customer?: ChatUser | null
+  technician?: ChatUser | null
 }
 
 // =======================
-export default function ChatBox({ orderId, userId, role }: Props) {
+const API =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:4000/api"
+
+const BASE = API.endsWith("/api") ? API : `${API}/api`
+
+// =======================
+export default function ChatBox({
+  orderId,
+  userId,
+  role,
+  customer,
+  technician
+}: Props) {
 
   const [messages, setMessages] = useState<Message[]>([])
-  const [text, setText] = useState<string>("")
+  const [text, setText] = useState("")
   const [typingUser, setTypingUser] = useState<string | null>(null)
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
-  const [unreadCount, setUnreadCount] = useState<number>(0)
-
-  const [customer, setCustomer] = useState<ChatUser | null>(null)
-  const [technician, setTechnician] = useState<ChatUser | null>(null)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const bottomRef = useRef<HTMLDivElement>(null)
-  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const typingTimeout = useRef<any>(null)
 
   const isTechnician = role === "technician"
+
   const otherUser = isTechnician ? customer : technician
   const myUser = isTechnician ? technician : customer
 
@@ -53,37 +66,14 @@ export default function ChatBox({ orderId, userId, role }: Props) {
       : false
 
   // =================
+  // CONNECT SOCKET
+  // =================
   useEffect(() => {
     connectSocket()
   }, [])
 
   // =================
-  useEffect(() => {
-
-    if (!orderId) return
-
-    const loadUsers = async () => {
-      try {
-        const res = await fetch(`/api/chat/${orderId}/chat-info`)
-        if (!res.ok) return
-
-        const data: {
-          customer: ChatUser | null
-          technician: ChatUser | null
-        } = await res.json()
-
-        setCustomer(data.customer)
-        setTechnician(data.technician)
-
-      } catch (err) {
-        console.error(err)
-      }
-    }
-
-    loadUsers()
-
-  }, [orderId])
-
+  // LOAD MESSAGES
   // =================
   useEffect(() => {
 
@@ -91,14 +81,23 @@ export default function ChatBox({ orderId, userId, role }: Props) {
 
     const loadMessages = async () => {
       try {
-        const res = await fetch(`/api/messages/${orderId}?userId=${userId}`)
-        if (!res.ok) return
+
+        const url = `${BASE}/chat/messages/${orderId}?userId=${userId}`
+        console.log("📥 fetch messages:", url)
+
+        const res = await fetch(url)
+
+        if (!res.ok) {
+          const text = await res.text()
+          console.error("❌ messages error:", res.status, text)
+          return
+        }
 
         const data: Message[] = await res.json()
         setMessages(data)
 
       } catch (err) {
-        console.error(err)
+        console.error("❌ loadMessages:", err)
       }
     }
 
@@ -106,6 +105,8 @@ export default function ChatBox({ orderId, userId, role }: Props) {
 
   }, [orderId, userId])
 
+  // =================
+  // SOCKET HANDLER
   // =================
   useChatSocket({
     orderId,
@@ -117,13 +118,22 @@ export default function ChatBox({ orderId, userId, role }: Props) {
   })
 
   // =================
+  // SEND MESSAGE (🔥 FIX: ไม่มี tempMsg แล้ว)
+  // =================
   const sendMessage = () => {
 
     if (!text.trim()) return
 
+    const socket = getSocket()
+
+    if (!socket || !socket.connected) {
+      console.warn("⚠️ socket not connected yet")
+      return
+    }
+
     socket.emit("send_message", {
-      order_id: orderId,
-      sender_id: userId,
+      order_id: String(orderId),
+      sender_id: String(userId),
       message: text
     })
 
@@ -133,11 +143,12 @@ export default function ChatBox({ orderId, userId, role }: Props) {
   // =================
   const sendImage = (imageUrl: string) => {
 
-    if (!imageUrl) return
+    const socket = getSocket()
+    if (!socket || !socket.connected) return
 
     socket.emit("send_message", {
-      order_id: orderId,
-      sender_id: userId,
+      order_id: String(orderId),
+      sender_id: String(userId),
       image: imageUrl
     })
   }
@@ -147,14 +158,22 @@ export default function ChatBox({ orderId, userId, role }: Props) {
 
     setText(value)
 
-    socket.emit("typing", { orderId, userId })
+    const socket = getSocket()
+    if (!socket || !socket.connected) return
+
+    socket.emit("typing", {
+      orderId: String(orderId),
+      userId: String(userId)
+    })
 
     if (typingTimeout.current) {
       clearTimeout(typingTimeout.current)
     }
 
     typingTimeout.current = setTimeout(() => {
-      socket.emit("stop_typing", { orderId })
+      socket.emit("stop_typing", {
+        orderId: String(orderId)
+      })
     }, 800)
   }
 
@@ -165,20 +184,19 @@ export default function ChatBox({ orderId, userId, role }: Props) {
 
   // =================
   return (
-
     <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
 
       <div className="shrink-0">
         <ChatHeader
           otherUser={otherUser}
-          otherOnline={otherOnline}
+          orderId={orderId}
         />
       </div>
 
       <div className="flex-1 overflow-hidden">
         <MessageList
           messages={messages}
-          userId={userId}
+          userId={String(userId)} // 🔥 กัน type mismatch
           myUser={myUser}
           otherUser={otherUser}
           typingUser={typingUser}

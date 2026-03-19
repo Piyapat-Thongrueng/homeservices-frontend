@@ -1,9 +1,9 @@
 import React from "react"
 
 type Message = {
-  id: string
-  order_id: string
-  sender_id: string
+  id: string | number
+  order_id: string | number
+  sender_id: string | number
   message?: string
   image?: string
   created_at: string
@@ -44,11 +44,12 @@ export default function MessageList({
     })
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 bg-gray-100">
+    <div className="flex flex-col justify-end h-full overflow-y-auto px-3 py-3 space-y-2 bg-gray-100">
 
       {messages.map((m) => {
 
-        const isMine = m.sender_id === userId
+        // 🔥 FIX สำคัญที่สุด
+        const isMine = String(m.sender_id) === String(userId)
 
         const avatar = isMine
           ? myUser?.avatar || defaultAvatar
@@ -57,28 +58,29 @@ export default function MessageList({
         return (
 
           <div
-            key={m.id}
-            className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+            key={String(m.id)} // 🔥 กัน React key error
+            className={`flex items-end ${isMine ? "justify-end" : "justify-start"}`}
           >
 
             {/* Avatar */}
             {!isMine && (
               <img
                 src={avatar}
-                className="w-6 h-6 rounded-full mr-2 self-end"
+                className="w-7 h-7 rounded-full mr-2"
               />
             )}
 
             {/* Bubble */}
             <div
               className={`
-                max-w-[70%] px-4 py-2 rounded-2xl text-sm
+                max-w-[75%] px-4 py-2 text-sm shadow-sm
                 ${isMine
-                  ? "bg-blue-600 text-white rounded-br-sm"
-                  : "bg-white text-gray-900 rounded-bl-sm shadow-sm"}
+                  ? "bg-blue-600 text-white rounded-2xl rounded-br-md"
+                  : "bg-white text-gray-900 rounded-2xl rounded-bl-md border"}
               `}
             >
 
+              {/* IMAGE */}
               {m.image && (
                 <img
                   src={m.image}
@@ -86,21 +88,24 @@ export default function MessageList({
                 />
               )}
 
-              {m.message}
+              {/* TEXT */}
+              {m.message && (
+                <div className="whitespace-pre-wrap break-words">
+                  {m.message}
+                </div>
+              )}
 
-              {/* เวลา + read receipt */}
+              {/* TIME + READ */}
               <div
                 className={`
-                  flex items-center justify-end gap-1
-                  text-[10px] mt-1
+                  flex items-center justify-end gap-1 mt-1 text-[10px]
                   ${isMine ? "text-blue-100" : "text-gray-400"}
                 `}
               >
                 {formatTime(m.created_at)}
 
-                {/* ✔✔ READ RECEIPT */}
                 {isMine && (
-                  <span>
+                  <span className="text-[10px]">
                     {m.is_read ? "✔✔" : "✔"}
                   </span>
                 )}
@@ -112,13 +117,17 @@ export default function MessageList({
         )
       })}
 
-      {/* typing */}
+      {/* typing indicator */}
       {typingUser && (
-        <div className="text-xs text-gray-400 px-2">
-          กำลังพิมพ์...
+        <div className="flex items-center gap-2 px-2 text-xs text-gray-400">
+          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100" />
+          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200" />
+          <span>กำลังพิมพ์...</span>
         </div>
       )}
 
+      {/* scroll target */}
       <div ref={bottomRef} />
 
     </div>

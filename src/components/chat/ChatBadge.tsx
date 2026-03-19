@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { socket } from "@/lib/socket"
+import { getSocket } from "@/lib/socket"
 
 type Props = {
   orderId: string
@@ -11,22 +11,30 @@ export default function ChatBadge({ orderId, userId }: Props) {
   const [count, setCount] = useState(0)
 
   // =========================
-  // LOAD INITIAL 
+  // LOAD INITIAL
   // =========================
   useEffect(() => {
 
+    if (!orderId || !userId) return
+
     const loadUnread = async () => {
-
-      if (!orderId || !userId) return
-
       try {
-        const res = await fetch(
-          `/api/messages/unread/${orderId}/${userId}`
-        )
 
-        if (!res.ok) return
+        const url = `/api/chat/messages/unread/${orderId}/${userId}`
+
+        console.log("📊 unread fetch:", url)
+
+        const res = await fetch(url)
+
+        if (!res.ok) {
+          console.warn("❌ unread status:", res.status)
+          return
+        }
 
         const data = await res.json()
+
+        console.log("✅ unread count:", data.count)
+
         setCount(data.count || 0)
 
       } catch (err) {
@@ -38,16 +46,31 @@ export default function ChatBadge({ orderId, userId }: Props) {
 
   }, [orderId, userId])
 
+
   // =========================
-  // SOCKET REALTIME 
+  // SOCKET REALTIME
   // =========================
   useEffect(() => {
 
+    if (!orderId || !userId) return
+
+    const socket = getSocket()
+
+    if (!socket) {
+      console.warn("⚠️ socket not ready")
+      return
+    }
+
     const handleNewMessage = (msg: any) => {
 
+      if (!msg) return
+
+      // debug
+      console.log("📩 receive_message:", msg)
+
       if (
-        msg.order_id === orderId &&
-        msg.sender_id !== userId
+        String(msg.order_id) === String(orderId) &&
+        String(msg.sender_id) !== String(userId)
       ) {
         setCount(prev => prev + 1)
       }
@@ -62,12 +85,14 @@ export default function ChatBadge({ orderId, userId }: Props) {
 
   }, [orderId, userId])
 
+
   // =========================
-  // RESET เมื่อเปิดหน้า 
+  // RESET เมื่อกลับมา focus
   // =========================
   useEffect(() => {
 
     const handleFocus = () => {
+      console.log("👁️ reset unread")
       setCount(0)
     }
 
@@ -79,10 +104,11 @@ export default function ChatBadge({ orderId, userId }: Props) {
 
   }, [])
 
+
   // =========================
   // UI
   // =========================
-  if (count === 0) return null
+  if (!count || count <= 0) return null
 
   return (
     <span className="ml-1 px-2 py-[2px] text-xs bg-red-500 text-white rounded-full">
