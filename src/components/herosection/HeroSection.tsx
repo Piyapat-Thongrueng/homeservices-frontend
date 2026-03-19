@@ -7,11 +7,11 @@ const HeroSection = () => {
   const { t } = useTranslation("common");
 
   const images = [
-    "/hero_house.png",
-    "/hero_pool.png",
-    "/hero_garden.png",
+    "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=1920&h=700&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&h=700&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1920&h=700&fit=crop&q=80",
   ];
-  
+
   const [currentIdx, setCurrentIdx] = useState(0);
 
   useEffect(() => {
@@ -22,7 +22,8 @@ const HeroSection = () => {
   }, [images.length]);
 
   const nextSlide = () => setCurrentIdx((prev) => (prev + 1) % images.length);
-  const prevSlide = () => setCurrentIdx((prev) => (prev - 1 + images.length) % images.length);
+  const prevSlide = () =>
+    setCurrentIdx((prev) => (prev - 1 + images.length) % images.length);
 
   return (
     <div className="w-full h-[600px] md:h-[700px] relative overflow-hidden group">
@@ -69,13 +70,13 @@ const HeroSection = () => {
       </div>
 
       {/* Controls */}
-      <button 
+      <button
         onClick={prevSlide}
         className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 bg-black/20 backdrop-blur-md hover:bg-black/40 p-3 md:p-4 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 z-20 border border-white/10"
       >
         <ChevronLeft className="w-8 h-8 text-white" />
       </button>
-      <button 
+      <button
         onClick={nextSlide}
         className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 bg-black/20 backdrop-blur-md hover:bg-black/40 p-3 md:p-4 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 z-20 border border-white/10"
       >
@@ -89,7 +90,9 @@ const HeroSection = () => {
             key={idx}
             onClick={() => setCurrentIdx(idx)}
             className={`h-3 rounded-full transition-all shadow-lg ${
-              idx === currentIdx ? "bg-white w-10" : "bg-white/50 w-3 hover:bg-white/80"
+              idx === currentIdx
+                ? "bg-white w-10"
+                : "bg-white/50 w-3 hover:bg-white/80"
             }`}
           />
         ))}
