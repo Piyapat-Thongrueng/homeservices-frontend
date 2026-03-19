@@ -3,9 +3,20 @@ import { Calendar, Wrench, MapPin, FileText, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
 import { getOrderDetail, type OrderDetailResponse } from '@/services/paymentApi';
 import type { OrderType } from '@/components/repairorder/types';
+import axios from 'axios';
+import { useRouter } from 'next/router';
+
+import ChatBadge from '@/components/chat/ChatBadge';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () => void }) {
   const { t } = useTranslation('common');
+
+  const router = useRouter(); //  เพิ่ม
+  const { state } = useAuth(); //  เพิ่ม
+  const userId = state.user?.id?.toString() || "";
+
   const [detail, setDetail] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,9 +56,15 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleString('th-TH', {
       timeZone: 'Asia/Bangkok',
-      year: 'numeric', month: 'long', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
+
+  const isChatAvailable =
+    detail?.status === 'in_progress' || detail?.status === 'completed';
 
   const formatAppointmentDateTime = (appointmentDate: string, appointmentTime: string | null) => {
     const datePart = appointmentDate.split('T')[0];
@@ -75,10 +92,11 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
     return [baseCompact, ...extras].filter(Boolean).join(' ').trim();
   };
 
+
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 font-prompt">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-800">
             {t('order.modal_title', 'รายละเอียดคำสั่งซ่อม')}
@@ -88,20 +106,18 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
           </button>
         </div>
 
-        {/* Body */}
         <div className="px-6 py-5 max-h-[70vh] overflow-y-auto">
           {loading && (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex justify-center py-12">
               <Loader2 className="animate-spin text-blue-500" size={32} />
             </div>
           )}
-          {error && (
-            <p className="text-center text-red-500 py-8">{error}</p>
-          )}
+
+          {error && <p className="text-center text-red-500 py-8">{error}</p>}
+
           {detail && (
             <div className="space-y-5">
-              {/* รหัสและสถานะ */}
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex justify-between">
                 <div>
                   <p className="text-xs text-gray-400 mb-1">{t('order.order_id', 'รหัสคำสั่งซ่อม')}</p>
                   <p className="text-xl font-bold text-gray-900">
@@ -115,9 +131,8 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 
               <div className="h-px bg-gray-100" />
 
-              {/* วันที่ */}
-              <div className="flex items-start gap-3">
-                <Calendar size={16} className="text-gray-400 mt-0.5 shrink-0" />
+              <div className="flex gap-3">
+                <Calendar size={16} />
                 <div>
                   <p className="text-xs text-gray-400 mb-0.5">{t('order.order_date', 'วันที่สั่งซ่อม')}</p>
                   <p className="text-sm text-gray-800">{formatDate(detail.created_at)}</p>
@@ -141,9 +156,9 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
                     <p className="text-sm text-gray-500">{detail.technician_phone}</p>
                   )}
                 </div>
+
               </div>
 
-              {/* ที่อยู่ */}
               {(detail.address_line || detail.province) && (
                 <div className="flex items-start gap-3">
                   <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
@@ -237,7 +252,13 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 export default function OrderCard({ order }: { order: OrderType }) {
   const { t } = useTranslation('common');
   const [showModal, setShowModal] = useState(false);
-  const isCompleted = order.status === 'ดำเนินการสำเร็จ';
+  const router = useRouter();
+
+  const { state } = useAuth();
+  const userId = state.user?.id?.toString() || "";
+
+  const isChatAvailable = !!order.worker;
+    const isCompleted = order.status === 'ดำเนินการสำเร็จ';
 
   const [cardTechName, setCardTechName] = useState<string | null>(null);
   const [cardTechPhone, setCardTechPhone] = useState<string | null>(null);
@@ -337,18 +358,34 @@ export default function OrderCard({ order }: { order: OrderType }) {
                 {order.price.toLocaleString('th-TH')} ฿
               </span>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="btn-primary w-full lg:w-auto px-6 py-2 rounded-lg text-sm"
-            >
-              {t('order.btn_view_details', 'ดูรายละเอียด')}
-            </button>
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              {userId && isChatAvailable && (
+                <button
+                  onClick={() => router.push(`/chat/${order.id}`)}
+                  className="relative w-10 h-10 rounded-md bg-green-600 hover:bg-green-700 text-white flex items-center justify-center shrink-0"
+                >
+                  💬
+                  <div className="absolute -top-1 -right-1">
+                    <ChatBadge orderId={order.id.toString()} userId={userId} />
+                  </div>
+                </button>
+              )}
+              <button
+                onClick={() => setShowModal(true)}
+                className="btn-primary flex-1 lg:flex-none px-6 py-2 rounded-lg text-sm"
+              >
+                {t('order.btn_view_details', 'ดูรายละเอียด')}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {showModal && (
-        <OrderDetailModal orderId={order.id} onClose={() => setShowModal(false)} />
+        <OrderDetailModal
+          orderId={order.id}
+          onClose={() => setShowModal(false)}
+        />
       )}
     </>
   );
