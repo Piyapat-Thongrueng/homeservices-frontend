@@ -93,12 +93,12 @@ export default function HomeServices({
                     <div className="flex items-center gap-2 text-gray-500 mb-6 grow">
                       <Tag className="w-4 h-4 text-blue-500 shrink-0" />
                       <p className="text-base">
-                        ค่าบริการ:
+                        {t('landing.service_fee', 'ค่าบริการ: ')}
                         {service.min_price !== null &&
                         service.max_price !== null &&
                         service.min_price !== service.max_price
-                          ? ` ${Math.floor(service.min_price).toLocaleString()} - ${Math.floor(service.max_price).toLocaleString()} บาท`
-                          : ` ${Math.floor(service.price ?? service.min_price ?? 0).toLocaleString()} บาท`}
+                          ? `${Math.floor(service.min_price).toLocaleString()} - ${Math.floor(service.max_price).toLocaleString()} ${t('landing.currency_thb', 'บาท')}`
+                          : `${Math.floor(service.price ?? service.min_price ?? 0).toLocaleString()} ${t('landing.currency_thb', 'บาท')}`}
                       </p>
                     </div>
 

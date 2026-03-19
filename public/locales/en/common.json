@@ -21,7 +21,9 @@
     "all_services_title": "Our Services",
     "not_found": "No services found matching your search.",
     "select_service": "Select Service",
-    "view_all": "View All Services"
+    "view_all": "View All Services",
+    "service_fee": "Service Fee: ",
+    "currency_thb": "Baht"
   },
   "landing_footer": {
     "title": "Join as a technician\nwith HomeServices",

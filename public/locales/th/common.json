@@ -21,7 +21,9 @@
     "all_services_title": "บริการของเรา",
     "not_found": "ไม่พบบริการที่ตรงกับการค้นหา",
     "select_service": "เลือกบริการ",
-    "view_all": "ดูบริการทั้งหมด"
+    "view_all": "ดูบริการทั้งหมด",
+    "service_fee": "ค่าบริการ: ",
+    "currency_thb": "บาท"
   },
   "landing_footer": {
     "title": "มาร่วมเป็นพนักงานซ่อม\nกับ HomeServices",
