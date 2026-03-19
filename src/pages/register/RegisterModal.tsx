@@ -51,7 +51,7 @@ export default function RegisterModal({
 
             <button
               onClick={handleGoToLogin}
-              className="btn-primary w-full h-11 text-[14px]"
+              className="btn-primary w-full h-11 text-[14px] cursor-pointer"
             >
               ไปยังหน้าเข้าสู่ระบบ
             </button>
@@ -94,7 +94,7 @@ export default function RegisterModal({
 
             <button
               onClick={onClose}
-              className="btn-primary w-full h-11 text-[14px]"
+              className="btn-primary w-full h-11 text-[14px] cursor-pointer"
             >
               กลับไปลงทะเบียน
             </button>

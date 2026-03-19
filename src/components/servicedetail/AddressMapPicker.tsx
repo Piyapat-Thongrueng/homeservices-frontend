@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useRouter } from "next/router";
 
 const DEFAULT_CENTER: [number, number] = [13.7563, 100.5018];
 
@@ -32,6 +33,8 @@ export default function AddressMapPicker({
   longitude,
   onPositionChange,
 }: AddressMapPickerProps) {
+  const { locale } = useRouter();
+  const isEn = locale === "en";
   const [iconReady, setIconReady] = useState(false);
 
   useEffect(() => {
@@ -72,7 +75,7 @@ export default function AddressMapPicker({
   if (!iconReady) {
     return (
       <div className="w-full h-[280px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
-        กำลังโหลดแผนที่...
+        {isEn ? "Loading map..." : "กำลังโหลดแผนที่..."}
       </div>
     );
   }
@@ -80,7 +83,7 @@ export default function AddressMapPicker({
   return (
     <div className="w-full space-y-2">
       <p className="text-sm text-gray-600">
-        ลากหมุดไปยังตำแหน่งที่อยู่จริงของคุณ
+        {isEn ? "Drag the pin to your actual location" : "ลากหมุดไปยังตำแหน่งที่อยู่จริงของคุณ"}
       </p>
       <div className="w-full h-[280px] rounded-lg overflow-hidden border border-gray-200 [&_.leaflet-container]:h-full">
         <MapContainer

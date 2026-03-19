@@ -62,7 +62,7 @@ export default function PrivacyPolicy() {
 
           {/* Last Updated */}
           <p className="body-4 text-gray-500">
-            {isEn ? "Last Updated: January 1, 2024" : "อัปเดตล่าสุด: 1 มกราคม 2568"}
+            {isEn ? "Last Updated: January 1, 2024" : "อัปเดตล่าสุด: 1 มกราคม 2569"}
           </p>
 
           {/* Section 1 */}

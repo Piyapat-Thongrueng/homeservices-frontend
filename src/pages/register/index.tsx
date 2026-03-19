@@ -220,7 +220,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -238,7 +238,7 @@ export default function RegisterPage() {
 
             {/* CHECKBOX */}
             <div>
-              <label className="flex items-start gap-2.5 cursor-pointer">
+              <label className="flex items-start gap-2.5">
                 <div className="relative mt-0.5">
                   <input
                     type="checkbox"
@@ -248,7 +248,7 @@ export default function RegisterPage() {
                   />
                   <div
                     onClick={() => setAccept((v) => !v)}
-                    className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                    className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors cursor-pointer ${
                       accept
                         ? "bg-blue-600 border-blue-600"
                         : "bg-white border-gray-300"
@@ -297,7 +297,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={state.loading ?? false}
-              className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-md shadow-blue-100 cursor-pointer mt-2"
+              className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-md shadow-blue-100 mt-2"
             >
               {state.loading ? "กำลังสมัคร..." : "ลงทะเบียน"}
             </button>

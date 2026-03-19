@@ -200,7 +200,7 @@ export default function Navbar() {
                           markAllAsRead();
                         }
                       }}
-                      className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors"
+                      className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
                     >
                       <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
                       {/* Badge จำนวนที่ยังไม่อ่าน */}
@@ -270,7 +270,7 @@ export default function Navbar() {
                   <div ref={dropdownRef} className="relative">
                     <button
                       onClick={() => setOpen(!open)}
-                      className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                      className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity cursor-pointer"
                     >
                       <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
                         {user?.profile_pic ? (
@@ -300,7 +300,7 @@ export default function Navbar() {
                             setOpen(false);
                             router.push("/profile");
                           }}
-                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2 cursor-pointer"
                         >
                           👤 {t("navbar.profile")}
                         </button>
@@ -310,7 +310,7 @@ export default function Navbar() {
                             setOpen(false);
                             router.push("/reset-password");
                           }}
-                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2 cursor-pointer"
                         >
                           🔒 {t("navbar.change_password")}
                         </button>
@@ -320,7 +320,7 @@ export default function Navbar() {
                             setOpen(false);
                             router.push("/profile?tab=orders");
                           }}
-                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2 cursor-pointer"
                         >
                           🔧 {t("navbar.orders")}
                         </button>
@@ -330,7 +330,7 @@ export default function Navbar() {
                             setOpen(false);
                             router.push("/profile?tab=history");
                           }}
-                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2 cursor-pointer"
                         >
                           📋 {t("navbar.repair_history")}
                         </button>
@@ -340,7 +340,7 @@ export default function Navbar() {
                         {/* ← เปลี่ยนมาเรียก handleLogoutClick แทน */}
                         <button
                           onClick={handleLogoutClick}
-                          className="w-full px-4 py-3 text-[14px] text-red-600 hover:bg-red-50 text-left cursor-pointer flex items-center gap-2"
+                          className="w-full px-4 py-3 text-[14px] text-red-600 hover:bg-red-50 text-left flex items-center gap-2 cursor-pointer"
                         >
                           🚪 {t("logout")}
                         </button>

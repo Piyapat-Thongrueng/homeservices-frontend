@@ -36,7 +36,7 @@ export default function Footer() {
                 <Phone className="w-4 h-4 text-gray-500 shrink-0" />
                 <a
                   href="tel:080-540-6357"
-                  className="body-2 font-normal hover:text-blue-600 transition-colors break-all cursor-pointer"
+                  className="body-2 font-normal hover:text-blue-600 transition-colors break-all"
                 >
                   080-540-6357
                 </a>
@@ -45,7 +45,7 @@ export default function Footer() {
                 <Mail className="w-4 h-4 text-gray-500 shrink-0" />
                 <a
                   href="mailto:contact@homeservices.co"
-                  className="body-2 font-normal hover:text-blue-600 transition-colors break-all cursor-pointer"
+                  className="body-2 font-normal hover:text-blue-600 transition-colors break-all"
                 >
                   contact@homeservices.co
                 </a>
@@ -63,19 +63,19 @@ export default function Footer() {
             <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-6 order-1 md:order-2 min-w-0">
               <Link
                 href="/t&c-privacy/t&c"
-                className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
+                className="body-3 hover:text-blue-600 transition-colors"
               >
                 {t("footer.terms")}
               </Link>
               <Link
                 href="/t&c-privacy/privacy"
-                className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
+                className="body-3 hover:text-blue-600 transition-colors"
               >
                 {t("footer.privacy")}
               </Link>
               <a
                 href="#"
-                className="body-3 hover:text-blue-600 transition-colors cursor-pointer"
+                className="body-3 hover:text-blue-600 transition-colors"
               >
               </a>
             </div>

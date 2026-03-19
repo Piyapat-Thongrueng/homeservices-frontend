@@ -20,7 +20,7 @@ const HeroSection = () => {
           </p>
           <div>
             <Link href="/service-lists">
-              <button className="btn-primary font-medium py-4 text-2xl px-10 cursor-pointer">
+              <button className="btn-primary font-medium py-4 text-2xl px-10">
                 {t("hero.cta")}
               </button>
             </Link>

@@ -4,11 +4,12 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import LocationSelectors from '@/components/servicedetail/LocationSelectors';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'next-i18next';
 
 // โหลด AddressMapPicker แบบ dynamic (ไม่ SSR เพราะ Leaflet ต้องการ browser)
 const AddressMapPicker = dynamic(
   () => import('@/components/servicedetail/AddressMapPicker'),
-  { ssr: false, loading: () => <div className="w-full h-[280px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">กำลังโหลดแผนที่...</div> }
+  { ssr: false, loading: () => <div className="w-full h-[280px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">Loading map / กำลังโหลดแผนที่...</div> }
 );
 
 interface UserProfileFormProps {
@@ -20,6 +21,7 @@ type Toast = { message: string; type: 'success' | 'error' } | null;
 export default function UserProfileForm({ user }: UserProfileFormProps) {
   const router = useRouter();
   const { fetchUser } = useAuth();
+  const { t } = useTranslation('common');
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -175,13 +177,13 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
       if (response.data.profilePicUrl) setAvatarUrl(response.data.profilePicUrl);
 
       await fetchUser(); // re-sync Navbar ให้แสดงรูปใหม่ทันที
-      showToast('บันทึกข้อมูลสำเร็จ', 'success');
+      showToast(t('profile.msg_save_success', 'บันทึกข้อมูลสำเร็จ'), 'success');
 
       setSelectedFile(null);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
     } catch (error: any) {
-      showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+      showToast(t('profile.msg_save_error', 'เกิดข้อผิดพลาด: ') + error.message, 'error');
     } finally {
       setSavingProfile(false);
     }
@@ -190,23 +192,23 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
 
-      <h2 className="text-xl font-semibold mb-6 text-gray-800">ข้อมูลผู้ใช้งาน</h2>
+      <h2 className="text-xl font-semibold mb-6 text-gray-800">{t('profile.title_profile', 'ข้อมูลผู้ใช้งาน')}</h2>
       <div className="flex flex-col md:flex-row gap-10">
         <div className="flex-1 space-y-4 max-w-md">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล (ไม่สามารถแก้ไขได้)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.email_label', 'อีเมล (ไม่สามารถแก้ไขได้)')}</label>
             <input value={email} readOnly className="w-full h-[44px] px-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 outline-none" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ระบุชื่อ-นามสกุลของคุณ" className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.name_label', 'ชื่อ-นามสกุล')}</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('profile.name_placeholder', 'ระบุชื่อ-นามสกุลของคุณ')} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
-            <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ระบุชื่อผู้ใช้งาน" className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.username_label', 'ชื่อผู้ใช้งาน (Username)')}</label>
+            <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t('profile.username_placeholder', 'ระบุชื่อผู้ใช้งาน')} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.phone_label', 'เบอร์โทรศัพท์')}</label>
             <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08X-XXX-XXXX" maxLength={10} className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
           </div>
         </div>
@@ -218,31 +220,31 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
             ) : (
               <div className="text-gray-400 flex flex-col items-center">
                 <i className="fa-solid fa-image text-3xl mb-2"></i>
-                <span className="text-sm">ไม่มีรูปภาพ</span>
+                <span className="text-sm">{t('profile.no_image', 'ไม่มีรูปภาพ')}</span>
               </div>
             )}
           </div>
-          <label className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer shadow-sm transition-all flex items-center gap-2">
+          <label className="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-all flex items-center gap-2">
             <i className="fa-solid fa-cloud-arrow-up"></i>
-            เลือกรูปภาพใหม่
+            {t('profile.btn_choose_image', 'เลือกรูปภาพใหม่')}
             <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
           </label>
-          <p className="text-xs text-gray-500 mt-3 text-center">* รูปภาพจะอัปเดตเมื่อคุณกดปุ่ม "บันทึกข้อมูล"</p>
+          <p className="text-xs text-gray-500 mt-3 text-center">{t('profile.image_hint', '* รูปภาพจะอัปเดตเมื่อคุณกดปุ่ม "บันทึกข้อมูล"')}</p>
         </div>
       </div>
 
       <div className="mt-10 pt-8 border-t border-gray-100">
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">ข้อมูลที่อยู่</h2>
-          <p className="text-sm text-gray-500 mt-1">ลากหมุดบนแผนที่เพื่อระบุตำแหน่ง หรือกรอกข้อมูลด้วยตนเอง</p>
+          <h2 className="text-xl font-semibold text-gray-800">{t('profile.address_title', 'ข้อมูลที่อยู่')}</h2>
+          <p className="text-sm text-gray-500 mt-1">{t('profile.address_hint', 'ลากหมุดบนแผนที่เพื่อระบุตำแหน่ง หรือกรอกข้อมูลด้วยตนเอง')}</p>
         </div>
 
         <div className="space-y-5">
           {/* แผนที่ */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">ระบุตำแหน่งบนแผนที่</label>
-              {geocoding && <span className="text-xs text-blue-500 animate-pulse">กำลังค้นหาที่อยู่...</span>}
+              <label className="block text-sm font-medium text-gray-700">{t('profile.map_label', 'ระบุตำแหน่งบนแผนที่')}</label>
+              {geocoding && <span className="text-xs text-blue-500 animate-pulse">{t('profile.searching_address', 'กำลังค้นหาที่อยู่...')}</span>}
             </div>
             <AddressMapPicker
               latitude={latitude}
@@ -251,28 +253,28 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
             />
             {latitude && longitude && (
               <p className="text-xs text-gray-400 mt-1">
-                พิกัด: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                {t('profile.coords_prefix', 'พิกัด:')} {latitude.toFixed(6)}, {longitude.toFixed(6)}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">รายละเอียดที่อยู่</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.address_detail_label', 'รายละเอียดที่อยู่')}</label>
             <input
               value={addressDetail}
               onChange={(e) => setAddressDetail(e.target.value)}
-              placeholder="ระบุเลขที่, หมู่, ถนน, ซอย"
+              placeholder={t('profile.address_detail_placeholder', 'ระบุเลขที่, หมู่, ถนน, ซอย')}
               className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">รหัสไปรษณีย์</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.postal_code', 'รหัสไปรษณีย์')}</label>
               <input
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
-                placeholder="รหัสไปรษณีย์"
+                placeholder={t('profile.postal_code', 'รหัสไปรษณีย์')}
                 maxLength={5}
                 className="w-full h-[44px] px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               />
@@ -301,14 +303,14 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
           disabled={savingProfile}
           className="btn-primary bg-blue-600 text-white w-full sm:w-auto px-10 py-2.5 rounded-lg font-medium shadow-sm transition-all hover:bg-blue-700 hover:shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {savingProfile ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+          {savingProfile ? t('profile.btn_saving', 'กำลังบันทึก...') : t('profile.btn_save', 'บันทึกข้อมูล')}
         </button>
 
         <button
           onClick={() => router.push('/reset-password')}
-          className="w-full sm:w-auto px-10 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 hover:text-blue-600 hover:border-blue-400 transition-all shadow-sm flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-10 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 hover:text-blue-600 hover:border-blue-400 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
         >
-          <i className="fa-solid fa-lock text-sm"></i>เปลี่ยนรหัสผ่าน
+          <i className="fa-solid fa-lock text-sm"></i>{t('profile.btn_change_password', 'เปลี่ยนรหัสผ่าน')}
         </button>
       </div>
 

@@ -32,11 +32,11 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       <button
         type="button"
         onClick={() => onChange("promptpay")}
-        className={`flex-1 flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors cursor-pointer ${
+        className={`flex-1 flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
           method === "promptpay"
             ? "border-blue-600 bg-blue-600 text-white"
             : "border-gray-300 bg-white hover:border-gray-400"
-        }`}
+        } cursor-pointer`}
       >
         <QrCode className="w-5 h-5" />
         <span className="headline-5">{t("payment.method_promptpay")}</span>
@@ -46,11 +46,11 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       <button
         type="button"
         onClick={() => onChange("creditcard")}
-        className={`flex-1 flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors cursor-pointer ${
+        className={`flex-1 flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
           method === "creditcard"
             ? "border-blue-600 bg-blue-600 text-white"
             : "border-gray-300 bg-white hover:border-gray-400"
-        }`}
+        } cursor-pointer`}
       >
         <CreditCard className="w-5 h-5" />
         <span className="headline-5">{t("payment.method_creditcard")}</span>

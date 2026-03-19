@@ -31,7 +31,7 @@ const ServiceFooterNav: React.FC<ServiceFooterNavProps> = ({
   const displayNextText = nextText || t("service_detail.nav_continue");
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-utility-white border-t border-gray-200 z-40 h-[92px]">
+    <footer className="fixed bottom-0 left-0 right-0 bg-utility-white border-t border-gray-200 z-1200 h-[92px]">
       <div className="relative w-full h-full max-w-[1440px] mx-auto px-4 md:px-[160px]">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 h-full">
           <button

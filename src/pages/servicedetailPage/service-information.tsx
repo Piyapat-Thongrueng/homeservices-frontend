@@ -111,15 +111,40 @@ const defaultServiceInfo: ServiceInfo = {
   savedAddressLine: undefined,
 };
 
-/**
- * Combined address line used across cart, payment, and summary flows.
- * Kept outside the component for clearer separation of pure helpers.
- */
-const buildCombinedAddressLine = (f: ServiceInfo) =>
-  [f.address, f.subDistrict, f.district, f.province, f.postalCode]
+/** Address line persisted to DB: only the street/input address field. */
+const buildAddressLine = (f: ServiceInfo) => (f.address ?? "").trim();
+
+/** Saved-address display format: address line + province (as before). */
+const formatSavedAddressLine = (addr: SavedAddress) => {
+  const addressParts = [
+    addr.address_line ?? "",
+    addr.subdistrict ?? "",
+    addr.district ?? "",
+    addr.postal_code ?? "",
+  ];
+  const addressLine = addressParts
+    .map((part) => part?.trim())
     .filter(Boolean)
-    .join(" ")
-    .trim();
+    .join(" ");
+  const province = addr.province ?? "";
+  return [addressLine.trim(), province.trim()].filter(Boolean).join(" · ").trim();
+};
+
+/** Full saved-address line for summary/confirmation (same shape as manual new input). */
+const formatSavedAddressFullLine = (addr: SavedAddress) => {
+  const base = (addr.address_line ?? "").replace(/\s+/g, " ").trim();
+  const extras = [
+    addr.subdistrict ?? "",
+    addr.district ?? "",
+    addr.province ?? "",
+    addr.postal_code ?? "",
+  ]
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => !base.includes(p));
+
+  return [base, ...extras].filter(Boolean).join(" ").trim();
+};
 
 /** Strip given tokens from the end of the string (for normalizing saved address_line). */
 const stripLocationFromAddressLine = (
@@ -168,8 +193,8 @@ export default function ServiceInformation() {
     ? savedAddresses.find((a) => a.id === formData.addressId)
     : undefined;
 
-  /** Combined address line — must match how we send to backend / how rows are stored */
-  const combinedAddressLine = (f: ServiceInfo) => buildCombinedAddressLine(f);
+  /** Address line persisted to DB: only the "ที่อยู่" input. */
+  const addressLine = (f: ServiceInfo) => buildAddressLine(f);
 
   /** Load saved addresses for dropdown when user is logged in */
   useEffect(() => {
@@ -412,7 +437,7 @@ export default function ServiceInformation() {
             ? { addressId: formData.addressId }
             : {
                 address: {
-                  address_line: combinedAddressLine(formData),
+                  address_line: addressLine(formData),
                   district: formData.district,
                   subdistrict: formData.subDistrict,
                   province: formData.province,
@@ -432,7 +457,7 @@ export default function ServiceInformation() {
             ? { addressId: formData.addressId }
             : {
                 address: {
-                  address_line: combinedAddressLine(formData),
+                  address_line: addressLine(formData),
                   district: formData.district,
                   subdistrict: formData.subDistrict,
                   province: formData.province,
@@ -517,7 +542,7 @@ export default function ServiceInformation() {
       ...prev,
       addressId: addr.id,
       saveAddress: false,
-      savedAddressLine: addr.address_line ?? undefined,
+      savedAddressLine: formatSavedAddressFullLine(addr),
       province,
       district,
       postalCode,
@@ -647,9 +672,7 @@ export default function ServiceInformation() {
                       <option value="">{t("booking_info.address_new")}</option>
                       {savedAddresses.map((a) => (
                         <option key={a.id} value={a.id}>
-                          {[a.address_line, a.province]
-                            .filter(Boolean)
-                            .join(" · ") || `ที่อยู่ #${a.id}`}
+                          {formatSavedAddressLine(a) || `ที่อยู่ #${a.id}`}
                         </option>
                       ))}
                     </select>
@@ -836,8 +859,13 @@ export default function ServiceInformation() {
               serviceInfo={formData}
               savedAddressLine={
                 formData.addressId != null
-                  ? savedAddresses.find((a) => a.id === formData.addressId)
-                      ?.address_line
+                  ? (() => {
+                      const selected = savedAddresses.find(
+                        (a) => a.id === formData.addressId,
+                      );
+                      if (!selected) return undefined;
+                      return formatSavedAddressFullLine(selected);
+                    })()
                   : undefined
               }
             />
@@ -847,7 +875,7 @@ export default function ServiceInformation() {
                   type="button"
                   disabled={!isFormValid || cartActionLoading}
                   onClick={handleCartAction}
-                  className="btn-primary w-full inline-flex items-center justify-center gap-2"
+                  className="btn-primary w-full inline-flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <ShoppingCart className="w-5 h-5" />
                   {cartActionLoading

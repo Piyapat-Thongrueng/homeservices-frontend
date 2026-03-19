@@ -2,6 +2,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 export interface CreateCheckoutSessionItem {
   serviceId: number;
+  serviceItemId?: number;
   name: string;
   quantity: number;
   price: number;
@@ -174,6 +175,38 @@ export interface PromotionValidationResponse {
   message?: string;
 }
 
+export interface OrderDetailItem {
+  serviceId: number;
+  serviceItemId: number | null;
+  name: string;
+  unit: string | null;
+  quantity: number;
+  price: number;
+}
+
+export interface OrderDetailResponse {
+  id: number;
+  status: string;
+  created_at: string;
+  total_price: number;
+  discount_amount: number;
+  promotion_code: string | null;
+  net_price: number;
+  appointment_date: string | null;
+  appointment_time: string | null;
+  remark: string | null;
+  address_line: string | null;
+  district: string | null;
+  subdistrict: string | null;
+  province: string | null;
+  postal_code: string | null;
+  technician_id: number | null;
+  technician_name: string | null;
+  technician_phone: string | null;
+  services: string[];
+  items: OrderDetailItem[];
+}
+
 /** Saved address row from GET /api/payment/addresses */
 export interface SavedAddress {
   id: number;
@@ -237,6 +270,17 @@ export async function validatePromotionCode(
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error ?? "Failed to validate promotion code");
+  }
+  return data;
+}
+
+export async function getOrderDetail(orderId: number): Promise<OrderDetailResponse> {
+  const res = await fetch(
+    `${API_URL}/api/payment/order-detail/${encodeURIComponent(String(orderId))}`,
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error ?? "Failed to load order detail");
   }
   return data;
 }

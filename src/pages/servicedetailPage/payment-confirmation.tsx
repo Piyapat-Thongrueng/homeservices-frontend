@@ -94,6 +94,27 @@ export default function PaymentConfirmation() {
     (sum, item) => sum + item.quantity,
     0,
   );
+  const subTotal = serviceItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+  const promotionCode =
+    typeof router.query.promotionCode === "string"
+      ? router.query.promotionCode.trim()
+      : Array.isArray(router.query.promotionCode)
+        ? String(router.query.promotionCode[0] ?? "").trim()
+        : "";
+  const discountFromQuery = Number(
+    typeof router.query.discount === "string"
+      ? router.query.discount
+      : Array.isArray(router.query.discount)
+        ? router.query.discount[0]
+        : "0",
+  );
+  const appliedDiscount =
+    Number.isFinite(discountFromQuery) && discountFromQuery > 0
+      ? discountFromQuery
+      : Math.max(0, subTotal - total);
 
   /**
    * Format address like ServiceSummaryCard:
@@ -120,8 +141,9 @@ export default function PaymentConfirmation() {
    * Inline styles for text wrapping in address and notes fields
    */
   const textWrapStyle = {
-    wordBreak: "break-all" as const,
-    overflowWrap: "anywhere" as const,
+    wordBreak: "normal" as const,
+    overflowWrap: "break-word" as const,
+    whiteSpace: "normal" as const,
     maxWidth: "30ch",
     lineHeight: "1.5",
     minWidth: 0,
@@ -149,7 +171,7 @@ export default function PaymentConfirmation() {
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="btn-primary px-6 py-2 cursor-pointer"
+              className="btn-primary px-6 py-2"
             >
               {t("payment_confirm.btn_home")}
             </button>
@@ -175,16 +197,46 @@ export default function PaymentConfirmation() {
           <h1 className="headline-1 text-gray-900 mb-8">{t("payment_confirm.success")}</h1>
 
           {/* Service Details */}
+          <div className="border-t border-gray-300 pt-4 space-y-3"></div>
           <div className="text-left space-y-4 mb-6">
             {/* Service Item Description and Quantity */}
-            <div className="flex items-center justify-between gap-4">
-              <p className="body-2 text-gray-700 flex-1">
-                {serviceItems[0]?.description ?? t("payment_confirm.default_service")}
-              </p>
-              <p className="body-2 text-gray-600 whitespace-nowrap">
-                {totalQuantity} {t("payment_confirm.items")}
-              </p>
-            </div>
+            {serviceItems.length > 0 ? (
+              <div className="space-y-2">
+                {serviceItems.map((item) => (
+                  <div
+                    key={`${item.id}-${item.description}`}
+                    className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3"
+                  >
+                    <p className="body-2 text-gray-700 truncate">• {item.description}</p>
+                    <p className="body-2 text-gray-600 whitespace-nowrap text-center min-w-[92px]">
+                      {item.quantity} {t("payment_confirm.items")}
+                    </p>
+                    <p className="body-2 text-gray-700 whitespace-nowrap text-right min-w-[90px]">
+                      {(item.price * item.quantity).toFixed(2)} ฿
+                    </p>
+                  </div>
+                ))}
+                {promotionCode && appliedDiscount > 0 && (
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center">
+                    <p className="body-3 text-red-600 truncate">
+                      • Promotion Code: {promotionCode}
+                    </p>
+                    <p className="body-2 text-red-600 whitespace-nowrap text-right min-w-[90px]">
+                      - {appliedDiscount.toFixed(2)} ฿
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-4">
+                <p className="body-2 text-gray-700 flex-1">
+                  {t("payment_confirm.default_service")}
+                </p>
+                <p className="body-2 text-gray-600 whitespace-nowrap">
+                  {totalQuantity} {t("payment_confirm.items")}
+                </p>
+              </div>
+            )}
 
             {/* Service Information Details */}
             <div className="border-t border-gray-300 pt-4 space-y-3">
@@ -257,8 +309,8 @@ export default function PaymentConfirmation() {
           {/* Action Button - Navigate to Home */}
           <button
             type="button"
-            onClick={() => router.push("/History")}
-            className="btn-primary w-full px-8 py-3 mt-6 cursor-pointer"
+            onClick={() => router.push("/profile?tab=orders")}
+            className="btn-primary w-full px-8 py-3 mt-6"
           >
             {t("payment_confirm.btn_check_order")}
           </button>

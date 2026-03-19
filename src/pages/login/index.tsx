@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import AuthenticationRoute from "@/components/auth/AuthenticationRoute";
 import LoginModal from "./LoginModal";
 import { Mail, Lock, Eye, EyeOff, Wrench, ArrowLeft } from "lucide-react";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 
 interface FormErrors {
   email: string;
@@ -19,6 +21,7 @@ const initialErrors: FormErrors = {
 export default function LoginPage() {
   const { login, state, isAuthenticated, loginWithGoogle, fetchUser } =
     useAuth();
+  const { t } = useTranslation("common");
 
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -33,17 +36,17 @@ export default function LoginPage() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!email.trim()) {
-      newErrors.email = "โปรดกรอกอีเมล";
+      newErrors.email = t("auth.email_required", "โปรดกรอกอีเมล");
       valid = false;
     } else if (!emailRegex.test(email)) {
-      newErrors.email = "รูปแบบอีเมลไม่ถูกต้อง";
+      newErrors.email = t("auth.email_invalid", "รูปแบบอีเมลไม่ถูกต้อง");
       valid = false;
     }
     if (!password.trim()) {
-      newErrors.password = "โปรดกรอกรหัสผ่าน";
+      newErrors.password = t("auth.password_required", "โปรดกรอกรหัสผ่าน");
       valid = false;
     } else if (password.length < 8) {
-      newErrors.password = "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร";
+      newErrors.password = t("auth.password_min_length", "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
       valid = false;
     }
 
@@ -66,7 +69,7 @@ export default function LoginPage() {
     if (result?.role !== "user") {
       localStorage.removeItem("token");
       await fetchUser();
-      setApiError("บัญชีนี้ไม่สามารถเข้าใช้งานระบบนี้ได้");
+      setApiError(t("auth.error_forbidden_role", "บัญชีนี้ไม่สามารถเข้าใช้งานระบบนี้ได้"));
       setModalType("error");
       return;
     }
@@ -96,20 +99,20 @@ export default function LoginPage() {
         <div className="w-full max-w-md bg-white border border-gray-200 rounded-2xl px-8 py-10 shadow-sm">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <h1 className="text-[32px] font-bold text-gray-900">เข้าสู่ระบบ</h1>
+            <h1 className="text-[32px] font-bold text-gray-900">{t("auth.login", "เข้าสู่ระบบ")}</h1>
           </div>
 
           <form className="space-y-4" onSubmit={handleLogin}>
             {/* EMAIL */}
             <div>
               <label className="block text-[14px] font-semibold text-gray-700 mb-1.5">
-                อีเมล <span className="text-red-500">*</span>
+                {t("auth.email", "อีเมล")} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="email"
-                  placeholder="กรุณากรอกอีเมลของคุณ"
+                  placeholder={t("auth.email_placeholder", "กรุณากรอกอีเมลของคุณ")}
                   value={email}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     setEmail(e.target.value)
@@ -129,13 +132,13 @@ export default function LoginPage() {
             {/* PASSWORD */}
             <div>
               <label className="block text-[14px] font-semibold text-gray-700 mb-1.5">
-                รหัสผ่าน <span className="text-red-500">*</span>
+                {t("auth.password", "รหัสผ่าน")} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="กรุณากรอกรหัสผ่านของคุณ"
+                  placeholder={t("auth.password_placeholder", "กรุณากรอกรหัสผ่านของคุณ")}
                   value={password}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     setPassword(e.target.value)
@@ -171,7 +174,7 @@ export default function LoginPage() {
                 href="/forgot-password"
                 className="text-[13px] text-blue-600 hover:underline"
               >
-                ลืมรหัสผ่าน?
+                {t("auth.forgot_password", "ลืมรหัสผ่าน?")}
               </Link>
             </div>
 
@@ -179,9 +182,9 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={state.loading ?? false}
-              className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-md shadow-blue-100 cursor-pointer"
+              className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-md shadow-blue-100"
             >
-              {state.loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+              {state.loading ? t("auth.logging_in", "กำลังเข้าสู่ระบบ...") : t("auth.login", "เข้าสู่ระบบ")}
             </button>
           </form>
 
@@ -189,7 +192,7 @@ export default function LoginPage() {
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 border-t border-gray-100" />
             <span className="text-[12px] text-gray-400">
-              หรือลงชื่อเข้าใช้ผ่าน
+              {t("auth.or_sign_in_with", "หรือลงชื่อเข้าใช้ผ่าน")}
             </span>
             <div className="flex-1 border-t border-gray-100" />
           </div>
@@ -198,14 +201,14 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={loginWithGoogle}
-            className="w-full h-11 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors cursor-pointer text-[14px] text-gray-700 font-medium"
+            className="w-full h-11 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors text-[14px] text-gray-700 font-medium cursor-pointer"
           >
             <img
               src="/icons/google_logos_.png"
               alt="Google"
               className="w-4.5 h-4.5"
             />
-            เข้าสู่ระบบด้วยบัญชี Google
+            {t("auth.google_login", "เข้าสู่ระบบด้วยบัญชี Google")}
           </button>
 
           {/* FACEBOOK — disabled */}
@@ -219,17 +222,17 @@ export default function LoginPage() {
               alt="Facebook"
               className="w-4.5 h-4.5"
             />
-            เข้าสู่ระบบด้วย Facebook
+            {t("auth.facebook_login", "เข้าสู่ระบบด้วย Facebook")}
           </button>
 
           {/* REGISTER LINK + BACK TO HOME */}
           <p className="text-center text-[14px] text-gray-400 mt-6">
-            ยังไม่มีบัญชีผู้ใช้ HomeServices?{" "}
+            {t("auth.no_account", "ยังไม่มีบัญชีผู้ใช้ HomeServices?")}{" "}
             <Link
               href="/register"
               className="text-blue-600 font-semibold hover:underline"
             >
-              ลงทะเบียน
+              {t("auth.register", "ลงทะเบียน")}
             </Link>
           </p>
 
@@ -242,11 +245,19 @@ export default function LoginPage() {
               <span className="w-7 h-7 rounded-full bg-gray-100 group-hover:bg-blue-50 flex items-center justify-center transition-colors">
                 <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
               </span>
-              กลับไปยังหน้าหลัก
+              {t("auth.back_to_home", "กลับไปยังหน้าหลัก")}
             </Link>
           </div>
         </div>
       </div>
     </AuthenticationRoute>
   );
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ['common'])),
+    },
+  };
 }

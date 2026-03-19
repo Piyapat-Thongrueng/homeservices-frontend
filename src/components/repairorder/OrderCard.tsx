@@ -1,56 +1,27 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import { Calendar, UserCircle, MapPin, X, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/router';
-
-import ChatBadge from '@/components/chat/ChatBadge';
-import { useAuth } from '@/contexts/AuthContext';
-
-interface OrderType {
-  id: number;
-  display_id?: string;
-  status: 'รอดำเนินการ' | 'กำลังดำเนินการ' | 'ดำเนินการสำเร็จ' | 'ยกเลิกคำสั่งซ่อม' | 'paid';
-  date: string;
-  worker: string;
-  price: number;
-  details: string[];
-}
-
-interface OrderDetail {
-  id: number;
-  status: string;
-  created_at: string;
-  total_price: number;
-  net_price: number;
-  services: string[];
-  appointment_date: string | null;
-  appointment_time: string | null;
-  address_line: string | null;
-  district: string | null;
-  province: string | null;
-  postal_code: string | null;
-  technician_name: string | null;
-  technician_phone: string | null;
-}
+import { Calendar, Wrench, MapPin, FileText, X, Loader2 } from 'lucide-react';
+import { useTranslation } from 'next-i18next';
+import { getOrderDetail, type OrderDetailResponse } from '@/services/paymentApi';
+import type { OrderType } from '@/components/repairorder/types';
 
 function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () => void }) {
+  const { t } = useTranslation('common');
 
   const router = useRouter(); //  เพิ่ม
   const { state } = useAuth(); //  เพิ่ม
   const userId = state.user?.id?.toString() || "";
 
-  const [detail, setDetail] = useState<OrderDetail | null>(null);
+  const [detail, setDetail] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   React.useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        const res = await axios.get(`${API_URL}/api/orders/${orderId}`);
-        setDetail(res.data);
+        const data = await getOrderDetail(orderId);
+        setDetail(data);
       } catch {
-        setError('ไม่สามารถโหลดรายละเอียดได้');
+        setError(t('order.error_load', 'ไม่สามารถโหลดรายละเอียดได้'));
       } finally {
         setLoading(false);
       }
@@ -68,11 +39,11 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
     return 'bg-gray-100 text-gray-600';
   };
 
-  const thaiStatus = (s: string) => {
-    if (s === 'pending') return 'รอดำเนินการ';
-    if (s === 'in_progress') return 'กำลังดำเนินการ';
-    if (s === 'completed') return 'ดำเนินการสำเร็จ';
-    if (s === 'cancelled') return 'ยกเลิกคำสั่งซ่อม';
+  const translatedStatus = (s: string) => {
+    if (s === 'pending' || s === 'รอดำเนินการ') return t('order.status_pending', 'รอดำเนินการ');
+    if (s === 'in_progress' || s === 'กำลังดำเนินการ') return t('order.status_in_progress', 'กำลังดำเนินการ');
+    if (s === 'completed' || s === 'ดำเนินการสำเร็จ') return t('order.status_completed', 'ดำเนินการสำเร็จ');
+    if (s === 'cancelled' || s === 'ยกเลิกคำสั่งซ่อม') return t('order.status_cancelled', 'ยกเลิกคำสั่งซ่อม');
     return s;
   };
 
@@ -89,12 +60,69 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
     const isChatAvailable =
     detail?.status === 'in_progress' || detail?.status === 'completed';
 
+  const formatAppointmentDateTime = (appointmentDate: string, appointmentTime: string | null) => {
+    const datePart = appointmentDate.split('T')[0];
+    if (appointmentTime) {
+      const hhmm = appointmentTime.slice(0, 5);
+      return formatDate(`${datePart}T${hhmm}:00`);
+    }
+    return formatDate(appointmentDate);
+  };
+
+  const formatServiceAddress = (
+    addressLine: string | null,
+    subdistrict: string | null,
+    district: string | null,
+    province: string | null,
+    postalCode: string | null,
+  ) => {
+    const base = (addressLine ?? '').trim();
+    const baseCompact = base.replace(/\s+/g, ' ').trim();
+    const extras = [subdistrict, district, province, postalCode]
+      .map((part) => (part ?? '').trim())
+      .filter(Boolean)
+      .filter((part) => !baseCompact.includes(part));
+
+    return [baseCompact, ...extras].filter(Boolean).join(' ').trim();
+  };
+
+  const formatAppointmentDateTime = (appointmentDate: string, appointmentTime: string | null) => {
+    const datePart = appointmentDate.split('T')[0];
+    if (appointmentTime) {
+      const hhmm = appointmentTime.slice(0, 5);
+      return formatDate(`${datePart}T${hhmm}:00`);
+    }
+    return formatDate(appointmentDate);
+  };
+  
+  const isChatAvailable =
+  detail?.status === 'in_progress' || detail?.status === 'completed';
+
+  const formatServiceAddress = (
+    addressLine: string | null,
+    subdistrict: string | null,
+    district: string | null,
+    province: string | null,
+    postalCode: string | null,
+  ) => {
+    const base = (addressLine ?? '').trim();
+    const baseCompact = base.replace(/\s+/g, ' ').trim();
+    const extras = [subdistrict, district, province, postalCode]
+      .map((part) => (part ?? '').trim())
+      .filter(Boolean)
+      .filter((part) => !baseCompact.includes(part));
+
+    return [baseCompact, ...extras].filter(Boolean).join(' ').trim();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 font-prompt">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-800">รายละเอียดคำสั่งซ่อม</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">
+          <h2 className="text-lg font-semibold text-gray-800">
+            {t('order.modal_title', 'รายละเอียดคำสั่งซ่อม')}
+          </h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
             <X size={20} className="text-gray-500" />
           </button>
         </div>
@@ -112,11 +140,13 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
             <div className="space-y-5">
               <div className="flex justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">รหัสคำสั่งซ่อม</p>
-                  <p className="text-xl font-bold">AD{String(detail.id).padStart(8, '0')}</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('order.order_id', 'รหัสคำสั่งซ่อม')}</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    AD{String(detail.id).padStart(8, '0')}
+                  </p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs ${statusColor()}`}>
-                  {thaiStatus(detail.status)}
+                <span className={`px-3 py-1 rounded-full text-xs font-medium mt-1 ${statusColor()}`}>
+                  {translatedStatus(detail.status)}
                 </span>
               </div>
 
@@ -125,15 +155,27 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
               <div className="flex gap-3">
                 <Calendar size={16} />
                 <div>
-                  <p className="text-sm">{formatDate(detail.created_at)}</p>
+                  <p className="text-xs text-gray-400 mb-0.5">{t('order.order_date', 'วันที่สั่งซ่อม')}</p>
+                  <p className="text-sm text-gray-800">{formatDate(detail.created_at)}</p>
+                  {detail.appointment_date && (
+                    <p className="text-sm text-blue-600 mt-1">
+                      {t('order.appointment', 'นัดหมาย:')} {formatAppointmentDateTime(detail.appointment_date, detail.appointment_time)}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* 🔥 แก้ตรงนี้: เพิ่มปุ่มแชท */}
-              <div className="flex gap-3 items-center justify-between">
-                <div className="flex gap-3 items-center">
-                  <UserCircle size={16} />
-                  <p>{detail.technician_name || 'ยังไม่ระบุช่าง'}</p>
+              {/* ช่าง */}
+              <div className="flex items-start gap-3">
+                <Wrench size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">{t('order.technician', 'ช่างผู้รับงาน')}</p>
+                  <p className="text-sm text-gray-800">
+                    {detail.technician_name || t('order.tech_unassigned', 'ยังไม่ระบุช่าง')}
+                  </p>
+                  {detail.technician_phone && (
+                    <p className="text-sm text-gray-500">{detail.technician_phone}</p>
+                  )}
                 </div>
 
                 {userId && isChatAvailable && (
@@ -150,35 +192,88 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
               </div>
 
               {(detail.address_line || detail.province) && (
-                <div className="flex gap-3">
-                  <MapPin size={16} />
-                  <p>
-                    {[detail.address_line, detail.district, detail.province, detail.postal_code]
-                      .filter(Boolean)
-                      .join(' ')}
-                  </p>
+                <div className="flex items-start gap-3">
+                  <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">{t('order.service_address', 'ที่อยู่นัดซ่อม')}</p>
+                    <p className="text-sm text-gray-800">
+                      {formatServiceAddress(
+                        detail.address_line,
+                        detail.subdistrict,
+                        detail.district,
+                        detail.province,
+                        detail.postal_code,
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {detail.remark && (
+                <div className="flex items-start gap-3">
+                  <FileText size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">{t('payment_confirm.note', 'หมายเหตุ')}</p>
+                    <p className="text-sm text-gray-800">{detail.remark}</p>
+                  </div>
                 </div>
               )}
 
               <div className="h-px bg-gray-100" />
 
-              <ul>
-                {(detail.services || []).map((s, i) => (
-                  <li key={i}>• {s}</li>
-                ))}
-              </ul>
+              {/* รายการบริการ */}
+              <div>
+                <p className="text-xs text-gray-400 mb-2">{t('order.service_items', 'รายการบริการ')}</p>
+                <ul className="space-y-2">
+                  {(detail.items || []).length > 0
+                    ? detail.items.map((item, i) => (
+                        <li key={`${item.serviceId}-${item.serviceItemId ?? 'base'}-${i}`} className="flex items-center justify-between text-sm gap-3">
+                          <span className="text-gray-800">
+                            • {item.name} ({item.quantity}{item.unit ? ` ${item.unit}` : ''})
+                          </span>
+                          <span className="text-gray-600 shrink-0">
+                            {(item.price * item.quantity).toLocaleString('th-TH')} ฿
+                          </span>
+                        </li>
+                      ))
+                    : (detail.services || []).map((s, i) => (
+                        <li key={i} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-800">• {s}</span>
+                        </li>
+                      ))}
+                  {detail.promotion_code && detail.discount_amount > 0 && (
+                    <li className="flex items-center justify-between text-sm gap-3">
+                      <span className="text-red-600">
+                        • Promotion Code: {detail.promotion_code}
+                      </span>
+                      <span className="text-red-600 shrink-0">
+                        - {detail.discount_amount.toFixed(2)} ฿
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              </div>
 
-              <div className="flex justify-between">
-                <span>ราคารวม</span>
-                <span>{(detail.net_price ?? detail.total_price ?? 0).toLocaleString()} ฿</span>
+              <div className="h-px bg-gray-100" />
+
+              {/* ราคา */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">{t('order.total_price', 'ราคารวมทั้งหมด')}</span>
+                <span className="text-xl font-bold text-gray-900">
+                  {(detail.net_price ?? detail.total_price ?? 0).toLocaleString('th-TH')} ฿
+                </span>
               </div>
             </div>
           )}
         </div>
 
-        <div className="px-6 py-4 border-t">
-          <button onClick={onClose} className="w-full py-2 border rounded-lg">
-            ปิด
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100">
+          <button
+            onClick={onClose}
+            className="btn-secondary w-full py-2.5 rounded-lg text-sm"
+          >
+            {t('order.btn_close', 'ปิด')}
           </button>
         </div>
       </div>
@@ -187,6 +282,7 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 }
 
 export default function OrderCard({ order }: { order: OrderType }) {
+  const { t } = useTranslation('common');
   const [showModal, setShowModal] = useState(false);
   const router = useRouter();
 
@@ -196,59 +292,111 @@ export default function OrderCard({ order }: { order: OrderType }) {
   const isChatAvailable = !!order.worker;
     const isCompleted = order.status === 'ดำเนินการสำเร็จ';
 
-  let statusColor = 'bg-gray-200 text-gray-700';
+  const [cardTechName, setCardTechName] = useState<string | null>(null);
+  const [cardTechPhone, setCardTechPhone] = useState<string | null>(null);
 
-  if (order.status === 'กำลังดำเนินการ') {
-    statusColor = 'bg-yellow-100 text-yellow-700';
-  }
-  if (isCompleted) {
-    statusColor = 'bg-teal-100 text-teal-700';
-  }
-  if (order.status === 'ยกเลิกคำสั่งซ่อม') {
-    statusColor = 'bg-red-100 text-red-600';
-  }
-  if (order.status === 'paid') {
-    statusColor = 'bg-green-100 text-green-700';
-  }
+  const formatCardDateTime = (value: string) =>
+    new Date(value).toLocaleString('th-TH', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+  let statusColor = 'bg-gray-200 text-gray-700';
+  if (order.status === 'กำลังดำเนินการ') statusColor = 'bg-yellow-100 text-yellow-700';
+  if (isCompleted) statusColor = 'bg-teal-100 text-teal-700';
+  if (order.status === 'ยกเลิกคำสั่งซ่อม') statusColor = 'bg-red-100 text-red-600';
+
+  const translatedStatus = (s: string) => {
+    if (s === 'pending' || s === 'รอดำเนินการ') return t('order.status_pending', 'รอดำเนินการ');
+    if (s === 'in_progress' || s === 'กำลังดำเนินการ') return t('order.status_in_progress', 'กำลังดำเนินการ');
+    if (s === 'completed' || s === 'ดำเนินการสำเร็จ') return t('order.status_completed', 'ดำเนินการสำเร็จ');
+    if (s === 'cancelled' || s === 'ยกเลิกคำสั่งซ่อม') return t('order.status_cancelled', 'ยกเลิกคำสั่งซ่อม');
+    return s;
+  };
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getOrderDetail(order.id)
+      .then((data) => {
+        if (cancelled) return;
+        setCardTechName(data.technician_name ?? null);
+        setCardTechPhone(data.technician_phone ?? null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.id]);
 
   return (
     <>
-      <div className="relative bg-white rounded-xl shadow-sm border p-6 flex justify-between">
-        <div>
-          <h3 className="font-bold">คำสั่งการซ่อมรหัส : {order.id}</h3>
-          <p>{order.date}</p>
-          <p>{order.worker}</p>
-
-          <ul>
-            {order.details.map((d, i) => (
-              <li key={i}>• {d}</li>
-            ))}
-          </ul>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col lg:flex-row justify-between gap-6 font-prompt">
+        <div className="space-y-3 flex-1">
+          <h3 className="text-lg font-bold text-gray-900">
+            {t('order.order_id_prefix', 'คำสั่งการซ่อมรหัส :')} AD{String(order.id).padStart(8, '0')}
+          </h3>
+          <div className="text-sm text-gray-500 space-y-1">
+            <div className="flex items-center gap-2">
+              <Calendar size={16} />
+              <span>
+                {isCompleted
+                  ? t('order.completed_datetime', 'วันเวลาดำเนินการสำเร็จ:')
+                  : t('order.service_datetime', 'วันเวลาดำเนินการ:')}{' '}
+                {formatCardDateTime(order.date)}
+              </span>
+            </div>
+            <div className="flex items-start gap-2 mt-2">
+              <Wrench size={16} className="text-gray-500 shrink-0" />
+              <div className="flex flex-col">
+                <p className="text-xs text-gray-500 mb-0.5">
+                  {t('order.technician', 'ช่างผู้รับงาน')}
+                </p>
+                <p className="text-sm text-gray-800">
+                  {cardTechName?.trim() ||
+                    order.worker?.trim() ||
+                    t('order.tech_unassigned', 'ยังไม่ระบุช่าง')}
+                </p>
+                {cardTechPhone && (
+                  <p className="text-sm text-gray-500">{cardTechPhone}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="pt-2">
+            <p className="text-sm text-gray-500 mb-1">{t('order.services_label', 'บริการ:')}</p>
+            <p className="text-sm text-gray-800">
+              {order.details[0] ?? '-'}
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col items-start lg:items-end justify-between min-w-[200px]">
           <div className="flex items-center gap-2 w-full justify-between lg:justify-end mb-4 lg:mb-0">
-            <span className="text-sm text-gray-500">สถานะ:</span>
+            <span className="text-sm text-gray-500">{t('order.status_label', 'สถานะ:')}</span>
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-              {order.status}
+              {translatedStatus(order.status)}
             </span>
           </div>
-
-          <div className="flex items-center gap-2 w-full justify-between lg:justify-end mt-2 lg:mt-0">
-            <span className="text-sm text-gray-500">ราคารวม:</span>
-            <span className="text-lg font-bold text-gray-900">
-              {order.price.toLocaleString('th-TH')} ฿
-            </span>
-          </div>
-
-          {!isCompleted && (
+          <div className="w-full mt-4 flex flex-col items-start lg:items-end gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">{t('order.total_label', 'ราคารวม:')}</span>
+              <span className="text-lg font-bold text-gray-900">
+                {order.price.toLocaleString('th-TH')} ฿
+              </span>
+            </div>
             <button
               onClick={() => setShowModal(true)}
-              className="mt-4 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="btn-primary w-full lg:w-auto px-6 py-2 rounded-lg text-sm"
             >
-              ดูรายละเอียด
+              {t('order.btn_view_details', 'ดูรายละเอียด')}
             </button>
-          )}
+          </div>
         </div>
       </div>
 

@@ -68,19 +68,8 @@ function buildIntentAddressParams(
   if (id != null && Number.isFinite(Number(id))) {
     return { addressId: Number(id) };
   }
-  // For "กรอกที่อยู่ใหม่" keep old behavior: store combined address line.
-  const addressLine = serviceInfo
-    ? [
-        serviceInfo.address,
-        serviceInfo.subDistrict,
-        serviceInfo.district,
-        serviceInfo.province,
-        serviceInfo.postalCode,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .trim()
-    : "";
+  // For "กรอกที่อยู่ใหม่": persist only "ที่อยู่" in address_line.
+  const addressLine = (serviceInfo?.address ?? "").trim();
   if (!addressLine) return {};
 
   return {
@@ -101,6 +90,21 @@ function buildIntentAddressParams(
         : {}),
     },
   };
+}
+
+function formatSavedAddressLineFromCart(item: {
+  addressLine?: string | null;
+  subdistrict?: string | null;
+  district?: string | null;
+  province?: string | null;
+  postalCode?: string | null;
+}) {
+  const base = (item.addressLine ?? "").replace(/\s+/g, " ").trim();
+  const extras = [item.subdistrict, item.district, item.province, item.postalCode]
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean)
+    .filter((part) => !base.includes(part));
+  return [base, ...extras].filter(Boolean).join(" ").trim();
 }
 
 /**
@@ -233,7 +237,7 @@ export default function Payment() {
           province: item.province ?? "",
           postalCode: item.postalCode ?? "",
           additionalInfo: item.remark ?? "",
-          savedAddressLine: item.addressLine ?? undefined,
+          savedAddressLine: formatSavedAddressLineFromCart(item),
         });
         setSelectedService({
           id: item.serviceId,
@@ -452,6 +456,7 @@ export default function Payment() {
           ...buildIntentAddressParams(serviceInfo),
           items: serviceItems.map((item) => ({
             serviceId,
+            serviceItemId: item.id,
             name: item.description,
             quantity: item.quantity,
             price: item.price,
@@ -499,6 +504,10 @@ export default function Payment() {
           total: String(finalTotal),
           orderId: String(intentOrderId),
         };
+        if (paymentData.promotionCode && discount > 0) {
+          query.promotionCode = paymentData.promotionCode;
+          query.discount = String(discount);
+        }
         if (serviceInfo) query.serviceInfo = JSON.stringify(serviceInfo);
         router.push({
           pathname: "/servicedetailPage/payment-confirmation",
@@ -537,18 +546,7 @@ export default function Payment() {
   };
 
   /** Build address line from serviceInfo for cart API */
-  const combinedAddressLine = serviceInfo
-    ? [
-        serviceInfo.address,
-        serviceInfo.subDistrict,
-        serviceInfo.district,
-        serviceInfo.province,
-        serviceInfo.postalCode,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .trim()
-    : "";
+  const addressLine = (serviceInfo?.address ?? "").trim();
 
   /**
    * Add to cart or Update cart (below summary card on payment page)
@@ -587,7 +585,7 @@ export default function Payment() {
             ? { addressId: serviceInfo.addressId }
             : {
                 address: {
-                  address_line: combinedAddressLine,
+                  address_line: addressLine,
                   district: serviceInfo?.district,
                   subdistrict: serviceInfo?.subDistrict,
                   province: serviceInfo?.province,
@@ -607,7 +605,7 @@ export default function Payment() {
             ? { addressId: serviceInfo.addressId }
             : {
                 address: {
-                  address_line: combinedAddressLine,
+                  address_line: addressLine,
                   district: serviceInfo?.district,
                   subdistrict: serviceInfo?.subDistrict,
                   province: serviceInfo?.province,
@@ -761,7 +759,7 @@ export default function Payment() {
                 type="button"
                 disabled={!hasItems || cartActionLoading}
                 onClick={handleCartAction}
-                className="btn-primary w-full inline-flex items-center justify-center gap-2"
+                className="btn-primary w-full inline-flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShoppingCart className="w-5 h-5" />
                 {cartActionLoading
@@ -821,6 +819,7 @@ export default function Payment() {
                   ...buildIntentAddressParams(serviceInfo),
                   items: serviceItems.map((item) => ({
                     serviceId,
+                    serviceItemId: item.id,
                     name: item.description,
                     quantity: item.quantity,
                     price: item.price,
@@ -846,6 +845,10 @@ export default function Payment() {
                   total: String(finalTotal),
                   orderId: String(intentOrderId),
                 };
+                if (paymentData.promotionCode && discount > 0) {
+                  query.promotionCode = paymentData.promotionCode;
+                  query.discount = String(discount);
+                }
                 if (serviceInfo) {
                   query.serviceInfo = JSON.stringify(serviceInfo);
                 }

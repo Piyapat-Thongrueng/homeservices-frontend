@@ -14,7 +14,10 @@ import { Search, X } from "lucide-react";
 import CategoryDropdown from "./CategoryDropdown";
 import PriceRangeDropdown from "./PriceRangeDropdown";
 import SortDropdown from "./SortDropdown";
-import { fetchServices } from "@/services/serviceListsApi/serviceApi";
+import {
+  fetchServices,
+  fetchPriceRange,
+} from "@/services/serviceListsApi/serviceApi";
 import { Service, ServiceFilterParams } from "@/types/serviceListTypes/type";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
@@ -45,6 +48,7 @@ export default function SearchAndFilterBar({
   >({ sort_by: "name", order: "ASC" });
   const [suggestions, setSuggestions] = useState<Service[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [priceRangeMax, setPriceRangeMax] = useState(2000);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Set default labels once translation is available
@@ -64,6 +68,19 @@ export default function SearchAndFilterBar({
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const loadPriceRange = async () => {
+      try {
+        const data = await fetchPriceRange();
+        setPriceRangeMax(data.max_price);
+        setMaxPrice(data.max_price);
+      } catch (error) {
+        console.error("Error fetching price range:", error);
+      }
+    };
+    loadPriceRange();
   }, []);
 
   const handleInputChange = (value: string) => {
@@ -86,7 +103,8 @@ export default function SearchAndFilterBar({
   };
 
   const handleSelectSuggestion = (service: Service) => {
-    const name = (locale === "en" ? service.name_en : service.name_th) || service.name;
+    const name =
+      (locale === "en" ? service.name_en : service.name_th) || service.name;
     setSearchText(name);
     setSuggestions([]);
     setShowSuggestions(false);
@@ -136,7 +154,7 @@ export default function SearchAndFilterBar({
               {searchText && (
                 <button
                   onClick={handleClear}
-                  className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                  className="text-gray-400 hover:text-gray-600 transition-colors shrink-0 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -146,8 +164,13 @@ export default function SearchAndFilterBar({
             {showSuggestions && (
               <ul className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden">
                 {suggestions.map((service) => {
-                  const displayName = (locale === "en" ? service.name_en : service.name_th) || service.name;
-                  const displayCategory = (locale === "en" ? service.category_name_en : service.category_name_th) || service.category_name_th;
+                  const displayName =
+                    (locale === "en" ? service.name_en : service.name_th) ||
+                    service.name;
+                  const displayCategory =
+                    (locale === "en"
+                      ? service.category_name_en
+                      : service.category_name_th) || service.category_name_th;
                   return (
                     <li
                       key={service.id}
@@ -187,6 +210,7 @@ export default function SearchAndFilterBar({
           <PriceRangeDropdown
             minPrice={minPrice}
             maxPrice={maxPrice}
+            absoluteMax={priceRangeMax}
             onChange={(min, max) => {
               setMinPrice(min);
               setMaxPrice(max);

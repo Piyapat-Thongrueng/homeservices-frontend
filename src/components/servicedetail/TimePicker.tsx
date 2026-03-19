@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Clock } from "lucide-react";
+import { useRouter } from "next/router";
 
 interface TimePickerProps {
   /** Current time value in HH:MM format */
@@ -30,10 +31,14 @@ interface TimePickerProps {
 const TimePicker: React.FC<TimePickerProps> = ({
   value,
   onChange,
-  placeholder = "เลือกเวลา",
+  placeholder,
   label,
   required = false,
 }) => {
+  const { locale } = useRouter();
+  const isEn = locale === "en";
+  const displayPlaceholder = placeholder || (isEn ? "Select time" : "เลือกเวลา");
+
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [tempTime, setTempTime] = useState({ hour: "00", minute: "00" });
   const timePickerRef = useRef<HTMLDivElement>(null);
@@ -101,7 +106,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
           type="text"
           readOnly
           value={displayTime}
-          placeholder={placeholder}
+          placeholder={displayPlaceholder}
           className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg headline-5 text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer"
           onClick={handleOpenTimePicker}
         />
@@ -109,7 +114,7 @@ const TimePicker: React.FC<TimePickerProps> = ({
         <button
           type="button"
           onClick={handleOpenTimePicker}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer z-10"
+          className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-gray-600 z-10 cursor-pointer"
         >
           <Clock className="w-5 h-5" />
         </button>
@@ -176,9 +181,9 @@ const TimePicker: React.FC<TimePickerProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmTime}
-                className="btn-primary px-4 py-2 headline-5 cursor-pointer"
+                className="btn-primary px-4 py-2 headline-5"
               >
-                ยืนยัน
+                {isEn ? "Confirm" : "ยืนยัน"}
               </button>
             </div>
           </div>

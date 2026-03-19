@@ -57,7 +57,7 @@ const ServiceItemsSection: React.FC<ServiceItemsSectionProps> = ({
                   type="button"
                   onClick={() => onChangeQuantity(item.id, -1)}
                   disabled={item.quantity === 0}
-                  className="w-11 h-11 rounded-lg border border-blue-600 flex items-center justify-center hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  className="w-11 h-11 rounded-lg border border-blue-600 flex items-center justify-center hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Minus className="w-4 h-4 text-blue-600" />
                 </button>
@@ -67,7 +67,7 @@ const ServiceItemsSection: React.FC<ServiceItemsSectionProps> = ({
                 <button
                   type="button"
                   onClick={() => onChangeQuantity(item.id, 1)}
-                  className="w-11 h-11 rounded-lg border border-blue-600 flex items-center justify-center hover:bg-blue-50 cursor-pointer transition-colors"
+                  className="w-11 h-11 rounded-lg border border-blue-600 flex items-center justify-center hover:bg-blue-50 transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4 text-blue-600" />
                 </button>

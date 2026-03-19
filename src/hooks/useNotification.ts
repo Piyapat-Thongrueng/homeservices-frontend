@@ -51,7 +51,6 @@ export const useNotification = (userId: number | null) => {
   // เมื่อมี INSERT ใหม่ที่ user_id ตรงกับลูกค้าคนนี้
   // → เพิ่ม notification เข้า state ทันที ไม่ต้อง refresh
   useEffect(() => {
-    console.log("userId ที่ส่งเข้า hook:", userId);
     if (!userId) return;
 
     const channel = supabase
@@ -66,14 +65,12 @@ export const useNotification = (userId: number | null) => {
         },
         (payload) => {
           // payload.new คือ row ที่เพิ่งถูก INSERT
-          console.log("Realtime event received:", payload);
           const newNotification = payload.new as Notification;
           setNotifications((prev) => [newNotification, ...prev]);
           setUnreadCount((prev) => prev + 1);
         },
       )
       .subscribe((status) => {
-        console.log("Supabase subscription status:", status);
       });
 
     // cleanup: unsubscribe เมื่อ component unmount หรือ userId เปลี่ยน
