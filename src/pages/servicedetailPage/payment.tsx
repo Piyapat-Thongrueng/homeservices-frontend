@@ -452,6 +452,7 @@ export default function Payment() {
           ...buildIntentAddressParams(serviceInfo),
           items: serviceItems.map((item) => ({
             serviceId,
+            serviceItemId: item.id,
             name: item.description,
             quantity: item.quantity,
             price: item.price,
@@ -499,6 +500,10 @@ export default function Payment() {
           total: String(finalTotal),
           orderId: String(intentOrderId),
         };
+        if (paymentData.promotionCode && discount > 0) {
+          query.promotionCode = paymentData.promotionCode;
+          query.discount = String(discount);
+        }
         if (serviceInfo) query.serviceInfo = JSON.stringify(serviceInfo);
         router.push({
           pathname: "/servicedetailPage/payment-confirmation",
@@ -821,6 +826,7 @@ export default function Payment() {
                   ...buildIntentAddressParams(serviceInfo),
                   items: serviceItems.map((item) => ({
                     serviceId,
+                    serviceItemId: item.id,
                     name: item.description,
                     quantity: item.quantity,
                     price: item.price,
@@ -846,6 +852,10 @@ export default function Payment() {
                   total: String(finalTotal),
                   orderId: String(intentOrderId),
                 };
+                if (paymentData.promotionCode && discount > 0) {
+                  query.promotionCode = paymentData.promotionCode;
+                  query.discount = String(discount);
+                }
                 if (serviceInfo) {
                   query.serviceInfo = JSON.stringify(serviceInfo);
                 }
