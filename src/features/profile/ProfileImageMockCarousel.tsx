@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Bird,
   Cat,
@@ -38,12 +38,28 @@ export default function ProfileImageMockCarousel({
 
   const [mockIndex, setMockIndex] = useState<number>(0);
   const [isGeneratingMock, setIsGeneratingMock] = useState(false);
+  /** Carousel index for arrow math — avoids stale state while async PNG runs */
+  const mockIndexRef = useRef(0);
+  const generatingRef = useRef(false);
+
+  const waitImageReady = (img: HTMLImageElement) =>
+    new Promise<void>((resolve, reject) => {
+      if (img.complete && img.naturalWidth > 0) {
+        resolve();
+        return;
+      }
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Image failed to load'));
+      void img.decode?.().catch(() => {
+        /* fall back to onload / already complete */
+      });
+    });
 
   const svgToPngFile = async (svg: string, fileName: string) => {
     const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     const img = new Image();
     img.src = dataUrl;
-    await img.decode();
+    await waitImageReady(img);
 
     const canvas = document.createElement('canvas');
     const out = 512;
@@ -121,7 +137,8 @@ export default function ProfileImageMockCarousel({
       // Build an SVG (rounded background + lucide animal icon) then convert to PNG.
       // We position the lucide icon SVG by injecting x/y on its root <svg>.
       const iconSvg = renderToStaticMarkup(cfg.icon);
-      const iconSvgPos = iconSvg.replace('<svg ', `<svg x="${iconPos}" y="${iconPos}" `);
+      // Lucide roots vary; inject position without relying on a single "<svg " prefix
+      const iconSvgPos = iconSvg.replace(/^<svg\b/i, `<svg x="${iconPos}" y="${iconPos}" `);
 
       const animalSvg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
@@ -156,20 +173,23 @@ export default function ProfileImageMockCarousel({
       setSelectedFile(file);
       const newUrl = URL.createObjectURL(file);
       setPreviewUrl(newUrl);
+
+      const idx = mockKeys.indexOf(key);
+      mockIndexRef.current = idx;
+      setMockIndex(idx);
     } finally {
+      generatingRef.current = false;
       setIsGeneratingMock(false);
     }
   };
 
   const handleMockPrev = async () => {
-    const next = (mockIndex - 1 + mockKeys.length) % mockKeys.length;
-    setMockIndex(next);
+    const next = (mockIndexRef.current - 1 + mockKeys.length) % mockKeys.length;
     await applyMockAvatar(mockKeys[next]);
   };
 
   const handleMockNext = async () => {
-    const next = (mockIndex + 1) % mockKeys.length;
-    setMockIndex(next);
+    const next = (mockIndexRef.current + 1) % mockKeys.length;
     await applyMockAvatar(mockKeys[next]);
   };
 

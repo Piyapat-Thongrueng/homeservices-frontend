@@ -36,14 +36,27 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // Sync text fields when server data changes — not on every new `user` object reference
   useEffect(() => {
     if (!user) return;
     setEmail(user.email || '');
     setName(user.full_name || '');
     setUsername(user.username || user.email?.split('@')[0] || '');
     setPhone(user.phone || '');
+  }, [
+    user?.id,
+    user?.email,
+    user?.full_name,
+    user?.username,
+    user?.phone,
+  ]);
+
+  // Server avatar only when there is no local preview blob (avoid clobbering mock/upload preview).
+  useEffect(() => {
+    if (!user) return;
+    if (previewUrl) return;
     setAvatarUrl(user.profile_pic || null);
-  }, [user]);
+  }, [user?.id, user?.profile_pic, previewUrl]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -78,7 +91,10 @@ export default function UserProfileForm({ user }: UserProfileFormProps) {
         { headers: { 'Content-Type': 'multipart/form-data' } },
       );
 
-      if (response.data.profilePicUrl) setAvatarUrl(response.data.profilePicUrl);
+      const newPic = response.data?.profilePicUrl as string | undefined;
+      if (newPic) {
+        setAvatarUrl(`${newPic.split('?')[0]}?t=${Date.now()}`);
+      }
 
       await fetchUser();
       showToast(t('profile.msg_save_success', 'บันทึกข้อมูลสำเร็จ'), 'success');

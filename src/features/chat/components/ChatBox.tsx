@@ -4,6 +4,7 @@ import MessageList from "./MessageList"
 import MessageInput from "./MessageInput"
 import useChatSocket from "@/hooks/useChatSocket"
 import { getSocket, connectSocket } from "@/lib/socket"
+import { CHAT_MESSAGES_READ_EVENT } from "@/features/chat/chatEvents"
 
 // =======================
 type Message = {
@@ -91,14 +92,29 @@ export default function ChatBox({
         const res = await fetch(url)
 
         if (!res.ok) {
-          const text = await res.text()
-          
           return
         }
 
         const data: Message[] = await res.json()
         setMessages(data)
 
+        try {
+          await fetch(`${BASE}/chat/messages/read/${orderId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: String(userId) }),
+          })
+        } catch {
+          /* ignore */
+        }
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent(CHAT_MESSAGES_READ_EVENT, {
+              detail: { orderId: String(orderId) },
+            }),
+          )
+        }
       } catch (err) {
       }
     }

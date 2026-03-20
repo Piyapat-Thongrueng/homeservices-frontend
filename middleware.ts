@@ -3,7 +3,6 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export async function middleware(req: NextRequest) {
-
   let res = NextResponse.next()
 
   const supabase = createServerClient(
@@ -20,68 +19,57 @@ export async function middleware(req: NextRequest) {
           })
         },
       },
-    }
+    },
   )
 
-  // ดึง session จาก Supabase
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
   const pathname = req.nextUrl.pathname
 
-  // =========================
-  // DEFINE ROUTE TYPES
-  // =========================
+  const pathWithoutLocale =
+    pathname.replace(/^\/(en|th)(?=\/|$)/, "") || "/"
 
   const isAuthPage =
-    pathname.startsWith("/auth/login") ||
-    pathname.startsWith("/auth/register")
+    pathWithoutLocale === "/login" ||
+    pathWithoutLocale.startsWith("/login/") ||
+    pathWithoutLocale === "/register" ||
+    pathWithoutLocale.startsWith("/register/") ||
+    pathWithoutLocale.startsWith("/auth/login") ||
+    pathWithoutLocale.startsWith("/auth/register")
 
-  const isProtectedPage =
-    pathname.startsWith("/profile") ||
-    pathname.startsWith("/reset-password") ||
-    pathname.startsWith("/dashboard")
-
-  // =========================
-  // NOT LOGGED IN → BLOCK PROTECTED
-  // =========================
+  // Profile / reset-password use JWT in pages — do not block on Supabase session
+  // (otherwise refresh → /auth/login → wrong UX or redirect to /).
+  const isProtectedPage = pathWithoutLocale.startsWith("/dashboard")
 
   if (!session && isProtectedPage) {
-
-    return NextResponse.redirect(
-      new URL("/auth/login", req.url)
-    )
-
+    const localeMatch = pathname.match(/^\/(en|th)(?=\/|$)/)
+    const prefix = localeMatch ? localeMatch[0] : ""
+    return NextResponse.redirect(new URL(`${prefix}/login`, req.url))
   }
 
-  // =========================
-  // LOGGED IN → BLOCK AUTH PAGES
-  // =========================
-
   if (session && isAuthPage) {
-
-    return NextResponse.redirect(
-      new URL("/", req.url)
-    )
-
+    return NextResponse.redirect(new URL("/", req.url))
   }
 
   return res
-
 }
-
-
-// =========================
-// MATCH ROUTES
-// =========================
 
 export const config = {
   matcher: [
+    "/login",
+    "/en/login",
+    "/th/login",
+    "/register",
+    "/en/register",
+    "/th/register",
     "/auth/login",
     "/auth/register",
-    "/profile/:path*",
-    "/reset-password/:path*",
+    "/en/auth/:path*",
+    "/th/auth/:path*",
     "/dashboard/:path*",
+    "/en/dashboard/:path*",
+    "/th/dashboard/:path*",
   ],
 }

@@ -35,8 +35,8 @@ export default function ProfilePage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   useEffect(() => {
-    // รอให้ AuthContext โหลดเสร็จก่อน แล้วค่อยเช็ค
-    if (!state.getUserLoading && !isAuthenticated) {
+    // getUserLoading starts as null — must not redirect until resolved (false).
+    if (state.getUserLoading === false && !isAuthenticated) {
       router.push('/login');
     }
   }, [state.getUserLoading, isAuthenticated, router]);
@@ -90,7 +90,8 @@ export default function ProfilePage() {
     setCurrentPage(1);
   }, [currentTab, displayOrders.length]);
 
-  if (state.getUserLoading) {
+  // null = not resolved yet (same as loading); true = fetching user
+  if (state.getUserLoading !== false) {
     return (
       <div className="min-h-screen flex items-center justify-center font-prompt">
         {t('profile.loading', 'กำลังโหลด...')}
