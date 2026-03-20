@@ -88,7 +88,16 @@ function AuthProvider({ children }: AuthProviderProps) {
           },
         },
       );
-      // เมื่อได้รับข้อมูลผู้ใช้สำเร็จ ให้ตั้งสถานะ user เป็นข้อมูลที่ได้รับจาก API และ getUserLoading เป็น false เพื่อแสดงว่าการโหลดข้อมูลผู้ใช้เสร็จสิ้น
+      // ตรวจสอบว่า role เป็น user เท่านั้น หาก token เป็นของ role อื่น (เช่น technician) ให้ล้าง token และ set user เป็น null
+      if (response.data.role !== "user") {
+        localStorage.removeItem("token");
+        setState((prevState) => ({
+          ...prevState,
+          user: null,
+          getUserLoading: false,
+        }));
+        return;
+      }
       setState((prevState) => ({
         ...prevState,
         user: response.data,
