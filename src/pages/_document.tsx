@@ -1,5 +1,4 @@
 import { Html, Head, Main, NextScript } from "next/document";
-import HomeServices from "./HomeServices";
 
 export default function Document() {
   return (
@@ -12,7 +11,7 @@ export default function Document() {
           rel="stylesheet"
         />
       </Head>
-      <body className="antialiased">
+      <body className="antialiased font-prompt">
         <Main />
         <NextScript />
         

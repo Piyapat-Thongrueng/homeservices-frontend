@@ -1,0 +1,968 @@
+/**
+ * Payment Page
+ *
+ * The third step in the service booking flow where users enter
+ * payment information and apply promotion codes.
+ *
+ * Features:
+ * - Payment method selection (PromptPay or Credit Card)
+ * - Credit card form with auto-formatting
+ * - Promotion code input with validation
+ * - Real-time discount calculation
+ * - Form validation
+ * - LocalStorage persistence
+ */
+
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/router";
+import {
+  Elements,
+  useStripe,
+  useElements,
+  CardNumberElement,
+} from "@stripe/react-stripe-js";
+import { loadStripe, type Stripe } from "@stripe/stripe-js";
+import Navbar from "@/components/common/Navbar";
+import ServiceHero from "@/features/servicedetail/components/ServiceHero";
+import ServiceSummaryCard from "@/features/servicedetail/components/ServiceSummaryCard";
+import ServiceFooterNav from "@/features/servicedetail/components/ServiceFooterNav";
+import PaymentMethodSelector from "@/features/servicedetail/components/PaymentMethodSelector";
+import PromotionCodeInput from "@/features/servicedetail/components/PromotionCodeInput";
+import CreditCardForm from "@/features/servicedetail/components/CreditCardForm";
+import type { ServiceItem } from "@/features/servicedetail/types";
+import type { Service } from "@/types/serviceListTypes/type";
+import {
+  PAYMENT_DATA_STORAGE_KEY,
+  SERVICE_ITEMS_STORAGE_KEY,
+  SERVICE_INFO_STORAGE_KEY,
+} from "@/constants/service-constants";
+import {
+  getFromLocalStorage,
+  saveToLocalStorage,
+  getServiceScopedKey,
+} from "@/utils/localStorage-helpers";
+import {
+  parseServiceItemsFromQuery,
+  parseServiceInfoFromQuery,
+} from "@/utils/router-helpers";
+import { fetchServices } from "@/services/serviceListsApi/serviceApi";
+import {
+  createPaymentIntent,
+  createPromptPayIntent,
+  markPaymentIntentPaid,
+  validatePromotionCode,
+  getStripeConfig,
+  type CreatePaymentIntentParams,
+} from "@/services/paymentApi";
+import { useAuth } from "@/contexts/AuthContext";
+import { getCart, addToCart, updateCart } from "@/services/cartApi";
+import { ShoppingCart } from "lucide-react";
+import { useTranslation } from "next-i18next";
+import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+
+/** When serviceInfo has addressId, pass only addressId so backend reuses row (no duplicate insert). */
+function buildIntentAddressParams(
+  serviceInfo: any,
+): Pick<CreatePaymentIntentParams, "addressId" | "address"> {
+  const id = serviceInfo?.addressId;
+  if (id != null && Number.isFinite(Number(id))) {
+    return { addressId: Number(id) };
+  }
+  // For "กรอกที่อยู่ใหม่": persist only "ที่อยู่" in address_line.
+  const addressLine = (serviceInfo?.address ?? "").trim();
+  if (!addressLine) return {};
+
+  return {
+    address: {
+      address_line: addressLine,
+      province: serviceInfo?.province,
+      district: serviceInfo?.district,
+      subdistrict: serviceInfo?.subDistrict,
+      postal_code: serviceInfo?.postalCode,
+      ...(serviceInfo?.latitude != null &&
+      serviceInfo?.longitude != null &&
+      Number.isFinite(serviceInfo.latitude) &&
+      Number.isFinite(serviceInfo.longitude)
+        ? {
+            latitude: Number(serviceInfo.latitude),
+            longitude: Number(serviceInfo.longitude),
+          }
+        : {}),
+    },
+  };
+}
+
+function formatSavedAddressLineFromCart(item: {
+  addressLine?: string | null;
+  subdistrict?: string | null;
+  district?: string | null;
+  province?: string | null;
+  postalCode?: string | null;
+}) {
+  const base = (item.addressLine ?? "").replace(/\s+/g, " ").trim();
+  const extras = [item.subdistrict, item.district, item.province, item.postalCode]
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean)
+    .filter((part) => !base.includes(part));
+  return [base, ...extras].filter(Boolean).join(" ").trim();
+}
+
+/**
+ * Payment data structure
+ */
+interface PaymentData {
+  method: "promptpay" | "creditcard";
+  cardNumber: string;
+  cardName: string;
+  expiryDate: string;
+  cvv: string;
+  promotionCode: string;
+}
+
+/**
+ * Default payment data
+ */
+const defaultPaymentData: PaymentData = {
+  method: "creditcard",
+  cardNumber: "",
+  cardName: "",
+  expiryDate: "",
+  cvv: "",
+  promotionCode: "",
+};
+export default function Payment() {
+  const router = useRouter();
+  const { locale } = router;
+  const { t } = useTranslation("common");
+  const { state } = useAuth();
+  const [serviceItems, setServiceItems] = useState<ServiceItem[]>([]);
+  const [serviceInfo, setServiceInfo] = useState<any>(null);
+  const [discount, setDiscount] = useState(0);
+  const [promotionError, setPromotionError] = useState<string>("");
+  const [isMounted, setIsMounted] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string>("");
+  const [promotionId, setPromotionId] = useState<number | null>(null);
+  const [stripePublishableKey, setStripePublishableKey] = useState<
+    string | null
+  >(null);
+  const [cartItemIdForService, setCartItemIdForService] = useState<number | null>(null);
+  const [cartActionLoading, setCartActionLoading] = useState(false);
+  const [cartActionError, setCartActionError] = useState<string | null>(null);
+  const [cartActionSuccess, setCartActionSuccess] = useState<string | null>(null);
+
+  /**
+   * Initialize payment data with defaults to prevent hydration mismatch
+   * Will be updated from localStorage on client side after mount
+   */
+  const [paymentData, setPaymentData] =
+    useState<PaymentData>(defaultPaymentData);
+
+  /**
+   * Load payment data from localStorage on client side only (after mount)
+   * This prevents hydration mismatch between server and client
+   * Scoped by serviceId so each service has its own payment data
+   */
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    setIsMounted(true);
+    const paymentKey = getServiceScopedKey(
+      PAYMENT_DATA_STORAGE_KEY,
+      router.query.serviceId,
+      state.user?.auth_user_id,
+    );
+
+    const saved = getFromLocalStorage<PaymentData>(paymentKey);
+    if (saved) {
+      setPaymentData({
+        ...saved,
+        promotionCode: "", // Reset promotion code
+      });
+    }
+  }, [router.isReady, router.query.serviceId, state.user?.auth_user_id]);
+
+  /**
+   * Load Stripe publishable key from backend config (for Elements)
+   */
+  useEffect(() => {
+    getStripeConfig()
+      .then((cfg) => {
+        setStripePublishableKey(cfg.publishableKey);
+      })
+      .catch((err) => {
+        console.error("Failed to load Stripe config:", err);
+        setCheckoutError(t("payment.error_load_config"));
+      });
+  }, [t]);
+
+  /** When coming from cart: load cart item and set serviceItems, serviceInfo, selectedService */
+  const cartItemIdParam =
+    router.query.cartItemId != null
+      ? Number(
+          Array.isArray(router.query.cartItemId)
+            ? router.query.cartItemId[0]
+            : router.query.cartItemId
+        )
+      : null;
+  const isFromCart = Number.isFinite(cartItemIdParam) && cartItemIdParam != null;
+
+  useEffect(() => {
+    if (!router.isReady || !state.user?.auth_user_id || !isFromCart || !cartItemIdParam) return;
+
+    let cancelled = false;
+    getCart(state.user.auth_user_id)
+      .then((res) => {
+        if (cancelled) return;
+        const item = (res.cartItems ?? []).find((c) => c.id === cartItemIdParam);
+        if (!item) return;
+        const mappedItems: ServiceItem[] = item.details.map((d) => ({
+          id: d.serviceItemId,
+          description: d.name,
+          unit: d.unit,
+          price: d.pricePerUnit,
+          quantity: d.quantity,
+        }));
+        setServiceItems(mappedItems);
+        setServiceInfo({
+          addressId: item.addressId ?? undefined,
+          date: item.appointmentDate ?? "",
+          time: item.appointmentTime
+            ? String(item.appointmentTime).replace(/^(\d{1,2}):(\d{2}).*/, "$1:$2")
+            : "",
+          address: "",
+          subDistrict: item.subdistrict ?? "",
+          district: item.district ?? "",
+          province: item.province ?? "",
+          postalCode: item.postalCode ?? "",
+          additionalInfo: item.remark ?? "",
+          savedAddressLine: formatSavedAddressLineFromCart(item),
+        });
+        setSelectedService({
+          id: item.serviceId,
+          name: item.serviceName,
+          name_en: item.serviceName, // Assuming same for mock if not provided
+          name_th: item.serviceName,
+          image: item.serviceImage ?? "",
+          description: "",
+          price: null,
+          min_price: null,
+          max_price: null,
+          category_id: 0,
+          category_name: "",
+          category_name_th: "",
+          avg_rating: 0,
+          order_count: 0,
+          created_at: "",
+        } as Service);
+        setCartItemIdForService(cartItemIdParam);
+      })
+      .catch((err) => console.error("Load cart for payment:", err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, state.user?.auth_user_id, isFromCart, cartItemIdParam]);
+
+  /**
+   * Load service items and service info from router query or localStorage
+   * Scoped by serviceId so each service has its own data (skip when loading from cart)
+   */
+  useEffect(() => {
+    if (!router.isReady || isFromCart) return;
+
+    const itemsKey = getServiceScopedKey(
+      SERVICE_ITEMS_STORAGE_KEY,
+      router.query.serviceId,
+      state.user?.auth_user_id,
+    );
+    const serviceInfoKey = getServiceScopedKey(
+      SERVICE_INFO_STORAGE_KEY,
+      router.query.serviceId,
+      state.user?.auth_user_id,
+    );
+
+    // Load service items
+    const queryItems = parseServiceItemsFromQuery(router.query.items);
+    if (queryItems.length > 0) {
+      setServiceItems(queryItems);
+      saveToLocalStorage(itemsKey, queryItems);
+    } else {
+      const savedItems = getFromLocalStorage<ServiceItem[]>(itemsKey);
+      if (savedItems) {
+        setServiceItems(savedItems);
+      }
+    }
+
+    // Load service info
+    const queryServiceInfo = parseServiceInfoFromQuery(
+      router.query.serviceInfo,
+    );
+    if (queryServiceInfo) {
+      setServiceInfo(queryServiceInfo);
+      saveToLocalStorage(serviceInfoKey, queryServiceInfo);
+    } else {
+      const savedInfo = getFromLocalStorage(serviceInfoKey);
+      if (savedInfo) {
+        setServiceInfo(savedInfo);
+      }
+    }
+  }, [router.isReady, router.query, state.user?.id, isFromCart]);
+
+  /**
+   * Load selected service data from API using serviceId in query
+   */
+  useEffect(() => {
+    const { serviceId } = router.query;
+    if (!serviceId) return;
+
+    const idString = Array.isArray(serviceId) ? serviceId[0] : serviceId;
+    const id = parseInt(idString, 10);
+    if (Number.isNaN(id)) return;
+
+    let isSubscribed = true;
+
+    const loadService = async () => {
+      try {
+        const services = await fetchServices({});
+        if (!isSubscribed) return;
+
+        const service = services.find((item) => item.id === id) ?? null;
+        setSelectedService(service);
+      } catch (error) {
+        console.error("Error loading service detail (payment):", error);
+      }
+    };
+
+    loadService();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [router.query.serviceId]);
+
+  /** When not from cart: check if this service is already in cart (for Update cart vs Add to cart) */
+  useEffect(() => {
+    if (isFromCart || !state.user?.auth_user_id || !router.query.serviceId) return;
+    const sid =
+      typeof router.query.serviceId === "string"
+        ? router.query.serviceId
+        : router.query.serviceId?.[0];
+    const serviceIdNum = parseInt(sid, 10);
+    if (Number.isNaN(serviceIdNum)) return;
+    let cancelled = false;
+    getCart(state.user.auth_user_id)
+      .then((res) => {
+        if (cancelled) return;
+        const found = (res.cartItems ?? []).find((c) => c.serviceId === serviceIdNum);
+        setCartItemIdForService(found ? found.id : null);
+      })
+      .catch(() => {
+        if (!cancelled) setCartItemIdForService(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.user?.auth_user_id, router.query.serviceId, isFromCart]);
+
+  /**
+   * Save payment data to localStorage whenever it changes (only after mount)
+   * Note: promotionCode is not saved to localStorage
+   * Scoped by serviceId so each service has its own payment data
+   */
+  useEffect(() => {
+    if (!isMounted || !router.isReady) return;
+
+    const paymentKey = getServiceScopedKey(
+      PAYMENT_DATA_STORAGE_KEY,
+      router.query.serviceId,
+      state.user?.auth_user_id,
+    );
+
+    const dataToSave = {
+      ...paymentData,
+      promotionCode: "", // Don't save promotionCode
+    };
+    saveToLocalStorage(paymentKey, dataToSave);
+  }, [
+    paymentData,
+    isMounted,
+    router.isReady,
+    router.query.serviceId,
+    state.user?.auth_user_id,
+  ]);
+
+  /**
+   * Calculate total price from selected service items
+   */
+  const total = serviceItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+
+  /**
+   * Ensure we have at least one item to pay for
+   */
+  const hasItems = serviceItems.length > 0;
+
+  /**
+   * Calculate final total after discount
+   */
+  const finalTotal = total - discount;
+
+  /**
+   * Validate payment form
+   * Card details are collected on Stripe's hosted page,
+   * so we don't require local credit card inputs here anymore.
+   */
+  const isFormValid = true;
+
+  /**
+   * Create PromptPay PaymentIntent and show Stripe’s QR modal on the frontend (no URL redirect).
+   */
+  const handleNextPromptPay = async () => {
+    if (!isFormValid || !state.user?.auth_user_id) {
+      setCheckoutError(t("payment.error_login_required"));
+      return;
+    }
+    if (!hasItems) {
+      setCheckoutError(t("payment.error_no_items"));
+      return;
+    }
+    if (!stripePublishableKey) {
+      setCheckoutError(t("payment.error_not_ready"));
+      return;
+    }
+
+    setCheckoutError("");
+    setIsSubmitting(true);
+
+    try {
+      const serviceId =
+        typeof router.query.serviceId === "string"
+          ? parseInt(router.query.serviceId, 10)
+          : Number(router.query.serviceId?.[0]);
+      if (Number.isNaN(serviceId)) {
+        setCheckoutError(t("payment.error_no_id"));
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { clientSecret, orderId: intentOrderId } =
+        await createPromptPayIntent({
+          authUserId: state.user.auth_user_id,
+          promotionId: promotionId ?? undefined,
+          ...buildIntentAddressParams(serviceInfo),
+          items: serviceItems.map((item) => ({
+            serviceId,
+            serviceItemId: item.id,
+            name: item.description,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          discountAmount: discount,
+          appointmentDate: serviceInfo?.date || undefined,
+          appointmentTime: serviceInfo?.time || undefined,
+          remark: serviceInfo?.additionalInfo || undefined,
+        });
+
+      const stripeInstance = await getStripePromise(stripePublishableKey);
+      if (!stripeInstance) {
+        setCheckoutError(t("payment.error_stripe_load"));
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { error, paymentIntent } =
+        await stripeInstance.confirmPromptPayPayment(clientSecret, {
+          payment_method: {
+            billing_details: {
+              email: state.user.email ?? "customer@example.com",
+            },
+          },
+        });
+
+      if (error) {
+        setCheckoutError(error.message ?? t("payment.error_payment_failed"));
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (paymentIntent?.status === "succeeded") {
+        try {
+          await markPaymentIntentPaid({
+            authUserId: state.user.auth_user_id,
+            orderId: intentOrderId,
+            cartItemId: isFromCart ? cartItemIdParam ?? undefined : undefined,
+          });
+        } catch (err) {
+          console.error("Failed to mark order as paid:", err);
+        }
+        const query: Record<string, string> = {
+          items: JSON.stringify(serviceItems),
+          total: String(finalTotal),
+          orderId: String(intentOrderId),
+        };
+        if (paymentData.promotionCode && discount > 0) {
+          query.promotionCode = paymentData.promotionCode;
+          query.discount = String(discount);
+        }
+        if (serviceInfo) query.serviceInfo = JSON.stringify(serviceInfo);
+        router.push({
+          pathname: "/servicedetailPage/payment-confirmation",
+          query,
+        });
+      } else {
+        setCheckoutError(t("payment.error_not_succeeded"));
+      }
+    } catch (err) {
+      setCheckoutError(
+        err instanceof Error ? err.message : t("payment.error_general"),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * Navigate back to previous page
+   */
+  const handleBack = () => {
+    if (isFromCart) {
+      // When coming from cart, go back to service-information so user can edit the order
+      const serviceIdRaw = router.query.serviceId;
+      const serviceId =
+        typeof serviceIdRaw === "string"
+          ? serviceIdRaw
+          : serviceIdRaw?.[0];
+      router.push({
+        pathname: "/servicedetailPage/service-information",
+        query: serviceId ? { serviceId, fromCart: "1" } : { fromCart: "1" },
+      });
+    } else {
+      router.back();
+    }
+  };
+
+  /** Build address line from serviceInfo for cart API */
+  const addressLine = (serviceInfo?.address ?? "").trim();
+
+  /**
+   * Add to cart or Update cart (below summary card on payment page)
+   */
+  const handleCartAction = async () => {
+    if (!state.user?.auth_user_id || !hasItems) return;
+    const serviceIdRaw = router.query.serviceId;
+    const serviceId =
+      typeof serviceIdRaw === "string"
+        ? parseInt(serviceIdRaw, 10)
+        : parseInt(serviceIdRaw?.[0] ?? "", 10);
+    if (Number.isNaN(serviceId)) return;
+
+    setCartActionError(null);
+    setCartActionSuccess(null);
+    setCartActionLoading(true);
+
+    const items = serviceItems.map((i) => ({
+      serviceItemId: i.id,
+      quantity: i.quantity,
+      pricePerUnit: i.price,
+    }));
+
+    const basePayload = {
+      authUserId: state.user.auth_user_id,
+      appointmentDate: serviceInfo?.date ?? "",
+      appointmentTime: serviceInfo?.time ?? "",
+      remark: serviceInfo?.additionalInfo || undefined,
+      items,
+    };
+
+    try {
+      if (cartItemIdForService != null) {
+        const addressPayload =
+          serviceInfo?.addressId != null
+            ? { addressId: serviceInfo.addressId }
+            : {
+                address: {
+                  address_line: addressLine,
+                  district: serviceInfo?.district,
+                  subdistrict: serviceInfo?.subDistrict,
+                  province: serviceInfo?.province,
+                  postal_code: serviceInfo?.postalCode,
+                  latitude: serviceInfo?.latitude,
+                  longitude: serviceInfo?.longitude,
+                },
+              };
+        await updateCart(cartItemIdForService, {
+          ...basePayload,
+          ...addressPayload,
+        });
+        setCartActionSuccess(t("booking_info.msg_cart_updated"));
+      } else {
+        const addressPayload =
+          serviceInfo?.addressId != null
+            ? { addressId: serviceInfo.addressId }
+            : {
+                address: {
+                  address_line: addressLine,
+                  district: serviceInfo?.district,
+                  subdistrict: serviceInfo?.subDistrict,
+                  province: serviceInfo?.province,
+                  postal_code: serviceInfo?.postalCode,
+                  latitude: serviceInfo?.latitude,
+                  longitude: serviceInfo?.longitude,
+                },
+              };
+        const res = await addToCart({
+          ...basePayload,
+          serviceId,
+          ...addressPayload,
+        });
+        setCartActionSuccess(t("booking_info.msg_cart_added"));
+        setCartItemIdForService(res.cartItemId);
+      }
+    } catch (err) {
+      setCartActionError(
+        err instanceof Error ? err.message : t("booking_info.msg_error")
+      );
+    } finally {
+      setCartActionLoading(false);
+    }
+  };
+
+  /**
+   * Update a specific field in payment data
+   */
+  const updatePaymentField = <K extends keyof PaymentData>(
+    field: K,
+    value: PaymentData[K],
+  ) => {
+    setPaymentData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  /**
+   * Handle promotion code application
+   * Validates the code and applies discount if valid
+   */
+  const handleApplyPromotionCode = async (code: string) => {
+    const trimmedCode = code.trim().toUpperCase();
+
+    if (!trimmedCode) {
+      setPromotionError(t("payment.promo_empty"));
+      setDiscount(0);
+      return;
+    }
+
+    try {
+      const result = await validatePromotionCode(trimmedCode);
+      const discountValue = result.discountValue ?? 0;
+      if (!result.valid || (result.discountType && discountValue <= 0)) {
+        setPromotionId(null);
+        setDiscount(0);
+        setPromotionError(
+          result.message ?? t("payment.promo_invalid"),
+        );
+        return;
+      }
+
+      // percentage: discount_value is % of total. fixed: discount_value is THB (capped by total)
+      const discountAmount =
+        result.discountType === "fixed"
+          ? Math.min(Math.round(discountValue), total)
+          : Math.round((total * discountValue) / 100);
+      setPromotionId(result.promotionId ?? null);
+      setDiscount(discountAmount);
+      setPromotionError("");
+    } catch (err) {
+      console.error("Error validating promotion code:", err);
+      setPromotionId(null);
+      setDiscount(0);
+      setPromotionError(t("payment.promo_error"));
+    }
+  };
+
+  /**
+   * Handle promotion code input change
+   * Clears error when user starts typing
+   */
+  const handlePromotionCodeChange = (value: string) => {
+    updatePaymentField("promotionCode", value);
+    setPromotionError(""); // Clear error when typing
+  };
+
+  /**
+   * Reset promotion code state back to initial when user clicks "เปลี่ยนโค้ด"
+   */
+  const handleResetPromotionCode = () => {
+    updatePaymentField("promotionCode", "");
+    setPromotionId(null);
+    setDiscount(0);
+    setPromotionError("");
+  };
+
+  const mainContent = (
+    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)] gap-6 lg:gap-8">
+        {/* Left Panel - Payment Details */}
+        <section className="card-box bg-utility-white p-5 md:p-8">
+          <h2 className="headline-3 text-gray-700 mb-6">{t("payment.heading")}</h2>
+
+          <div className="space-y-6">
+            {/* Payment Method Selection */}
+            <PaymentMethodSelector
+              method={paymentData.method}
+              onChange={(method) => updatePaymentField("method", method)}
+            />
+
+            {/* Credit Card Form - only when card selected AND inside Stripe Elements */}
+            {paymentData.method === "creditcard" &&
+              stripePublishableKey &&
+              state.user?.auth_user_id && <CreditCardForm />}
+
+            {/* Promotion Code Input */}
+            <PromotionCodeInput
+              value={paymentData.promotionCode}
+              discount={discount}
+              error={promotionError}
+              onValueChange={handlePromotionCodeChange}
+              onApply={handleApplyPromotionCode}
+              onReset={handleResetPromotionCode}
+            />
+
+            {/* Checkout error from API */}
+            {checkoutError && (
+              <p className="body-2 text-red-600">{checkoutError}</p>
+            )}
+          </div>
+        </section>
+
+        {/* Right Panel - Summary */}
+        <div className="lg:sticky lg:top-24 lg:self-start space-y-4">
+          <ServiceSummaryCard
+            items={serviceItems}
+            total={total}
+            serviceInfo={serviceInfo}
+            savedAddressLine={serviceInfo?.savedAddressLine}
+            promotionCode={paymentData.promotionCode}
+            discount={discount}
+          />
+          {state.user?.auth_user_id && (
+            <div>
+              {cartActionSuccess && (
+                <p className="body-3 text-green-600 mb-2">{cartActionSuccess}</p>
+              )}
+              {cartActionError && (
+                <p className="body-3 text-red-600 mb-2">{cartActionError}</p>
+              )}
+              <button
+                type="button"
+                disabled={!hasItems || cartActionLoading}
+                onClick={handleCartAction}
+                className="btn-primary w-full inline-flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartActionLoading
+                  ? t("booking_info.msg_saving")
+                  : cartItemIdForService != null
+                    ? t("booking_info.btn_update_cart")
+                    : t("booking_info.btn_add_cart")}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+
+  return (
+    <div className="min-h-screen bg-utility-bg font-prompt pb-32">
+      <Navbar />
+      <ServiceHero
+        serviceName={(locale === "en" ? selectedService?.name_en : selectedService?.name_th) || selectedService?.name || ""}
+        currentStep={3}
+        imageUrl={selectedService?.image}
+      />
+      {paymentData.method === "promptpay" ? (
+        <>
+          {mainContent}
+          <ServiceFooterNav
+            canProceed={isFormValid && !isSubmitting && hasItems}
+            onBack={handleBack}
+            onNext={handleNextPromptPay}
+            nextText={isSubmitting ? t("payment.btn_processing") : t("payment.btn_confirm")}
+          />
+        </>
+      ) : stripePublishableKey && state.user?.auth_user_id ? (
+        <Elements stripe={getStripePromise(stripePublishableKey)}>
+          <>
+            {mainContent}
+            <StripeFooterInner
+              canProceed={isFormValid && !isSubmitting}
+              isSubmitting={isSubmitting}
+              onBack={handleBack}
+              onCreatePaymentIntent={async () => {
+                const serviceIdRaw = router.query.serviceId;
+                const serviceIdValue =
+                  typeof serviceIdRaw === "string"
+                    ? serviceIdRaw
+                    : serviceIdRaw?.[0];
+                const serviceId = serviceIdValue
+                  ? parseInt(serviceIdValue, 10)
+                  : NaN;
+                if (Number.isNaN(serviceId)) {
+                  throw new Error(t("payment.error_no_id"));
+                }
+                return createPaymentIntent({
+                  authUserId: state.user!.auth_user_id,
+                  promotionId: promotionId ?? undefined,
+                  ...buildIntentAddressParams(serviceInfo),
+                  items: serviceItems.map((item) => ({
+                    serviceId,
+                    serviceItemId: item.id,
+                    name: item.description,
+                    quantity: item.quantity,
+                    price: item.price,
+                  })),
+                  discountAmount: discount,
+                  appointmentDate: serviceInfo?.date || undefined,
+                  appointmentTime: serviceInfo?.time || undefined,
+                  remark: serviceInfo?.additionalInfo || undefined,
+                });
+              }}
+              onSuccess={async (intentOrderId: number) => {
+                try {
+                  await markPaymentIntentPaid({
+                    authUserId: state.user!.auth_user_id,
+                    orderId: intentOrderId,
+                    cartItemId: isFromCart ? cartItemIdParam ?? undefined : undefined,
+                  });
+                } catch (err) {
+                  console.error("Failed to mark order as paid:", err);
+                }
+                const query: Record<string, string> = {
+                  items: JSON.stringify(serviceItems),
+                  total: String(finalTotal),
+                  orderId: String(intentOrderId),
+                };
+                if (paymentData.promotionCode && discount > 0) {
+                  query.promotionCode = paymentData.promotionCode;
+                  query.discount = String(discount);
+                }
+                if (serviceInfo) {
+                  query.serviceInfo = JSON.stringify(serviceInfo);
+                }
+                router.push({
+                  pathname: "/servicedetailPage/payment-confirmation",
+                  query,
+                });
+              }}
+              setCheckoutError={setCheckoutError}
+              setIsSubmitting={setIsSubmitting}
+            />
+          </>
+        </Elements>
+      ) : (
+        // Fallback: show content with no active Stripe Elements (e.g. config not loaded yet)
+        <>{mainContent}</>
+      )}
+    </div>
+  );
+}
+
+interface StripeFooterInnerProps {
+  canProceed: boolean;
+  isSubmitting: boolean;
+  onBack: () => void;
+  onCreatePaymentIntent: () => Promise<{
+    clientSecret: string;
+    orderId: number;
+  }>;
+  onSuccess: (orderId: number) => void | Promise<void>;
+  setCheckoutError: (msg: string) => void;
+  setIsSubmitting: (value: boolean) => void;
+}
+
+const stripePromiseCache: { [key: string]: Promise<Stripe | null> } = {};
+
+function getStripePromise(publishableKey: string) {
+  if (!stripePromiseCache[publishableKey]) {
+    stripePromiseCache[publishableKey] = loadStripe(publishableKey);
+  }
+  return stripePromiseCache[publishableKey];
+}
+
+const StripeFooterInner: React.FC<StripeFooterInnerProps> = ({
+  canProceed,
+  isSubmitting,
+  onBack,
+  onCreatePaymentIntent,
+  onSuccess,
+  setCheckoutError,
+  setIsSubmitting,
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { t } = useTranslation("common");
+
+  const handleNext = async () => {
+    if (!canProceed) {
+      return;
+    }
+    if (!stripe || !elements) {
+      setCheckoutError(t("payment.error_not_ready"));
+      return;
+    }
+    const cardNumberElement = elements.getElement(CardNumberElement);
+    if (!cardNumberElement) {
+      setCheckoutError(t("payment.error_stripe_load"));
+      return;
+    }
+
+    setCheckoutError("");
+    setIsSubmitting(true);
+    try {
+      const { clientSecret, orderId } = await onCreatePaymentIntent();
+
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardNumberElement,
+        },
+      });
+
+      if (result.error) {
+        setCheckoutError(result.error.message ?? t("payment.error_payment_failed"));
+        return;
+      }
+
+      if (result.paymentIntent?.status === "succeeded") {
+        await onSuccess(orderId);
+      } else {
+        setCheckoutError(t("payment.error_not_succeeded"));
+      }
+    } catch (err) {
+      setCheckoutError(
+        err instanceof Error ? err.message : t("payment.error_general"),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <ServiceFooterNav
+      canProceed={canProceed}
+      onBack={onBack}
+      onNext={handleNext}
+      nextText={isSubmitting ? t("payment.btn_processing") : t("payment.btn_confirm")}
+    />
+  );
+};
+
+export const getServerSideProps = async ({ locale }: { locale: string }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ["common"])),
+    },
+  };
+};
