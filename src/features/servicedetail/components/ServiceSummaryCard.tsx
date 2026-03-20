@@ -11,7 +11,7 @@
  * - Calculates and displays final total
  */
 
-import type { ServiceItem } from "./types";
+import type { ServiceItem } from "../types";
 import { formatDateLocale, formatTimeLocale } from "@/utils/date-formatters";
 import { useTranslation } from "next-i18next";
 import { useRouter } from "next/router";
