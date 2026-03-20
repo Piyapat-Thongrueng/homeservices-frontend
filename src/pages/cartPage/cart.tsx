@@ -236,7 +236,7 @@ export default function CartPage() {
   );
 }
 
-export const getServerSideProps = async ({ locale }: { locale: string }) => {
+export const getStaticProps = async ({ locale }: { locale: string }) => {
   return {
     props: {
       ...(await serverSideTranslations(locale, ["common"])),
