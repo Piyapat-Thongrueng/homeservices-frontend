@@ -12,7 +12,7 @@
  */
 
 import { Minus, Plus, Tag } from "lucide-react";
-import type { ServiceItem } from "./types";
+import type { ServiceItem } from "../types";
 import { useTranslation } from "next-i18next";
 
 interface ServiceItemsSectionProps {
