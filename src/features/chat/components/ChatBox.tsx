@@ -28,6 +28,8 @@ type Props = {
   role: "user" | "technician"
   customer?: ChatUser | null
   technician?: ChatUser | null
+  /** When set (e.g. modal), header back closes instead of routing; root uses h-full not h-screen. */
+  onClose?: () => void
 }
 
 // =======================
@@ -43,7 +45,8 @@ export default function ChatBox({
   userId,
   role,
   customer,
-  technician
+  technician,
+  onClose,
 }: Props) {
 
   const [messages, setMessages] = useState<Message[]>([])
@@ -183,12 +186,16 @@ export default function ChatBox({
 
   // =================
   return (
-    <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
-
+    <div
+      className={`flex flex-col overflow-hidden bg-gray-100 ${
+        onClose ? "h-full min-h-0" : "h-screen"
+      }`}
+    >
       <div className="shrink-0">
         <ChatHeader
-          otherUser={otherUser}
+          otherUser={otherUser ?? null}
           orderId={orderId}
+          onClose={onClose}
         />
       </div>
 
@@ -196,8 +203,8 @@ export default function ChatBox({
         <MessageList
           messages={messages}
           userId={String(userId)} // 🔥 กัน type mismatch
-          myUser={myUser}
-          otherUser={otherUser}
+          myUser={myUser ?? null}
+          otherUser={otherUser ?? null}
           typingUser={typingUser}
           bottomRef={bottomRef}
         />
@@ -209,7 +216,6 @@ export default function ChatBox({
           setText={setText}
           handleTyping={handleTyping}
           sendMessage={sendMessage}
-          sendImage={sendImage}
         />
       </div>
 

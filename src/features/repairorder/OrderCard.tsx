@@ -3,19 +3,14 @@ import { Calendar, Wrench, MapPin, FileText, X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'next-i18next';
 import { getOrderDetail, type OrderDetailResponse } from '@/services/paymentApi';
 import type { OrderType } from '@/features/repairorder/types';
-import axios from 'axios';
-import { useRouter } from 'next/router';
 
 import ChatBadge from '@/features/chat/components/ChatBadge';
+import ChatModal from '@/features/chat/components/ChatModal';
 import { useAuth } from '@/contexts/AuthContext';
 
 
 function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () => void }) {
   const { t } = useTranslation('common');
-
-  const router = useRouter(); //  เพิ่ม
-  const { state } = useAuth(); //  เพิ่ม
-  const userId = state.user?.id?.toString() || "";
 
   const [detail, setDetail] = useState<OrderDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -252,13 +247,15 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
 export default function OrderCard({ order }: { order: OrderType }) {
   const { t } = useTranslation('common');
   const [showModal, setShowModal] = useState(false);
-  const router = useRouter();
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [showChatBlockedModal, setShowChatBlockedModal] = useState(false);
 
   const { state } = useAuth();
   const userId = state.user?.id?.toString() || "";
 
-  const isChatAvailable = !!order.worker;
-    const isCompleted = order.status === 'ดำเนินการสำเร็จ';
+  const isChatAvailable =
+    order.status === "กำลังดำเนินการ" || order.status === "ดำเนินการสำเร็จ";
+  const isCompleted = order.status === 'ดำเนินการสำเร็จ';
 
   const [cardTechName, setCardTechName] = useState<string | null>(null);
   const [cardTechPhone, setCardTechPhone] = useState<string | null>(null);
@@ -359,15 +356,33 @@ export default function OrderCard({ order }: { order: OrderType }) {
               </span>
             </div>
             <div className="flex items-center gap-2 w-full lg:w-auto">
-              {userId && isChatAvailable && (
+              {userId && (
                 <button
-                  onClick={() => router.push(`/chat/${order.id}`)}
-                  className="relative w-10 h-10 rounded-md bg-green-600 hover:bg-green-700 text-white flex items-center justify-center shrink-0"
+                  type="button"
+                  onClick={() => {
+                    if (!isChatAvailable) {
+                      setShowChatBlockedModal(true);
+                      return;
+                    }
+                    setShowChatModal(true);
+                  }}
+                  className={`relative w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${
+                    isChatAvailable
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : "bg-gray-200 text-gray-500 hover:bg-gray-300"
+                  }`}
+                  aria-label={
+                    isChatAvailable
+                      ? t("order.chat_btn", "แชท")
+                      : t("order.chat_unavailable", "แชท (ยังไม่พร้อม)")
+                  }
                 >
                   💬
-                  <div className="absolute -top-1 -right-1">
-                    <ChatBadge orderId={order.id.toString()} userId={userId} />
-                  </div>
+                  {isChatAvailable && (
+                    <div className="absolute -top-1 -right-1">
+                      <ChatBadge orderId={order.id.toString()} userId={userId} />
+                    </div>
+                  )}
                 </button>
               )}
               <button
@@ -386,6 +401,48 @@ export default function OrderCard({ order }: { order: OrderType }) {
           orderId={order.id}
           onClose={() => setShowModal(false)}
         />
+      )}
+
+      {showChatModal && userId && (
+        <ChatModal
+          orderId={String(order.id)}
+          userId={userId}
+          role="user"
+          onClose={() => setShowChatModal(false)}
+        />
+      )}
+
+      {showChatBlockedModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="flex items-center justify-center px-6 py-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-800">
+                {t("order.chat_unavailable_title", "แชทยังไม่พร้อมใช้งาน")}
+              </h3>
+            </div>
+            <div className="text-center px-6 py-8">
+              <p className="text-sm text-gray-700">
+                {t(
+                  "order.chat_unavailable_msg",
+                  "สามารถใช้งานแชทได้หลังจากมีช่างรับงาน",
+                )}
+              </p>
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowChatBlockedModal(false)}
+                  className="btn-primary w-full px-6 py-2.5 rounded-lg text-sm cursor-pointer"
+                >
+                  {t("order.btn_ok", "รับทราบ")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

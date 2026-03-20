@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react"
 import { getSocket } from "@/lib/socket"
 
+/** Same as ChatBox: Express serves chat at /api/chat on NEXT_PUBLIC_API_URL (not Next.js /api). */
+const API =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+const BASE = API.endsWith("/api") ? API : `${API}/api`
+
 type Props = {
   orderId: string
   userId: string
@@ -20,12 +25,11 @@ export default function ChatBadge({ orderId, userId }: Props) {
     const loadUnread = async () => {
       try {
 
-        const url = `/api/chat/messages/unread/${orderId}/${userId}`
+        const url = `${BASE}/chat/messages/unread/${orderId}/${userId}`
 
         const res = await fetch(url)
 
         if (!res.ok) {
-          console.warn("❌ unread status:", res.status)
           return
         }
 
@@ -34,7 +38,6 @@ export default function ChatBadge({ orderId, userId }: Props) {
         setCount(data.count || 0)
 
       } catch (err) {
-        console.error("❌ unread error:", err)
       }
     }
 

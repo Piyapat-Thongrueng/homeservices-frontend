@@ -9,9 +9,10 @@ type ChatUser = {
 type Props = {
   otherUser: ChatUser | null
   orderId?: string | number
+  onClose?: () => void
 }
 
-export default function ChatHeader({ otherUser, orderId }: Props) {
+export default function ChatHeader({ otherUser, orderId, onClose }: Props) {
 
   const router = useRouter()
 
@@ -24,14 +25,32 @@ export default function ChatHeader({ otherUser, orderId }: Props) {
       ? otherUser.name
       : "ช่างผู้ให้บริการ" // หรือ "ช่าง" / "ลูกค้า" ก็ได้
 
+  const handleBack = () => {
+    if (onClose) {
+      onClose()
+      return
+    }
+    const raw = router.query.profileTab
+    const tab =
+      typeof raw === "string" && (raw === "orders" || raw === "history")
+        ? raw
+        : null
+    if (tab) {
+      void router.push({ pathname: "/profile", query: { tab } })
+      return
+    }
+    router.back()
+  }
+
   return (
 
     <div className="flex items-center gap-3 px-4 py-3 bg-blue-600 text-white shadow-md">
 
       {/* 🔙 BACK */}
       <button
-        onClick={() => router.back()}
-        className="text-xl font-bold active:scale-90 transition"
+        type="button"
+        onClick={handleBack}
+        className="text-xl font-bold active:scale-90 transition cursor-pointer"
       >
         ←
       </button>
