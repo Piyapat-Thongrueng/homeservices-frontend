@@ -22,8 +22,6 @@ export default function ChatBadge({ orderId, userId }: Props) {
 
         const url = `/api/chat/messages/unread/${orderId}/${userId}`
 
-        console.log("📊 unread fetch:", url)
-
         const res = await fetch(url)
 
         if (!res.ok) {
@@ -32,8 +30,6 @@ export default function ChatBadge({ orderId, userId }: Props) {
         }
 
         const data = await res.json()
-
-        console.log("✅ unread count:", data.count)
 
         setCount(data.count || 0)
 
@@ -65,9 +61,6 @@ export default function ChatBadge({ orderId, userId }: Props) {
 
       if (!msg) return
 
-      // debug
-      console.log("📩 receive_message:", msg)
-
       if (
         String(msg.order_id) === String(orderId) &&
         String(msg.sender_id) !== String(userId)
@@ -92,7 +85,6 @@ export default function ChatBadge({ orderId, userId }: Props) {
   useEffect(() => {
 
     const handleFocus = () => {
-      console.log("👁️ reset unread")
       setCount(0)
     }
 

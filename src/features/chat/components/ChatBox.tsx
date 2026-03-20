@@ -83,13 +83,13 @@ export default function ChatBox({
       try {
 
         const url = `${BASE}/chat/messages/${orderId}?userId=${userId}`
-        console.log("📥 fetch messages:", url)
+        
 
         const res = await fetch(url)
 
         if (!res.ok) {
           const text = await res.text()
-          console.error("❌ messages error:", res.status, text)
+          
           return
         }
 
@@ -97,7 +97,6 @@ export default function ChatBox({
         setMessages(data)
 
       } catch (err) {
-        console.error("❌ loadMessages:", err)
       }
     }
 

@@ -34,8 +34,6 @@ export default function ProfilePage() {
   const [loadingOrders, setLoadingOrders] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  console.log('state.user full object:', JSON.stringify(state.user, null, 2));
-
   useEffect(() => {
     // รอให้ AuthContext โหลดเสร็จก่อน แล้วค่อยเช็ค
     if (!state.getUserLoading && !isAuthenticated) {
