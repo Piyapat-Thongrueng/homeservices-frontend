@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { ShoppingCart, Bell, Globe } from "lucide-react";
+import { ShoppingCart, Bell, Globe, Menu, X } from "lucide-react";
 import { getCart } from "@/services/cartApi";
 import { useNotification } from "@/hooks/useNotification";
 import { useTranslation } from "next-i18next";
@@ -18,6 +18,7 @@ export default function Navbar() {
   const [cartCount, setCartCount] = useState<number>(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
   const { notifications, unreadCount, markAllAsRead } = useNotification(
@@ -65,6 +66,11 @@ export default function Navbar() {
     };
     // Re-fetch when route changes so count stays in sync after leaving cart page
   }, [user?.auth_user_id, router.pathname]);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [router.pathname]);
 
   // ← เปิด modal แทนการ logout ทันที
   const handleLogoutClick = (): void => {
@@ -169,7 +175,7 @@ export default function Navbar() {
               />
               <Link
                 href="/service-lists"
-                className="text-[14px] sm:text-[15px] font-medium text-black hover:text-blue-600 transition-colors whitespace-nowrap"
+                className="hidden sm:inline text-[14px] sm:text-[15px] font-medium text-black hover:text-blue-600 transition-colors whitespace-nowrap"
               >
                 {t("navbar.services")}
               </Link>
@@ -177,7 +183,7 @@ export default function Navbar() {
                 href="https://home-service-technician.vercel.app/register-technician"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[14px] sm:text-[15px] font-medium text-black hover:text-blue-600 transition-colors whitespace-nowrap"
+                className="hidden md:block text-[14px] sm:text-[15px] font-medium text-black hover:text-blue-600 transition-colors whitespace-nowrap"
               >
                 {t("navbar.join_us")}
               </a>
@@ -188,14 +194,14 @@ export default function Navbar() {
               {/* LANGUAGE SWITCHER */}
               <button
                 onClick={toggleLanguage}
-                className="flex items-center gap-1.5 px-2 py-1.5 text-gray-600 hover:text-blue-600 transition-colors text-[13px] sm:text-[14px] font-medium cursor-pointer"
+                className="hidden md:flex items-center gap-1.5 px-2 py-1.5 text-gray-600 hover:text-blue-600 transition-colors text-[13px] sm:text-[14px] font-medium cursor-pointer"
                 title={locale === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย"}
               >
                 <Globe className="w-4 h-4" />
                 <span>{locale === "th" ? "EN" : "TH"}</span>
               </button>
 
-              <span className="w-px h-5 bg-gray-200" aria-hidden />
+              <span className="hidden md:block w-px h-5 bg-gray-200" aria-hidden />
 
               {state.getUserLoading ? null : isAuthenticated && user ? (
                 <>
@@ -275,7 +281,7 @@ export default function Navbar() {
                   </div>
 
                   {/* PROFILE DROPDOWN */}
-                  <div ref={dropdownRef} className="relative">
+                  <div ref={dropdownRef} className="hidden md:block relative">
                     <button
                       onClick={() => setOpen(!open)}
                       className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity cursor-pointer"
@@ -357,7 +363,7 @@ export default function Navbar() {
                   </div>
 
                   {/* CART - to the right of profile */}
-                  <span className="w-px h-7 bg-gray-300 shrink-0" aria-hidden />
+                  <span className="hidden md:inline-block w-px h-7 bg-gray-300 shrink-0" aria-hidden />
                   <button
                     onClick={() => router.push("/cartPage/cart")}
                     className="relative p-2 text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
@@ -374,13 +380,118 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => router.push("/login")}
-                  className="border border-blue-600 text-blue-600 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[13px] sm:text-[14px] font-medium hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
+                  className="hidden md:block border border-blue-600 text-blue-600 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[13px] sm:text-[14px] font-medium hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
                 >
                   {t("login")}
                 </button>
               )}
+
+              {/* HAMBURGER - mobile only */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 text-gray-600 hover:text-blue-600 transition-colors cursor-pointer"
+                aria-label="เปิดเมนู"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
             </div>
           </div>
+
+          {/* MOBILE MENU */}
+          {mobileMenuOpen && (
+            <div className="md:hidden border-t border-gray-100 pb-4">
+              {/* Nav links */}
+              <div className="flex flex-col">
+                <Link
+                  href="/service-lists"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-3 text-[14px] font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                >
+                  {t("navbar.services")}
+                </Link>
+                <a
+                  href="https://home-service-technician.vercel.app/register-technician"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-3 text-[14px] font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                >
+                  {t("navbar.join_us")}
+                </a>
+              </div>
+
+              {/* Language toggle */}
+              <div className="border-t border-gray-100">
+                <button
+                  onClick={() => { toggleLanguage(); setMobileMenuOpen(false); }}
+                  className="w-full px-4 py-3 text-[14px] font-medium text-gray-700 hover:bg-gray-50 text-left flex items-center gap-2 cursor-pointer"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>{locale === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย"}</span>
+                </button>
+              </div>
+
+              {/* Auth section */}
+              {state.getUserLoading ? null : isAuthenticated && user ? (
+                <div className="border-t border-gray-100">
+                  {/* User info */}
+                  <div className="px-4 py-3 bg-gray-50 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-utility-white text-white flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
+                      {user?.profile_pic ? (
+                        <img src={user.profile_pic} alt={userName} className="w-full h-full object-cover" />
+                      ) : (
+                        userInitial
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[14px] font-semibold text-gray-800 truncate">{userName}</div>
+                      <div className="text-[12px] text-gray-500 truncate">{userEmail}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); router.push("/profile"); }}
+                    className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2 cursor-pointer"
+                  >
+                    👤 {t("navbar.profile")}
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); router.push("/reset-password"); }}
+                    className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2 cursor-pointer"
+                  >
+                    🔒 {t("navbar.change_password")}
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); router.push("/profile?tab=orders"); }}
+                    className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2 cursor-pointer"
+                  >
+                    🔧 {t("navbar.orders")}
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); router.push("/profile?tab=history"); }}
+                    className="w-full px-4 py-3 text-[14px] text-gray-700 hover:bg-gray-100 text-left flex items-center gap-2 cursor-pointer"
+                  >
+                    📋 {t("navbar.repair_history")}
+                  </button>
+                  <div className="border-t border-gray-100" />
+                  <button
+                    onClick={handleLogoutClick}
+                    className="w-full px-4 py-3 text-[14px] text-red-600 hover:bg-red-50 text-left flex items-center gap-2 cursor-pointer"
+                  >
+                    🚪 {t("logout")}
+                  </button>
+                </div>
+              ) : (
+                <div className="border-t border-gray-100 px-4 py-3">
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); router.push("/login"); }}
+                    className="w-full h-11 border border-blue-600 text-blue-600 rounded-lg text-[14px] font-medium hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {t("login")}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </nav>
     </>
