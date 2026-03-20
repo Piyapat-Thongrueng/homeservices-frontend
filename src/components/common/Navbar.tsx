@@ -173,6 +173,14 @@ export default function Navbar() {
               >
                 {t("navbar.services")}
               </Link>
+              <a
+                href="https://home-service-technician.vercel.app/register-technician"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[14px] sm:text-[15px] font-medium text-black hover:text-blue-600 transition-colors whitespace-nowrap"
+              >
+                {t("navbar.join_us")}
+              </a>
             </div>
 
             {/* RIGHT */}
