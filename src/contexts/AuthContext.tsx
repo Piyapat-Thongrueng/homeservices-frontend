@@ -37,7 +37,7 @@ interface AuthContextValue {
   state: AuthState;
   login: (data: LoginData) => Promise<{ error?: string; role?: string } | void>;
   loginWithGoogle: () => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (data: RegisterData) => Promise<{ error?: string } | void>;
   isAuthenticated: boolean;
   fetchUser: () => Promise<string | undefined>;
@@ -190,7 +190,8 @@ function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem("token");
     setState({
       user: null,
