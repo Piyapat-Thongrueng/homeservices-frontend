@@ -52,19 +52,24 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
   const selectedItems = items.filter((item) => item.quantity > 0);
   const finalTotal = total - discount;
 
-  const locationLine =
-    savedAddressLine ||
-    (serviceInfo
-      ? [
-          serviceInfo.address,
-          serviceInfo.subDistrict,
-          serviceInfo.district,
-          serviceInfo.province,
-          serviceInfo.postalCode,
-        ]
-          .filter(Boolean)
-          .join(" ")
-      : "");
+  /**
+   * `address` is often the full Nominatim line (road, ตำบล, อำเภอ, จังหวัด, ไปรษณีย์, ประเทศ).
+   * Joining it again with subDistrict/district/province/postalCode duplicates content — show one or the other.
+   */
+  const locationLine = (() => {
+    if (savedAddressLine?.trim()) return savedAddressLine.trim();
+    if (!serviceInfo) return "";
+    const addr = (serviceInfo.address ?? "").trim();
+    if (addr) return addr;
+    return [
+      serviceInfo.subDistrict,
+      serviceInfo.district,
+      serviceInfo.province,
+      serviceInfo.postalCode,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  })();
 
   const displayTitle = title || t("service_detail.summary_title");
 
