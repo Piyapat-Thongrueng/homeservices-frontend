@@ -67,6 +67,8 @@ function AuthProvider({ children }: AuthProviderProps) {
 
   const fetchUser = async (): Promise<string | undefined> => {
     const token = localStorage.getItem("token");
+
+    // ไม่มี token → ไม่ต้องเรียก API ให้ reset state แล้วออกเลย
     if (!token) {
       setState((prevState) => ({
         ...prevState,
@@ -75,20 +77,19 @@ function AuthProvider({ children }: AuthProviderProps) {
       }));
       return;
     }
+
     try {
-      setState((prevState) => ({
-        ...prevState,
-        getUserLoading: true,
-      }));
+      setState((prevState) => ({ ...prevState, getUserLoading: true }));
+
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/auth/get-user`,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         },
       );
-      // ตรวจสอบว่า role เป็น user เท่านั้น หาก token เป็นของ role อื่น (เช่น technician) ให้ล้าง token และ set user เป็น null
+
+      // token นี้เป็นของ role อื่น (เช่น technician) → ใช้งานบน frontend นี้ไม่ได้
+      // ล้าง token ทิ้งเพื่อไม่ให้ค้างอยู่ใน localStorage
       if (response.data.role !== "user") {
         localStorage.removeItem("token");
         setState((prevState) => ({
@@ -98,6 +99,7 @@ function AuthProvider({ children }: AuthProviderProps) {
         }));
         return;
       }
+
       setState((prevState) => ({
         ...prevState,
         user: response.data,
@@ -107,9 +109,11 @@ function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       const axiosError = error as AxiosError<ErrorResponse>;
 
-      if (axiosError.response?.status === 401) {
-        localStorage.removeItem("token");
-      }
+      // ล้าง token ทุกกรณีที่ API ล้มเหลว ไม่ใช่เฉพาะ 401
+      // เพราะ token ที่ใช้ไม่ได้ไม่ควรค้างอยู่ใน localStorage
+      // (เช่น token หมดอายุแต่ server ตอบ 403, network error ฯลฯ)
+      localStorage.removeItem("token");
+
       setState((prevState) => ({
         ...prevState,
         error:
@@ -131,13 +135,24 @@ function AuthProvider({ children }: AuthProviderProps) {
   ): Promise<{ error?: string; role?: string } | void> => {
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
+
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/auth/login`,
         data,
       );
+
       const token = response.data.access_token;
       localStorage.setItem("token", token);
+
       const role = await fetchUser();
+
+      // fetchUser() คืน undefined เมื่อ role ไม่ใช่ "user" หรือเกิด error
+      // ในกรณีนี้ token ถูกล้างไปแล้วใน fetchUser() แล้ว
+      // ต้องคืน error กลับไปให้ UI รับทราบ ไม่ใช่ปล่อยให้ login ผ่าน
+      if (!role) {
+        return { error: "ไม่มีสิทธิ์เข้าถึง หรือบัญชีนี้ไม่ใช่ผู้ใช้ทั่วไป" };
+      }
+
       return { role };
     } catch (error) {
       const axiosError = error as AxiosError<ErrorResponse>;
@@ -145,24 +160,33 @@ function AuthProvider({ children }: AuthProviderProps) {
 
       setState((prevState) => ({
         ...prevState,
-        loading: false,
         error: errorMessage,
       }));
 
       return { error: errorMessage };
     } finally {
+      // finally ทำงานเสมอไม่ว่าจะ success หรือ error → ปิด loading state
       setState((prevState) => ({ ...prevState, loading: false }));
     }
   };
 
   const loginWithGoogle = async (): Promise<void> => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) console.error("Google login error:", error);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      // Google OAuth redirect ไม่ได้ใช้ return value มากนัก
+      // แต่ถ้า supabase ส่ง error กลับมา (เช่น config ผิด) ให้บันทึก state ด้วย
+      if (error) {
+        console.error("Google login error:", error);
+        setState((prevState) => ({ ...prevState, error: error.message }));
+      }
+    } catch (err) {
+      console.error("Unexpected Google login error:", err);
+    }
   };
 
   const register = async (
@@ -191,15 +215,23 @@ function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem("token");
-    setState({
-      user: null,
-      error: null,
-      loading: false,
-      getUserLoading: false,
-    });
-    router.push("/");
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // แม้ supabase signOut จะ fail (เช่น network หลุด) ก็ยังต้อง logout ต่อ
+      // ไม่ควรให้ error นี้หยุดการล้าง token และ redirect
+      console.error("supabase signOut error:", err);
+    } finally {
+      // finally การันตีว่า token ถูกล้าง + state reset + redirect ทุกกรณี
+      localStorage.removeItem("token");
+      setState({
+        user: null,
+        error: null,
+        loading: false,
+        getUserLoading: false,
+      });
+      router.push("/");
+    }
   };
 
   const isAuthenticated = Boolean(state.user);

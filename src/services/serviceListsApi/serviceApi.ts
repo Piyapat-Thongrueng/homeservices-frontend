@@ -5,7 +5,7 @@ import {
   ServiceFilterParams,
 } from "../../types/serviceListTypes/type";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 // ดึง categories ทั้งหมด
 export const fetchCategories = async (): Promise<Category[]> => {
