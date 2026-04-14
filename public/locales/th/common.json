@@ -175,7 +175,20 @@
     "status_pending": "รอดำเนินการ",
     "status_in_progress": "กำลังดำเนินการ",
     "status_completed": "ดำเนินการสำเร็จ",
-    "status_cancelled": "ยกเลิกคำสั่งซ่อม"
+    "status_cancelled": "ยกเลิกคำสั่งซ่อม",
+    "review_rate_tech": "ให้คะแนนช่าง",
+    "review_modal_title": "ให้คะแนนช่าง",
+    "review_stars_hint": "เลือกคะแนน 1–5 ดาว",
+    "review_stars": "ดาว",
+    "review_comment_label": "ความคิดเห็น (ไม่บังคับ)",
+    "review_comment_placeholder": "แชร์ประสบการณ์ของคุณ...",
+    "review_btn_cancel": "ยกเลิก",
+    "review_btn_submit": "ส่งรีวิว",
+    "review_btn_sending": "กำลังส่ง...",
+    "review_error_generic": "ไม่สามารถส่งรีวิวได้",
+    "review_duplicate_title": "ไม่สามารถรีวิวซ้ำได้",
+    "review_duplicate_msg": "คุณได้ให้คะแนนคำสั่งซ่อมนี้แล้ว",
+    "btn_ok": "รับทราบ"
   },
   "profile": {
     "user_account": "บัญชีผู้ใช้",
