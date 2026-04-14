@@ -175,7 +175,20 @@
     "status_pending": "Pending",
     "status_in_progress": "In Progress",
     "status_completed": "Completed",
-    "status_cancelled": "Cancelled"
+    "status_cancelled": "Cancelled",
+    "review_rate_tech": "Rate technician",
+    "review_modal_title": "Rate technician",
+    "review_stars_hint": "Choose a rating from 1 to 5 stars",
+    "review_stars": "stars",
+    "review_comment_label": "Comment (optional)",
+    "review_comment_placeholder": "Share your experience...",
+    "review_btn_cancel": "Cancel",
+    "review_btn_submit": "Submit review",
+    "review_btn_sending": "Sending...",
+    "review_error_generic": "Could not submit review",
+    "review_duplicate_title": "Cannot review again",
+    "review_duplicate_msg": "You have already rated this order.",
+    "btn_ok": "OK"
   },
   "profile": {
     "user_account": "User Account",

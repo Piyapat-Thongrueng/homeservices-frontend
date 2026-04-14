@@ -6,6 +6,7 @@ import type { OrderType } from '@/features/repairorder/types';
 
 import ChatBadge from '@/features/chat/components/ChatBadge';
 import ChatModal from '@/features/chat/components/ChatModal';
+import ReviewRatingModal from '@/features/repairorder/ReviewRatingModal';
 import { useAuth } from '@/contexts/AuthContext';
 
 
@@ -244,11 +245,19 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
   );
 }
 
-export default function OrderCard({ order }: { order: OrderType }) {
+export default function OrderCard({
+  order,
+  onReviewSubmitted,
+}: {
+  order: OrderType;
+  onReviewSubmitted?: () => void;
+}) {
   const { t } = useTranslation('common');
   const [showModal, setShowModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [showChatBlockedModal, setShowChatBlockedModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showDuplicateReviewModal, setShowDuplicateReviewModal] = useState(false);
 
   const { state } = useAuth();
   const userId = state.user?.id?.toString() || "";
@@ -256,6 +265,15 @@ export default function OrderCard({ order }: { order: OrderType }) {
   const isChatAvailable =
     order.status === "กำลังดำเนินการ" || order.status === "ดำเนินการสำเร็จ";
   const isCompleted = order.status === 'ดำเนินการสำเร็จ';
+  const hasReviewed = Boolean(order.has_reviewed);
+
+  const handleReviewButtonClick = () => {
+    if (hasReviewed) {
+      setShowDuplicateReviewModal(true);
+      return;
+    }
+    setShowReviewModal(true);
+  };
 
   const [cardTechName, setCardTechName] = useState<string | null>(null);
   const [cardTechPhone, setCardTechPhone] = useState<string | null>(null);
@@ -355,7 +373,16 @@ export default function OrderCard({ order }: { order: OrderType }) {
                 {order.price.toLocaleString('th-TH')} ฿
               </span>
             </div>
-            <div className="flex items-center gap-2 w-full lg:w-auto">
+            <div className="flex items-center gap-2 w-full lg:w-auto flex-wrap justify-end">
+              {isCompleted && userId && state.user?.id != null && (
+                <button
+                  type="button"
+                  onClick={handleReviewButtonClick}
+                  className="px-3 py-2 rounded-lg text-sm font-medium shrink-0 bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+                >
+                  {t('order.review_rate_tech', 'ให้คะแนนช่าง')}
+                </button>
+              )}
               {userId && (
                 <button
                   type="button"
@@ -410,6 +437,51 @@ export default function OrderCard({ order }: { order: OrderType }) {
           role="user"
           onClose={() => setShowChatModal(false)}
         />
+      )}
+
+      {showReviewModal && state.user?.id != null && (
+        <ReviewRatingModal
+          orderId={order.id}
+          userId={state.user.id}
+          onClose={() => setShowReviewModal(false)}
+          onSuccess={() => {
+            onReviewSubmitted?.();
+          }}
+          onDuplicate={() => setShowDuplicateReviewModal(true)}
+        />
+      )}
+
+      {showDuplicateReviewModal && (
+        <div
+          className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="flex items-center justify-center px-6 py-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-800">
+                {t('order.review_duplicate_title', 'ไม่สามารถรีวิวซ้ำได้')}
+              </h3>
+            </div>
+            <div className="text-center px-6 py-8">
+              <p className="text-sm text-gray-700">
+                {t(
+                  'order.review_duplicate_msg',
+                  'คุณได้ให้คะแนนคำสั่งซ่อมนี้แล้ว',
+                )}
+              </p>
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowDuplicateReviewModal(false)}
+                  className="btn-primary w-full px-6 py-2.5 rounded-lg text-sm cursor-pointer"
+                >
+                  {t('order.btn_ok', 'รับทราบ')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {showChatBlockedModal && (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/common/Navbar';
 import Footer from '@/components/common/Footer';
@@ -41,27 +41,24 @@ export default function ProfilePage() {
     }
   }, [state.getUserLoading, isAuthenticated, router]);
 
-  // 🌟 เพิ่ม useEffect สำหรับดึงข้อมูลออเดอร์เมื่อเปลี่ยน Tab
-  useEffect(() => {
-    const fetchOrders = async () => {
-      // ดึงข้อมูลเฉพาะตอนที่เปิดหน้า orders หรือ history
-      if (state.getUserLoading || !state.user || currentTab === 'profile') return;
+  const fetchOrders = useCallback(async () => {
+    if (state.getUserLoading || !state.user || currentTab === 'profile') return;
 
-      setLoadingOrders(true);
-      try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-        // ดึงออเดอร์ทั้งหมดของ User คนนี้มา
-        const response = await axios.get(`${API_URL}/api/orders/my-orders/${state.user.id}`);
-        setOrders(response.data);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      } finally {
-        setLoadingOrders(false);
-      }
-    };
-
-    fetchOrders();
+    setLoadingOrders(true);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const response = await axios.get(`${API_URL}/api/orders/my-orders/${state.user.id}`);
+      setOrders(response.data);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+    } finally {
+      setLoadingOrders(false);
+    }
   }, [currentTab, state.user, state.getUserLoading]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   // 🌟 กรองข้อมูลตามสถานะแท็บ
   // - หน้า "รายการคำสั่งซ่อม" (orders): โชว์แค่ที่ยังไม่เสร็จ (รอดำเนินการ, กำลังดำเนินการ)
@@ -127,7 +124,7 @@ export default function ProfilePage() {
                 <>
                   {pagedOrders.map((order) =>
                     currentTab === 'history' ? (
-                      <OrderCardHistory key={order.id} order={order} />
+                      <OrderCardHistory key={order.id} order={order} onReviewSubmitted={fetchOrders} />
                     ) : (
                       <OrderCardOrders key={order.id} order={order} />
                     ),
