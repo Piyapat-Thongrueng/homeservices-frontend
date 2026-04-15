@@ -67,7 +67,6 @@ export default function LoginPage() {
       return;
     }
     if (result?.role !== "user") {
-      localStorage.removeItem("token");
       await fetchUser();
       setApiError(t("auth.error_forbidden_role", "บัญชีนี้ไม่สามารถเข้าใช้งานระบบนี้ได้"));
       setModalType("error");
