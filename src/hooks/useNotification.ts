@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import axios from "axios";
+import type { RealtimePostgresInsertPayload } from "@supabase/supabase-js";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -63,15 +64,14 @@ export const useNotification = (userId: number | null) => {
           table: "notifications",
           filter: `user_id=eq.${userId}`, // กรองเฉพาะ notification ของ user นี้
         },
-        (payload) => {
+        (payload: RealtimePostgresInsertPayload<Notification>) => {
           // payload.new คือ row ที่เพิ่งถูก INSERT
-          const newNotification = payload.new as Notification;
+          const newNotification = payload.new;
           setNotifications((prev) => [newNotification, ...prev]);
           setUnreadCount((prev) => prev + 1);
         },
       )
-      .subscribe((status) => {
-      });
+      .subscribe();
 
     // cleanup: unsubscribe เมื่อ component unmount หรือ userId เปลี่ยน
     return () => {

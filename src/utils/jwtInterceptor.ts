@@ -4,19 +4,35 @@ import type {
   InternalAxiosRequestConfig,
   AxiosError,
 } from "axios";
+import { supabase } from "@/lib/supabaseClient";
 
 interface ErrorResponse {
   error: string;
   message?: string;
 }
 
+const clearLegacyToken = (): void => {
+  localStorage.removeItem("token");
+};
+
 function jwtInterceptor() {
   // Request — แนบ token อัตโนมัติ
   axios.interceptors.request.use(
-    (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    async (
+      config: InternalAxiosRequestConfig,
+    ): Promise<InternalAxiosRequestConfig> => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!error && data.session?.access_token) {
+          config.headers.Authorization = `Bearer ${data.session.access_token}`;
+        } else if (config.headers.Authorization) {
+          delete config.headers.Authorization;
+        }
+      } catch (err) {
+        console.error("Failed to read session token:", err);
+        if (config.headers.Authorization) {
+          delete config.headers.Authorization;
+        }
       }
       return config;
     },
@@ -30,9 +46,10 @@ function jwtInterceptor() {
     (response: AxiosResponse): AxiosResponse => {
       return response;
     },
-    (error: AxiosError<ErrorResponse>): Promise<AxiosError> => {
+    async (error: AxiosError<ErrorResponse>): Promise<AxiosError> => {
       if (error.response?.status === 401) {
-        localStorage.removeItem("token");
+        await supabase.auth.signOut();
+        clearLegacyToken();
 
         if (window.location.pathname !== "/login") {
           window.location.replace("/login");

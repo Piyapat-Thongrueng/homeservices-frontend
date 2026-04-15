@@ -65,8 +65,25 @@ function AuthProvider({ children }: AuthProviderProps) {
 
   const router = useRouter();
 
+  const clearLegacyToken = (): void => {
+    localStorage.removeItem("token");
+  };
+
+  const getAccessToken = async (): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (!error && data.session?.access_token) {
+        return data.session.access_token;
+      }
+    } catch (err) {
+      console.error("getSession error:", err);
+    }
+
+    return null;
+  };
+
   const fetchUser = async (): Promise<string | undefined> => {
-    const token = localStorage.getItem("token");
+    const token = await getAccessToken();
 
     // ไม่มี token → ไม่ต้องเรียก API ให้ reset state แล้วออกเลย
     if (!token) {
@@ -89,9 +106,10 @@ function AuthProvider({ children }: AuthProviderProps) {
       );
 
       // token นี้เป็นของ role อื่น (เช่น technician) → ใช้งานบน frontend นี้ไม่ได้
-      // ล้าง token ทิ้งเพื่อไม่ให้ค้างอยู่ใน localStorage
+      // ล้าง session และ token เก่า เพื่อกัน role ปะปน
       if (response.data.role !== "user") {
-        localStorage.removeItem("token");
+        await supabase.auth.signOut();
+        clearLegacyToken();
         setState((prevState) => ({
           ...prevState,
           user: null,
@@ -112,7 +130,8 @@ function AuthProvider({ children }: AuthProviderProps) {
       // ล้าง token ทุกกรณีที่ API ล้มเหลว ไม่ใช่เฉพาะ 401
       // เพราะ token ที่ใช้ไม่ได้ไม่ควรค้างอยู่ใน localStorage
       // (เช่น token หมดอายุแต่ server ตอบ 403, network error ฯลฯ)
-      localStorage.removeItem("token");
+      await supabase.auth.signOut();
+      clearLegacyToken();
 
       setState((prevState) => ({
         ...prevState,
@@ -136,13 +155,20 @@ function AuthProvider({ children }: AuthProviderProps) {
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
 
-      const response = await axios.post(
+      await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/auth/login`,
         data,
       );
 
-      const token = response.data.access_token;
-      localStorage.setItem("token", token);
+      const { error: supabaseLoginError } = await supabase.auth.signInWithPassword(
+        {
+          email: data.email,
+          password: data.password,
+        },
+      );
+      if (supabaseLoginError) {
+        return { error: supabaseLoginError.message };
+      }
 
       const role = await fetchUser();
 
@@ -223,7 +249,7 @@ function AuthProvider({ children }: AuthProviderProps) {
       console.error("supabase signOut error:", err);
     } finally {
       // finally การันตีว่า token ถูกล้าง + state reset + redirect ทุกกรณี
-      localStorage.removeItem("token");
+      clearLegacyToken();
       setState({
         user: null,
         error: null,
