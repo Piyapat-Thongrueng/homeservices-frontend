@@ -18,9 +18,6 @@ export default function AuthCallback() {
         return;
       }
 
-      // เก็บ token ใน localStorage เหมือน login ปกติ
-      localStorage.setItem("token", data.session.access_token);
-
       // ดึงข้อมูล user จาก backend เหมือนกับ login ปกติ
       await fetchUser();
 
