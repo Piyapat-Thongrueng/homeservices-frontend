@@ -2,18 +2,19 @@ import { createBrowserClient } from "@supabase/ssr";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+type SupabaseClient = ReturnType<typeof createBrowserClient>;
 
-const createFallbackSupabaseClient = () => {
+const createFallbackSupabaseClient = (): SupabaseClient => {
   const notConfiguredError = new Error(
     "Supabase environment variables are missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
   );
 
   const fakeChannel = {
-    on: () => fakeChannel,
-    subscribe: () => fakeChannel,
+    on: (..._args: unknown[]) => fakeChannel,
+    subscribe: (..._args: unknown[]) => fakeChannel,
   };
 
-  return {
+  const fallbackClient = {
     auth: {
       async getSession() {
         return { data: { session: null }, error: notConfiguredError };
@@ -49,9 +50,11 @@ const createFallbackSupabaseClient = () => {
     channel: () => fakeChannel,
     removeChannel: () => undefined,
   };
+
+  return fallbackClient as unknown as SupabaseClient;
 };
 
-export const supabase =
+export const supabase: SupabaseClient =
   supabaseUrl && supabaseAnonKey
     ? createBrowserClient(supabaseUrl, supabaseAnonKey)
     : createFallbackSupabaseClient();
