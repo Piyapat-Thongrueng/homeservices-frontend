@@ -94,12 +94,25 @@ export function normalizeReverseAddressResult(data: unknown): ReverseGeocodeFiel
       a.county ?? a.city_district ?? a.district ?? a.city ?? a.town ?? "",
     ).trim();
     const subRaw = String(
-      a.municipality ?? a.suburb ?? a.quarter ?? a.village ?? "",
+      a.municipality ??
+        a.suburb ??
+        a.city_district ??
+        a.neighbourhood ??
+        a.quarter ??
+        a.village ??
+        a.hamlet ??
+        "",
     ).trim();
+    let subdistrict =
+      stripThaiAdminPrefix(subRaw, /^แขวง\s*|^ตำบล\s*/) || "";
+    if (!subdistrict) {
+      const m = displayName.match(/(?:ตำบล|แขวง)\s*([^,，]+)/);
+      if (m) subdistrict = m[1].trim();
+    }
 
     return {
       address_line: addressLine,
-      subdistrict: stripThaiAdminPrefix(subRaw, /^แขวง\s*|^ตำบล\s*/) || null,
+      subdistrict: subdistrict || null,
       district: stripThaiAdminPrefix(districtRaw, /^อำเภอ\s*|^เขต\s*/) || null,
       province: stripThaiAdminPrefix(provinceRaw, /^จังหวัด\s*/) || null,
       postal_code: String(a.postcode ?? "").trim() || null,

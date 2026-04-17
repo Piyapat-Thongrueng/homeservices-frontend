@@ -45,12 +45,13 @@ import {
   getServiceScopedKey,
 } from "@/utils/localStorage-helpers";
 import { parseServiceItemsFromQuery } from "@/utils/router-helpers";
-import { ShoppingCart } from "lucide-react";
+import { ChevronDown, ShoppingCart } from "lucide-react";
 import {
   getCart,
   addToCart,
   updateCart,
 } from "@/services/cartApi";
+import { getSavedAddresses, type SavedAddress } from "@/services/paymentApi";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 import { fetchServices } from "@/services/serviceListsApi/serviceApi";
@@ -106,6 +107,89 @@ const defaultServiceInfo: ServiceInfo = {
 
 /** Address line persisted to DB: only the street/input address field. */
 const buildAddressLine = (f: ServiceInfo) => (f.address ?? "").trim();
+const parseFiniteCoordinate = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+};
+
+const formatSavedAddressOption = (item: SavedAddress): string => {
+  const rawLine = String(item.address_line ?? "").trim();
+  const areaParts = [item.district, item.province]
+    .filter(Boolean)
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+  const areaText = areaParts.join("/");
+
+  if (rawLine && areaText) {
+    return `${rawLine} - ${areaText}`;
+  }
+  if (rawLine) return rawLine;
+  if (areaText) return areaText;
+  return `ที่อยู่ #${item.id}`;
+};
+
+const formatSavedAddressSummary = (item: SavedAddress): string => {
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[\s,./-]+/g, "")
+      .replace(/^(ตำบล|แขวง|อำเภอ|เขต|จังหวัด)/, "");
+  const pushUnique = (target: string[], raw?: string | null) => {
+    const text = String(raw ?? "").trim();
+    if (!text) return;
+    const normalized = normalize(text);
+    if (!normalized) return;
+    const hasDuplicate = target.some((existing) => {
+      const current = normalize(existing);
+      return current.includes(normalized) || normalized.includes(current);
+    });
+    if (!hasDuplicate) target.push(text);
+  };
+
+  const parts: string[] = [];
+  pushUnique(parts, item.address_line);
+  pushUnique(parts, item.subdistrict);
+  pushUnique(parts, item.district);
+  pushUnique(parts, item.province);
+  pushUnique(parts, item.postal_code);
+  return parts.join(", ");
+};
+
+const buildSavedSummaryFromFields = (fields: {
+  address?: string;
+  subDistrict?: string;
+  district?: string;
+  province?: string;
+  postalCode?: string;
+}): string => {
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[\s,./-]+/g, "")
+      .replace(/^(ตำบล|แขวง|อำเภอ|เขต|จังหวัด)/, "");
+  const pushUnique = (target: string[], raw?: string) => {
+    const text = String(raw ?? "").trim();
+    if (!text) return;
+    const normalized = normalize(text);
+    if (!normalized) return;
+    const hasDuplicate = target.some((existing) => {
+      const current = normalize(existing);
+      return current.includes(normalized) || normalized.includes(current);
+    });
+    if (!hasDuplicate) target.push(text);
+  };
+  const parts: string[] = [];
+  pushUnique(parts, fields.address);
+  pushUnique(parts, fields.subDistrict);
+  pushUnique(parts, fields.district);
+  pushUnique(parts, fields.province);
+  pushUnique(parts, fields.postalCode);
+  return parts.join(", ");
+};
 
 export default function ServiceInformation() {
   const router = useRouter();
@@ -129,7 +213,10 @@ export default function ServiceInformation() {
   const [cartActionSuccess, setCartActionSuccess] =
     useState<string | null>(null);
   const [reverseGeocodeLoading, setReverseGeocodeLoading] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [openDropdown, setOpenDropdown] = useState(false);
   const [locationSuggestions, setLocationSuggestions] = useState<
     { place_id: string; display_name: string; lat: string; lon: string; address?: Record<string, unknown> }[]
   >([]);
@@ -226,6 +313,26 @@ export default function ServiceInformation() {
       cancelled = true;
     };
   }, [state.user?.auth_user_id, router.query.serviceId]);
+
+  useEffect(() => {
+    if (!state.user?.auth_user_id) {
+      setSavedAddresses([]);
+      setSelectedSavedAddressId("");
+      return;
+    }
+    let cancelled = false;
+    getSavedAddresses(state.user.auth_user_id)
+      .then((rows) => {
+        if (cancelled) return;
+        setSavedAddresses(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setSavedAddresses([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.user?.auth_user_id]);
 
   /**
    * Load selected service data from API using serviceId in query
@@ -367,17 +474,20 @@ export default function ServiceInformation() {
       items,
     };
 
-    const addressPayload = {
-      address: {
-        address_line: addressLine(formData),
-        district: formData.district,
-        subdistrict: formData.subDistrict,
-        province: formData.province,
-        postal_code: formData.postalCode,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
-      },
-    };
+    const addressPayload =
+      formData.addressId != null
+        ? { addressId: formData.addressId }
+        : {
+            address: {
+              address_line: addressLine(formData),
+              district: formData.district,
+              subdistrict: formData.subDistrict,
+              province: formData.province,
+              postal_code: formData.postalCode,
+              latitude: formData.latitude,
+              longitude: formData.longitude,
+            },
+          };
 
     try {
       if (cartItemIdForService != null) {
@@ -411,13 +521,13 @@ export default function ServiceInformation() {
     field: K,
     value: ServiceInfo[K],
   ) => {
-    if (
+    const isAddressField =
       field === "address" ||
       field === "subDistrict" ||
       field === "district" ||
       field === "province" ||
-      field === "postalCode"
-    ) {
+      field === "postalCode";
+    if (isAddressField) {
       pinFromMapLockRef.current = false;
     }
     setFormData((prev) => {
@@ -432,9 +542,13 @@ export default function ServiceInformation() {
           field === "postalCode")
       ) {
         next.addressId = undefined;
+        next.savedAddressLine = undefined;
       }
       return next;
     });
+    if (isAddressField) {
+      setSelectedSavedAddressId("");
+    }
   };
 
   const applyReverseGeocodeToForm = async (lat: number, lng: number) => {
@@ -454,7 +568,10 @@ export default function ServiceInformation() {
         district: data.district || prev.district,
         province: data.province || prev.province,
         postalCode: data.postal_code || prev.postalCode,
+        addressId: undefined,
+        savedAddressLine: undefined,
       }));
+      setSelectedSavedAddressId("");
     } catch {
       setFormData((prev) => ({
         ...prev,
@@ -547,7 +664,71 @@ export default function ServiceInformation() {
       district: normalized.district || prev.district,
       province: normalized.province || prev.province,
       postalCode: normalized.postal_code || prev.postalCode,
+      addressId: undefined,
+      savedAddressLine: undefined,
     }));
+    setSelectedSavedAddressId("");
+  };
+
+  const selectSavedAddress = (rawId: string) => {
+    setSelectedSavedAddressId(rawId);
+    if (!rawId) {
+      setFormData((prev) => ({
+        ...prev,
+        addressId: undefined,
+        savedAddressLine: undefined,
+      }));
+      return;
+    }
+    const selected = savedAddresses.find((a) => a.id === Number(rawId));
+    if (!selected) return;
+    const selectedLat = parseFiniteCoordinate(selected.latitude);
+    const selectedLng = parseFiniteCoordinate(selected.longitude);
+    pinFromMapLockRef.current = true;
+    setFormData((prev) => ({
+      ...prev,
+      address: String(selected.address_line ?? "").trim(),
+      subDistrict: String(selected.subdistrict ?? "").trim(),
+      district: String(selected.district ?? "").trim(),
+      province: String(selected.province ?? "").trim(),
+      postalCode: String(selected.postal_code ?? "").trim(),
+      latitude: selectedLat ?? prev.latitude,
+      longitude: selectedLng ?? prev.longitude,
+      addressId: selected.id,
+      savedAddressLine: formatSavedAddressSummary(selected) || undefined,
+    }));
+
+    const needsAdminParts =
+      !String(selected.subdistrict ?? "").trim() ||
+      !String(selected.district ?? "").trim() ||
+      !String(selected.province ?? "").trim() ||
+      !String(selected.postal_code ?? "").trim();
+    if (!needsAdminParts) return;
+    if (selectedLat == null || selectedLng == null) return;
+
+    void (async () => {
+      try {
+        const data = await reverseGeocodeWithFallback(API_URL, selectedLat, selectedLng);
+        if (!data) return;
+        setFormData((prev) => {
+          if (prev.addressId !== selected.id) return prev;
+          const merged = {
+            address: prev.address || data.display_name || data.address_line || "",
+            subDistrict: prev.subDistrict || data.subdistrict || "",
+            district: prev.district || data.district || "",
+            province: prev.province || data.province || "",
+            postalCode: prev.postalCode || data.postal_code || "",
+          };
+          return {
+            ...prev,
+            ...merged,
+            savedAddressLine: buildSavedSummaryFromFields(merged) || prev.savedAddressLine,
+          };
+        });
+      } catch {
+        // Keep saved address values as-is when reverse lookup fails.
+      }
+    })();
   };
 
   /**
@@ -651,13 +832,13 @@ export default function ServiceInformation() {
                 <>
                   <div className="relative">
                     <label className="block headline-5 text-gray-800 font-medium mb-2">
-                      ค้นหาตำแหน่ง
+                      ค้นหาที่อยู่หรือปักหมุดบนแผนที่
                     </label>
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => scheduleLocationSearch(e.target.value)}
-                      placeholder="ค้นหาตำแหน่ง..."
+                      placeholder="พิมพ์ชื่อสถานที่หรือที่อยู่..."
                       autoComplete="off"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
                     />
@@ -676,6 +857,59 @@ export default function ServiceInformation() {
                       </div>
                     )}
                   </div>
+
+                  {savedAddresses.length > 0 && (
+                    <div>
+                      <label className="block headline-5 text-gray-800 font-medium mb-2">
+                        เลือกที่อยู่ที่เคยบันทึกไว้
+                      </label>
+
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setOpenDropdown((prev) => !prev)}
+                          aria-expanded={openDropdown}
+                          className="flex w-full items-start justify-between gap-3 rounded-lg border border-gray-300 bg-white px-3 py-3 text-left text-sm text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 md:px-4 md:text-base"
+                        >
+                          <span className="min-w-0 flex-1 whitespace-normal break-words leading-6">
+                            {selectedSavedAddressId
+                              ? formatSavedAddressOption(
+                                  savedAddresses.find(
+                                    (i) => String(i.id) === selectedSavedAddressId,
+                                  )!,
+                                )
+                              : "-- เลือกที่อยู่ที่บันทึกไว้ --"}
+                          </span>
+                          <ChevronDown
+                            className={`mt-1 h-5 w-5 shrink-0 text-gray-400 transition-transform ${
+                              openDropdown ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {openDropdown && (
+                          <div className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-md">
+                            {savedAddresses.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  selectSavedAddress(String(item.id));
+                                  setOpenDropdown(false);
+                                }}
+                                className="w-full px-4 py-3 text-left text-sm leading-6 text-gray-700 transition-colors hover:bg-gray-100"
+                              >
+                                <span className="block whitespace-normal break-words">
+                                  {formatSavedAddressOption(item)}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  )}
 
                   <div>
                     <label className="block headline-5 text-gray-800 font-medium mb-2">
