@@ -263,7 +263,7 @@ export default function OrderCard({
   const userId = state.user?.id?.toString() || "";
 
   const isChatAvailable =
-    order.status === "กำลังดำเนินการ" || order.status === "ดำเนินการสำเร็จ";
+    order.status === "กำลังดำเนินการ" || (order.status as string) === "in_progress";
   const isCompleted = order.status === 'ดำเนินการสำเร็จ';
   const hasReviewed = Boolean(order.has_reviewed);
 
@@ -383,7 +383,7 @@ export default function OrderCard({
                   {t('order.review_rate_tech', 'ให้คะแนนช่าง')}
                 </button>
               )}
-              {userId && (
+              {userId && !isCompleted && order.status !== 'ยกเลิกคำสั่งซ่อม' && (order.status as string) !== 'cancelled' && (
                 <button
                   type="button"
                   onClick={() => {

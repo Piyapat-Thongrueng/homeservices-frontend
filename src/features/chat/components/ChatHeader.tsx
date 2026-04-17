@@ -66,7 +66,7 @@ export default function ChatHeader({ otherUser, orderId, onClose }: Props) {
 
         {/* 🔥 TITLE = งาน */}
         <span className="text-sm font-semibold">
-          งาน #{orderId || "-"}
+          Order ID : {orderId || "-"}
         </span>
 
         {/* 🔥 SUBTITLE */}
