@@ -157,7 +157,10 @@ function AuthProvider({ children }: AuthProviderProps) {
 
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/auth/login`,
-        data,
+        {
+          ...data,
+          expectedRole: "user",
+        },
       );
 
       const { error: supabaseLoginError } = await supabase.auth.signInWithPassword(
@@ -182,7 +185,10 @@ function AuthProvider({ children }: AuthProviderProps) {
       return { role };
     } catch (error) {
       const axiosError = error as AxiosError<ErrorResponse>;
-      const errorMessage = axiosError.response?.data?.error || "Login failed";
+      const errorMessage =
+        axiosError.response?.status === 403
+          ? "บัญชีผู้ใช้ของคุณไม่ได้รับสิทธิ์เข้าใช้งานระบบนี้"
+          : axiosError.response?.data?.error || "Login failed";
 
       setState((prevState) => ({
         ...prevState,
