@@ -13,7 +13,7 @@
  * - LocalStorage persistence
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import Navbar from "@/components/common/Navbar";
@@ -22,8 +22,6 @@ import ServiceSummaryCard from "@/features/servicedetail/components/ServiceSumma
 import ServiceFooterNav from "@/features/servicedetail/components/ServiceFooterNav";
 import DateInput from "@/features/servicedetail/components/DateInput";
 import TimePicker from "@/features/servicedetail/components/TimePicker";
-import LocationSelectors from "@/features/servicedetail/components/LocationSelectors";
-
 const AddressMapPicker = dynamic(
   () => import("@/features/servicedetail/components/AddressMapPicker"),
   {
@@ -47,27 +45,23 @@ import {
   getServiceScopedKey,
 } from "@/utils/localStorage-helpers";
 import { parseServiceItemsFromQuery } from "@/utils/router-helpers";
-import {
-  getPostalCodeForLocation,
-  getSubDistrictsByDistrict,
-} from "@/utils/thailand-locations";
 import { ChevronDown, ShoppingCart } from "lucide-react";
 import {
   getCart,
   addToCart,
   updateCart,
 } from "@/services/cartApi";
+import { getSavedAddresses, type SavedAddress } from "@/services/paymentApi";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 import { fetchServices } from "@/services/serviceListsApi/serviceApi";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  getSavedAddresses,
-  updateAddressCoords,
-  type SavedAddress,
-} from "@/services/paymentApi";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
+import {
+  normalizeReverseAddressResult,
+  reverseGeocodeWithFallback,
+} from "@/utils/reverseGeocode";
 
 /**
  * Service information form data structure
@@ -113,55 +107,88 @@ const defaultServiceInfo: ServiceInfo = {
 
 /** Address line persisted to DB: only the street/input address field. */
 const buildAddressLine = (f: ServiceInfo) => (f.address ?? "").trim();
-
-/** Saved-address display format: address line + province (as before). */
-const formatSavedAddressLine = (addr: SavedAddress) => {
-  const addressParts = [
-    addr.address_line ?? "",
-    addr.subdistrict ?? "",
-    addr.district ?? "",
-    addr.postal_code ?? "",
-  ];
-  const addressLine = addressParts
-    .map((part) => part?.trim())
-    .filter(Boolean)
-    .join(" ");
-  const province = addr.province ?? "";
-  return [addressLine.trim(), province.trim()].filter(Boolean).join(" · ").trim();
-};
-
-/** Full saved-address line for summary/confirmation (same shape as manual new input). */
-const formatSavedAddressFullLine = (addr: SavedAddress) => {
-  const base = (addr.address_line ?? "").replace(/\s+/g, " ").trim();
-  const extras = [
-    addr.subdistrict ?? "",
-    addr.district ?? "",
-    addr.province ?? "",
-    addr.postal_code ?? "",
-  ]
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .filter((p) => !base.includes(p));
-
-  return [base, ...extras].filter(Boolean).join(" ").trim();
-};
-
-/** Strip given tokens from the end of the string (for normalizing saved address_line). */
-const stripLocationFromAddressLine = (
-  input: string,
-  parts: (string | null | undefined)[],
-) => {
-  let out = (input ?? "").trim();
-  const tokens = parts
-    .map((p) => (typeof p === "string" ? p.trim() : ""))
-    .filter(Boolean)
-    .sort((a, b) => b.length - a.length);
-  for (const t of tokens) {
-    if (!t) continue;
-    const re = new RegExp(`\\s*${t.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}$`);
-    out = out.replace(re, "").trim();
+const parseFiniteCoordinate = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
   }
-  return out;
+  return undefined;
+};
+
+const formatSavedAddressOption = (item: SavedAddress): string => {
+  const rawLine = String(item.address_line ?? "").trim();
+  const areaParts = [item.district, item.province]
+    .filter(Boolean)
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+  const areaText = areaParts.join("/");
+
+  if (rawLine && areaText) {
+    return `${rawLine} - ${areaText}`;
+  }
+  if (rawLine) return rawLine;
+  if (areaText) return areaText;
+  return `ที่อยู่ #${item.id}`;
+};
+
+const formatSavedAddressSummary = (item: SavedAddress): string => {
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[\s,./-]+/g, "")
+      .replace(/^(ตำบล|แขวง|อำเภอ|เขต|จังหวัด)/, "");
+  const pushUnique = (target: string[], raw?: string | null) => {
+    const text = String(raw ?? "").trim();
+    if (!text) return;
+    const normalized = normalize(text);
+    if (!normalized) return;
+    const hasDuplicate = target.some((existing) => {
+      const current = normalize(existing);
+      return current.includes(normalized) || normalized.includes(current);
+    });
+    if (!hasDuplicate) target.push(text);
+  };
+
+  const parts: string[] = [];
+  pushUnique(parts, item.address_line);
+  pushUnique(parts, item.subdistrict);
+  pushUnique(parts, item.district);
+  pushUnique(parts, item.province);
+  pushUnique(parts, item.postal_code);
+  return parts.join(", ");
+};
+
+const buildSavedSummaryFromFields = (fields: {
+  address?: string;
+  subDistrict?: string;
+  district?: string;
+  province?: string;
+  postalCode?: string;
+}): string => {
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[\s,./-]+/g, "")
+      .replace(/^(ตำบล|แขวง|อำเภอ|เขต|จังหวัด)/, "");
+  const pushUnique = (target: string[], raw?: string) => {
+    const text = String(raw ?? "").trim();
+    if (!text) return;
+    const normalized = normalize(text);
+    if (!normalized) return;
+    const hasDuplicate = target.some((existing) => {
+      const current = normalize(existing);
+      return current.includes(normalized) || normalized.includes(current);
+    });
+    if (!hasDuplicate) target.push(text);
+  };
+  const parts: string[] = [];
+  pushUnique(parts, fields.address);
+  pushUnique(parts, fields.subDistrict);
+  pushUnique(parts, fields.district);
+  pushUnique(parts, fields.province);
+  pushUnique(parts, fields.postalCode);
+  return parts.join(", ");
 };
 
 export default function ServiceInformation() {
@@ -179,41 +206,34 @@ export default function ServiceInformation() {
    * Will be updated from localStorage on client side after mount
    */
   const [formData, setFormData] = useState<ServiceInfo>(defaultServiceInfo);
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
-  const isUsingSavedAddress = formData.addressId != null;
-  const [mapDragged, setMapDragged] = useState(false);
-  const [coordsUpdating, setCoordsUpdating] = useState(false);
-  const [coordsMessage, setCoordsMessage] = useState<string | null>(null);
+  const isUsingSavedAddress = false;
   const [cartItemIdForService, setCartItemIdForService] = useState<number | null>(null);
   const [cartActionLoading, setCartActionLoading] = useState(false);
   const [cartActionError, setCartActionError] = useState<string | null>(null);
   const [cartActionSuccess, setCartActionSuccess] =
     useState<string | null>(null);
-  const selectedSaved = isUsingSavedAddress
-    ? savedAddresses.find((a) => a.id === formData.addressId)
-    : undefined;
+  const [reverseGeocodeLoading, setReverseGeocodeLoading] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [openDropdown, setOpenDropdown] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState<
+    { place_id: string; display_name: string; lat: string; lon: string; address?: Record<string, unknown> }[]
+  >([]);
+  const reverseGeocodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const locationSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  /**
+   * When true, text-based geocode preview must not overwrite lat/lng (avoids pin
+   * "jumping" 2–3s after map click when reverse geocode fills address fields).
+   */
+  const pinFromMapLockRef = useRef(false);
 
   /** Address line persisted to DB: only the "ที่อยู่" input. */
   const addressLine = (f: ServiceInfo) => buildAddressLine(f);
-
-  /** Load saved addresses for dropdown when user is logged in */
-  useEffect(() => {
-    if (!state.user?.auth_user_id) {
-      setSavedAddresses([]);
-      return;
-    }
-    let cancelled = false;
-    getSavedAddresses(state.user.auth_user_id)
-      .then((list) => {
-        if (!cancelled) setSavedAddresses(list);
-      })
-      .catch(() => {
-        if (!cancelled) setSavedAddresses([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [state.user?.auth_user_id]);
 
   /**
    * Load form data from localStorage on client side only (after mount)
@@ -232,7 +252,12 @@ export default function ServiceInformation() {
 
     const saved = getFromLocalStorage<ServiceInfo>(infoKey);
     if (saved) {
-      setFormData(saved);
+      setFormData({
+        ...saved,
+        addressId: undefined,
+        saveAddress: false,
+        savedAddressLine: undefined,
+      });
     }
   }, [router.isReady, router.query.serviceId, user?.auth_user_id]);
 
@@ -289,6 +314,26 @@ export default function ServiceInformation() {
     };
   }, [state.user?.auth_user_id, router.query.serviceId]);
 
+  useEffect(() => {
+    if (!state.user?.auth_user_id) {
+      setSavedAddresses([]);
+      setSelectedSavedAddressId("");
+      return;
+    }
+    let cancelled = false;
+    getSavedAddresses(state.user.auth_user_id)
+      .then((rows) => {
+        if (cancelled) return;
+        setSavedAddresses(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setSavedAddresses([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.user?.auth_user_id]);
+
   /**
    * Load selected service data from API using serviceId in query
    */
@@ -319,7 +364,7 @@ export default function ServiceInformation() {
     return () => {
       isSubscribed = false;
     };
-  }, [router.query.serviceId]);
+  }, [router.query.serviceId]); // eslint-disable-line react-hooks/exhaustive-deps -- only serviceId triggers reload
 
   /**
    * Save form data to localStorage whenever it changes (only after mount)
@@ -348,15 +393,14 @@ export default function ServiceInformation() {
   /**
    * Validate that all required fields are filled
    */
-  /** With addressId, payment uses saved row only — date/time still required */
   const isFormValid = !!(
     formData.date &&
     formData.time &&
-    (formData.addressId != null ||
-      (formData.address &&
-        formData.subDistrict &&
-        formData.district &&
-        formData.province))
+    (formData.address &&
+      formData.subDistrict &&
+      formData.district &&
+      formData.province &&
+      formData.postalCode)
   );
 
   /**
@@ -430,42 +474,29 @@ export default function ServiceInformation() {
       items,
     };
 
+    const addressPayload =
+      formData.addressId != null
+        ? { addressId: formData.addressId }
+        : {
+            address: {
+              address_line: addressLine(formData),
+              district: formData.district,
+              subdistrict: formData.subDistrict,
+              province: formData.province,
+              postal_code: formData.postalCode,
+              latitude: formData.latitude,
+              longitude: formData.longitude,
+            },
+          };
+
     try {
       if (cartItemIdForService != null) {
-        const addressPayload =
-          formData.addressId != null
-            ? { addressId: formData.addressId }
-            : {
-                address: {
-                  address_line: addressLine(formData),
-                  district: formData.district,
-                  subdistrict: formData.subDistrict,
-                  province: formData.province,
-                  postal_code: formData.postalCode,
-                  latitude: formData.latitude,
-                  longitude: formData.longitude,
-                },
-              };
         await updateCart(cartItemIdForService, {
           ...basePayload,
           ...addressPayload,
         });
         setCartActionSuccess(t("booking_info.msg_cart_updated"));
       } else {
-        const addressPayload =
-          formData.addressId != null
-            ? { addressId: formData.addressId }
-            : {
-                address: {
-                  address_line: addressLine(formData),
-                  district: formData.district,
-                  subdistrict: formData.subDistrict,
-                  province: formData.province,
-                  postal_code: formData.postalCode,
-                  latitude: formData.latitude,
-                  longitude: formData.longitude,
-                },
-              };
         const res = await addToCart({
           ...basePayload,
           serviceId: serviceIdNum,
@@ -490,6 +521,15 @@ export default function ServiceInformation() {
     field: K,
     value: ServiceInfo[K],
   ) => {
+    const isAddressField =
+      field === "address" ||
+      field === "subDistrict" ||
+      field === "district" ||
+      field === "province" ||
+      field === "postalCode";
+    if (isAddressField) {
+      pinFromMapLockRef.current = false;
+    }
     setFormData((prev) => {
       const next = { ...prev, [field]: value };
       /** Editing address fields manually clears saved address so backend inserts/reuses by payload */
@@ -502,70 +542,210 @@ export default function ServiceInformation() {
           field === "postalCode")
       ) {
         next.addressId = undefined;
+        next.savedAddressLine = undefined;
       }
       return next;
     });
+    if (isAddressField) {
+      setSelectedSavedAddressId("");
+    }
   };
 
-  /** Apply a saved address row to the form and set addressId for payment. */
-  const applySavedAddress = (addr: SavedAddress) => {
-    const province = addr.province ?? "";
-    const district = addr.district ?? "";
-    const postalCode = addr.postal_code ?? "";
-    // 1) Strip postal, province, district from end of address_line so "ที่อยู่" is street-only.
-    let addressOnly = stripLocationFromAddressLine(addr.address_line ?? "", [
-      postalCode,
-      province,
-      district,
-    ]);
-    // 2) If there's a trailing sub-district (ตำบล) name, strip it and use for dropdown.
-    let subDistrict = "";
-    const possibleSubDistricts = getSubDistrictsByDistrict(province, district);
-    for (const sub of possibleSubDistricts.sort(
-      (a, b) => b.length - a.length,
-    )) {
-      const trimmed = addressOnly.trim();
-      if (!sub) continue;
-      if (trimmed === sub) {
-        addressOnly = "";
-        subDistrict = sub;
-        break;
-      }
-      if (trimmed.endsWith(" " + sub)) {
-        addressOnly = trimmed.slice(0, -(sub.length + 1)).trim();
-        subDistrict = sub;
-        break;
-      }
-    }
-
+  const applyReverseGeocodeToForm = async (lat: number, lng: number) => {
     setFormData((prev) => ({
       ...prev,
-      addressId: addr.id,
-      saveAddress: false,
-      savedAddressLine: formatSavedAddressFullLine(addr),
-      province,
-      district,
-      postalCode,
-      subDistrict,
-      address: addressOnly,
-      latitude: addr.latitude != null ? Number(addr.latitude) : prev.latitude,
-      longitude:
-        addr.longitude != null ? Number(addr.longitude) : prev.longitude,
+      latitude: lat,
+      longitude: lng,
     }));
+    try {
+      setReverseGeocodeLoading(true);
+      const data = await reverseGeocodeWithFallback(API_URL, lat, lng);
+      if (!data) return;
+      setFormData((prev) => ({
+        ...prev,
+        address: data.display_name || data.address_line || prev.address,
+        subDistrict: data.subdistrict || prev.subDistrict,
+        district: data.district || prev.district,
+        province: data.province || prev.province,
+        postalCode: data.postal_code || prev.postalCode,
+        addressId: undefined,
+        savedAddressLine: undefined,
+      }));
+      setSelectedSavedAddressId("");
+    } catch {
+      setFormData((prev) => ({
+        ...prev,
+        latitude: lat,
+        longitude: lng,
+      }));
+    } finally {
+      setReverseGeocodeLoading(false);
+    }
+  };
+
+  const scheduleReverseGeocodeToForm = (lat: number, lng: number) => {
+    if (reverseGeocodeTimerRef.current) {
+      clearTimeout(reverseGeocodeTimerRef.current);
+    }
+    reverseGeocodeTimerRef.current = setTimeout(() => {
+      reverseGeocodeTimerRef.current = null;
+      void applyReverseGeocodeToForm(lat, lng);
+    }, 450);
+  };
+
+  const fetchLocationSuggestions = async (q: string) => {
+    const query = q.trim();
+    if (!query) {
+      setLocationSuggestions([]);
+      return;
+    }
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        format: "jsonv2",
+        addressdetails: "1",
+        limit: "5",
+        "accept-language": "th,en",
+      });
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+        { headers: { Accept: "application/json" } },
+      );
+      if (!res.ok) {
+        setLocationSuggestions([]);
+        return;
+      }
+      const data = (await res.json()) as {
+        place_id: string;
+        display_name: string;
+        lat: string;
+        lon: string;
+        address?: Record<string, unknown>;
+      }[];
+      setLocationSuggestions(data);
+    } catch {
+      setLocationSuggestions([]);
+    }
+  };
+
+  const scheduleLocationSearch = (value: string) => {
+    setSearchQuery(value);
+    if (locationSearchTimerRef.current) {
+      clearTimeout(locationSearchTimerRef.current);
+    }
+    locationSearchTimerRef.current = setTimeout(() => {
+      locationSearchTimerRef.current = null;
+      void fetchLocationSuggestions(value);
+    }, 500);
+  };
+
+  const selectLocationSuggestion = (item: {
+    display_name: string;
+    lat: string;
+    lon: string;
+    address?: Record<string, unknown>;
+  }) => {
+    const lat = Number(item.lat);
+    const lng = Number(item.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const normalized = normalizeReverseAddressResult({
+      display_name: item.display_name,
+      address: item.address ?? {},
+    });
+    pinFromMapLockRef.current = true;
+    setSearchQuery("");
+    setLocationSuggestions([]);
+    setFormData((prev) => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      address: normalized.display_name || normalized.address_line || prev.address,
+      subDistrict: normalized.subdistrict || prev.subDistrict,
+      district: normalized.district || prev.district,
+      province: normalized.province || prev.province,
+      postalCode: normalized.postal_code || prev.postalCode,
+      addressId: undefined,
+      savedAddressLine: undefined,
+    }));
+    setSelectedSavedAddressId("");
+  };
+
+  const selectSavedAddress = (rawId: string) => {
+    setSelectedSavedAddressId(rawId);
+    if (!rawId) {
+      setFormData((prev) => ({
+        ...prev,
+        addressId: undefined,
+        savedAddressLine: undefined,
+      }));
+      return;
+    }
+    const selected = savedAddresses.find((a) => a.id === Number(rawId));
+    if (!selected) return;
+    const selectedLat = parseFiniteCoordinate(selected.latitude);
+    const selectedLng = parseFiniteCoordinate(selected.longitude);
+    pinFromMapLockRef.current = true;
+    setFormData((prev) => ({
+      ...prev,
+      address: String(selected.address_line ?? "").trim(),
+      subDistrict: String(selected.subdistrict ?? "").trim(),
+      district: String(selected.district ?? "").trim(),
+      province: String(selected.province ?? "").trim(),
+      postalCode: String(selected.postal_code ?? "").trim(),
+      latitude: selectedLat ?? prev.latitude,
+      longitude: selectedLng ?? prev.longitude,
+      addressId: selected.id,
+      savedAddressLine: formatSavedAddressSummary(selected) || undefined,
+    }));
+
+    const needsAdminParts =
+      !String(selected.subdistrict ?? "").trim() ||
+      !String(selected.district ?? "").trim() ||
+      !String(selected.province ?? "").trim() ||
+      !String(selected.postal_code ?? "").trim();
+    if (!needsAdminParts) return;
+    if (selectedLat == null || selectedLng == null) return;
+
+    void (async () => {
+      try {
+        const data = await reverseGeocodeWithFallback(API_URL, selectedLat, selectedLng);
+        if (!data) return;
+        setFormData((prev) => {
+          if (prev.addressId !== selected.id) return prev;
+          const merged = {
+            address: prev.address || data.display_name || data.address_line || "",
+            subDistrict: prev.subDistrict || data.subdistrict || "",
+            district: prev.district || data.district || "",
+            province: prev.province || data.province || "",
+            postalCode: prev.postalCode || data.postal_code || "",
+          };
+          return {
+            ...prev,
+            ...merged,
+            savedAddressLine: buildSavedSummaryFromFields(merged) || prev.savedAddressLine,
+          };
+        });
+      } catch {
+        // Keep saved address values as-is when reverse lookup fails.
+      }
+    })();
   };
 
   /**
-   * Map uses only ตำบล + อำเภอ + จังหวัด + รหัส — NOT ที่อยู่ (ที่อยู่ is often inaccurate for geocode).
-   * User drags the pin to the exact spot; ที่อยู่ is still saved for the order.
+   * Geocode map center from typed address and/or location selectors.
    */
   useEffect(() => {
-    if (!formData.province || !formData.district || !formData.subDistrict) {
+    if (!formData.address && !formData.province) {
       return;
     }
 
     const t = setTimeout(async () => {
       try {
+        if (pinFromMapLockRef.current) {
+          return;
+        }
         const params = new URLSearchParams({
+          address_line: formData.address || "",
           subdistrict: formData.subDistrict,
           district: formData.district,
           province: formData.province,
@@ -573,6 +753,9 @@ export default function ServiceInformation() {
         });
         const res = await fetch(`${API_URL}/api/geocode/preview?${params}`);
         const data = await res.json();
+        if (pinFromMapLockRef.current) {
+          return;
+        }
         if (
           data &&
           typeof data.latitude === "number" &&
@@ -590,11 +773,23 @@ export default function ServiceInformation() {
     }, 500);
     return () => clearTimeout(t);
   }, [
+    formData.address,
     formData.province,
     formData.district,
     formData.subDistrict,
     formData.postalCode,
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (reverseGeocodeTimerRef.current) {
+        clearTimeout(reverseGeocodeTimerRef.current);
+      }
+      if (locationSearchTimerRef.current) {
+        clearTimeout(locationSearchTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-utility-bg font-prompt pb-32">
@@ -632,133 +827,93 @@ export default function ServiceInformation() {
                 />
               </div>
 
-              {/* Saved addresses dropdown — same user reuses row in DB when paying */}
-              {user?.auth_user_id && savedAddresses.length > 0 && (
-                <div>
-                  <label className="block headline-5 text-gray-800 font-medium mb-2">
-                    {t("booking_info.address_saved")}
-                  </label>
-                  <div className="relative">
-                    <select
-                      className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer"
-                      value={formData.addressId ?? ""}
-                      onChange={(e) => {
-                        const id = e.target.value
-                          ? parseInt(e.target.value, 10)
-                          : NaN;
-                        if (Number.isNaN(id)) {
-                          // กรอกที่อยู่ใหม่ — เคลียร์ฟิลด์ที่อยู่ทั้งหมด
-                          setFormData((prev) => ({
-                            ...prev,
-                            addressId: undefined,
-                            savedAddressLine: undefined,
-                            address: "",
-                            province: "",
-                            district: "",
-                            subDistrict: "",
-                            postalCode: "",
-                            latitude: undefined,
-                            longitude: undefined,
-                            saveAddress: false,
-                          }));
-                          setMapDragged(false);
-                          setCoordsMessage(null);
-                          return;
-                        }
-                        const addr = savedAddresses.find((a) => a.id === id);
-                        if (addr) applySavedAddress(addr);
-                      }}
-                    >
-                      <option value="">{t("booking_info.address_new")}</option>
-                      {savedAddresses.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {formatSavedAddressLine(a) || `ที่อยู่ #${a.id}`}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                  </div>
-                   {formData.addressId != null && (
-                    <p className="mt-2 text-sm text-gray-600">
-                      {t("booking_info.address_note")}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Map for saved address — move pin to update lat/long on that saved row */}
-              {isUsingSavedAddress && user?.auth_user_id && (
-                 <div>
-                  <label className="block headline-5 text-gray-800 font-medium mb-2">
-                    {t("booking_info.map_label")}
-                  </label>
-                  <AddressMapPicker
-                    key={`saved-${formData.addressId}-${selectedSaved?.latitude ?? "na"}-${
-                      selectedSaved?.longitude ?? "na"
-                    }`}
-                    latitude={
-                      formData.latitude ??
-                      (selectedSaved?.latitude != null
-                        ? Number(selectedSaved.latitude)
-                        : undefined)
-                    }
-                    longitude={
-                      formData.longitude ??
-                      (selectedSaved?.longitude != null
-                        ? Number(selectedSaved.longitude)
-                        : undefined)
-                    }
-                    onPositionChange={async (lat, lng) => {
-                      if (!user?.auth_user_id || !formData.addressId) return;
-                      setFormData((prev) => ({
-                        ...prev,
-                        latitude: lat,
-                        longitude: lng,
-                      }));
-                      setCoordsMessage(null);
-                      setCoordsUpdating(true);
-                      try {
-                        const res = await updateAddressCoords({
-                          authUserId: user.auth_user_id,
-                          addressId: formData.addressId,
-                          latitude: lat,
-                           longitude: lng,
-                        });
-                        setCoordsMessage(t("booking_info.msg_coords_updated"));
-                        if (res?.addressId) {
-                          setFormData((prev) => ({
-                            ...prev,
-                            addressId: res.addressId,
-                          }));
-                        }
-                        const list = await getSavedAddresses(user.auth_user_id);
-                        setSavedAddresses(list);
-                      } catch (err) {
-                        setCoordsMessage(
-                           err instanceof Error
-                            ? err.message
-                            : t("booking_info.msg_coords_error"),
-                        );
-                      } finally {
-                        setCoordsUpdating(false);
-                      }
-                    }}
-                  />
-                  {coordsMessage && (
-                    <p className="mt-2 text-sm text-gray-600">
-                      {coordsMessage}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Address fields: hidden when a saved address is selected */}
+              {/* Address fields */}
               {!isUsingSavedAddress && (
                 <>
-                  {/* 1) ที่อยู่ (house/soi/street) */}
-                   <div>
+                  <div className="relative">
                     <label className="block headline-5 text-gray-800 font-medium mb-2">
-                      {t("booking_info.address_label")}<span className="text-red-500 ml-1">*</span>
+                      ค้นหาที่อยู่หรือปักหมุดบนแผนที่
+                    </label>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => scheduleLocationSearch(e.target.value)}
+                      placeholder="พิมพ์ชื่อสถานที่หรือที่อยู่..."
+                      autoComplete="off"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
+                    />
+                    {locationSuggestions.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-md max-h-64 overflow-auto">
+                        {locationSuggestions.map((item) => (
+                          <button
+                            key={String(item.place_id)}
+                            type="button"
+                            onClick={() => selectLocationSuggestion(item)}
+                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            {item.display_name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {savedAddresses.length > 0 && (
+                    <div>
+                      <label className="block headline-5 text-gray-800 font-medium mb-2">
+                        เลือกที่อยู่ที่เคยบันทึกไว้
+                      </label>
+
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setOpenDropdown((prev) => !prev)}
+                          aria-expanded={openDropdown}
+                          className="flex w-full items-start justify-between gap-3 rounded-lg border border-gray-300 bg-white px-3 py-3 text-left text-sm text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 md:px-4 md:text-base"
+                        >
+                          <span className="min-w-0 flex-1 whitespace-normal break-words leading-6">
+                            {selectedSavedAddressId
+                              ? formatSavedAddressOption(
+                                  savedAddresses.find(
+                                    (i) => String(i.id) === selectedSavedAddressId,
+                                  )!,
+                                )
+                              : "-- เลือกที่อยู่ที่บันทึกไว้ --"}
+                          </span>
+                          <ChevronDown
+                            className={`mt-1 h-5 w-5 shrink-0 text-gray-400 transition-transform ${
+                              openDropdown ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {openDropdown && (
+                          <div className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-md">
+                            {savedAddresses.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  selectSavedAddress(String(item.id));
+                                  setOpenDropdown(false);
+                                }}
+                                className="w-full px-4 py-3 text-left text-sm leading-6 text-gray-700 transition-colors hover:bg-gray-100"
+                              >
+                                <span className="block whitespace-normal break-words">
+                                  {formatSavedAddressOption(item)}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block headline-5 text-gray-800 font-medium mb-2">
+                      รายละเอียดที่อยู่<span className="text-red-500 ml-1">*</span>
                     </label>
                     <input
                       type="text"
@@ -770,66 +925,88 @@ export default function ServiceInformation() {
                     />
                   </div>
 
-                  {/* 2) จังหวัด → เขต → ตำบล */}
-                  <LocationSelectors
-                    province={formData.province}
-                    district={formData.district}
-                    subDistrict={formData.subDistrict}
-                    onProvinceChange={(province) => {
-                      updateFormField("province", province);
-                      updateFormField("district", "");
-                      updateFormField("subDistrict", "");
-                      updateFormField("postalCode", "");
-                      // Keep previous lat/lng (when coming from a saved address) so map starts from existing coords.
-                    }}
-                    onDistrictChange={(district) => {
-                      updateFormField("district", district);
-                      updateFormField("subDistrict", "");
-                      updateFormField("postalCode", "");
-                      // Keep previous lat/lng (when coming from a saved address) so map starts from existing coords.
-                    }}
-                    onSubDistrictChange={(subDistrict) => {
-                      updateFormField("subDistrict", subDistrict);
-                      const postal = getPostalCodeForLocation(
-                        formData.province,
-                        formData.district,
-                        subDistrict,
-                      );
-                      if (postal) {
-                        updateFormField("postalCode", postal);
-                      }
-                    }}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block headline-5 text-gray-800 font-medium mb-2">
+                        แขวง / ตำบล<span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.subDistrict}
+                        onChange={(e) =>
+                          updateFormField("subDistrict", e.target.value)
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block headline-5 text-gray-800 font-medium mb-2">
+                        เขต / อำเภอ<span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.district}
+                        onChange={(e) =>
+                          updateFormField("district", e.target.value)
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block headline-5 text-gray-800 font-medium mb-2">
+                        จังหวัด<span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.province}
+                        onChange={(e) =>
+                          updateFormField("province", e.target.value)
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block headline-5 text-gray-800 font-medium mb-2">
+                        รหัสไปรษณีย์<span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formData.postalCode}
+                        onChange={(e) =>
+                          updateFormField(
+                            "postalCode",
+                            e.target.value.replace(/\D/g, "").slice(0, 5),
+                          )
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
+                      />
+                    </div>
+                  </div>
 
                   {/* 3) Map after location — keep showing when saveAddress is checked */}
                   <label className="block headline-5 text-gray-800 font-medium mb-2">
-                    ตำแหน่งบนแผนที่ (ลากหมุดให้ตรงจุด)
+                    ตำแหน่งบนแผนที่ (คลิกแผนที่หรือลากหมุดให้ตรงจุด)
                   </label>
-                  {formData.province &&
-                  formData.district &&
-                  (formData.subDistrict ||
-                    (formData.latitude != null &&
-                      formData.longitude != null)) ? (
-                    <div>
-                      <AddressMapPicker
-                        key={`${formData.province}-${formData.district}-${formData.subDistrict ?? "pin"}`}
-                        latitude={formData.latitude}
-                        longitude={formData.longitude}
-                        onPositionChange={(lat, lng) => {
-                          setMapDragged(true);
-                          setFormData((prev) => ({
-                            ...prev,
-                            latitude: lat,
-                            longitude: lng,
-                          }));
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-600">
-                      {t("booking_info.btn_select_location_first")}
-                    </div>
-                  )}
+                  <div>
+                    <AddressMapPicker
+                      key="service-info-manual-address-map"
+                      latitude={formData.latitude}
+                      longitude={formData.longitude}
+                      onPositionChange={(lat, lng) => {
+                        pinFromMapLockRef.current = true;
+                        scheduleReverseGeocodeToForm(lat, lng);
+                      }}
+                    />
+                    {reverseGeocodeLoading && (
+                      <p className="mt-2 text-sm text-gray-600">
+                        กำลังอัปเดตที่อยู่จากตำแหน่งแผนที่...
+                      </p>
+                    )}
+                  </div>
                 </>
               )}
 
@@ -857,17 +1034,6 @@ export default function ServiceInformation() {
               items={serviceItems}
               total={total}
               serviceInfo={formData}
-              savedAddressLine={
-                formData.addressId != null
-                  ? (() => {
-                      const selected = savedAddresses.find(
-                        (a) => a.id === formData.addressId,
-                      );
-                      if (!selected) return undefined;
-                      return formatSavedAddressFullLine(selected);
-                    })()
-                  : undefined
-              }
             />
             {user?.auth_user_id && (
               <div>

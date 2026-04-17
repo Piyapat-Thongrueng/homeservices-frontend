@@ -1,7 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { useCallback, useEffect, useMemo } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useRouter } from "next/router";
@@ -16,9 +22,23 @@ function SetViewOnChange({
   zoom?: number;
 }) {
   const map = useMap();
+  const [lat, lng] = center;
   useEffect(() => {
     map.flyTo(center, zoom, { duration: 0.6 } as L.ZoomPanOptions);
-  }, [center[0], center[1], zoom, map]);
+  }, [lat, lng, center, zoom, map]);
+  return null;
+}
+
+function MapClickHandler({
+  onPick,
+}: {
+  onPick: (lat: number, lng: number) => void;
+}) {
+  useMapEvents({
+    click: (e) => {
+      onPick(e.latlng.lat, e.latlng.lng);
+    },
+  });
   return null;
 }
 
@@ -35,7 +55,6 @@ export default function AddressMapPicker({
 }: AddressMapPickerProps) {
   const { locale } = useRouter();
   const isEn = locale === "en";
-  const [iconReady, setIconReady] = useState(false);
 
   useEffect(() => {
     delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: string })
@@ -48,7 +67,6 @@ export default function AddressMapPicker({
       shadowUrl:
         "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
     });
-    setIconReady(true);
   }, []);
 
   const position = useMemo((): [number, number] => {
@@ -72,18 +90,12 @@ export default function AddressMapPicker({
     [onPositionChange],
   );
 
-  if (!iconReady) {
-    return (
-      <div className="w-full h-[280px] rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
-        {isEn ? "Loading map..." : "กำลังโหลดแผนที่..."}
-      </div>
-    );
-  }
-
   return (
     <div className="w-full space-y-2">
       <p className="text-sm text-gray-600">
-        {isEn ? "Drag the pin to your actual location" : "ลากหมุดไปยังตำแหน่งที่อยู่จริงของคุณ"}
+        {isEn
+          ? "Click on the map or drag the pin to your actual location"
+          : "คลิกบนแผนที่หรือลากหมุดไปยังตำแหน่งที่อยู่จริงของคุณ"}
       </p>
       <div className="w-full h-[280px] rounded-lg overflow-hidden border border-gray-200 [&_.leaflet-container]:h-full">
         <MapContainer
@@ -97,6 +109,7 @@ export default function AddressMapPicker({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <SetViewOnChange center={position} zoom={16} />
+          <MapClickHandler onPick={onPositionChange} />
           <Marker
             key={position[0].toFixed(6) + "," + position[1].toFixed(6)}
             position={position}

@@ -20,6 +20,7 @@ interface ServiceInfo {
   date?: string;
   time?: string;
   address?: string;
+  savedAddressLine?: string;
   subDistrict?: string;
   district?: string;
   province?: string;
@@ -51,20 +52,47 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
 
   const selectedItems = items.filter((item) => item.quantity > 0);
   const finalTotal = total - discount;
+  const normalizeCompareText = (value: string) =>
+    value.toLowerCase().replace(/[\s,./-]+/g, "");
+  const pushIfMissing = (target: string[], value?: string) => {
+    const trimmed = (value ?? "").trim();
+    if (!trimmed) return;
+    const normalized = normalizeCompareText(trimmed);
+    if (!normalized) return;
+    const alreadyIncluded = target.some((item) => {
+      const current = normalizeCompareText(item);
+      return current.includes(normalized) || normalized.includes(current);
+    });
+    if (!alreadyIncluded) target.push(trimmed);
+  };
 
-  const locationLine =
-    savedAddressLine ||
-    (serviceInfo
-      ? [
-          serviceInfo.address,
-          serviceInfo.subDistrict,
-          serviceInfo.district,
-          serviceInfo.province,
-          serviceInfo.postalCode,
-        ]
-          .filter(Boolean)
-          .join(" ")
-      : "");
+  /**
+   * `address` is often the full Nominatim line (road, ตำบล, อำเภอ, จังหวัด, ไปรษณีย์, ประเทศ).
+   * Joining it again with subDistrict/district/province/postalCode duplicates content — show one or the other.
+   */
+  const locationLine = (() => {
+    const parts: string[] = [];
+    pushIfMissing(parts, serviceInfo?.savedAddressLine);
+    pushIfMissing(parts, savedAddressLine);
+    if (parts.length === 0) {
+      pushIfMissing(parts, serviceInfo?.address);
+    }
+    pushIfMissing(parts, serviceInfo?.subDistrict);
+    pushIfMissing(parts, serviceInfo?.district);
+    pushIfMissing(parts, serviceInfo?.province);
+    pushIfMissing(parts, serviceInfo?.postalCode);
+    if (parts.length > 0) return parts.join(", ");
+
+    if (!serviceInfo) return "";
+    return [
+      serviceInfo.subDistrict,
+      serviceInfo.district,
+      serviceInfo.province,
+      serviceInfo.postalCode,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  })();
 
   const displayTitle = title || t("service_detail.summary_title");
 
@@ -127,10 +155,8 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
                     style={{
                       wordBreak: "break-word",
                       overflowWrap: "anywhere",
-                      maxWidth: "30ch",
                       lineHeight: "1.5",
                       minWidth: 0,
-                      overflow: "hidden",
                     }}
                   >
                     {locationLine}
@@ -147,10 +173,8 @@ const ServiceSummaryCard: React.FC<ServiceSummaryCardProps> = ({
                     style={{
                       wordBreak: "break-word",
                       overflowWrap: "anywhere",
-                      maxWidth: "30ch",
                       lineHeight: "1.5",
                       minWidth: 0,
-                      overflow: "hidden",
                     }}
                   >
                     {serviceInfo.additionalInfo}
