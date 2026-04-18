@@ -15,6 +15,12 @@ const clearLegacyToken = (): void => {
   localStorage.removeItem("token");
 };
 
+const shouldForceLogout = (error: AxiosError<ErrorResponse>): boolean => {
+  if (error.response?.status !== 401) return false;
+  const url = error.config?.url ?? "";
+  return url.includes("/api/auth/get-user");
+};
+
 function jwtInterceptor() {
   // Request — แนบ token อัตโนมัติ
   axios.interceptors.request.use(
@@ -47,7 +53,7 @@ function jwtInterceptor() {
       return response;
     },
     async (error: AxiosError<ErrorResponse>): Promise<AxiosError> => {
-      if (error.response?.status === 401) {
+      if (shouldForceLogout(error)) {
         await supabase.auth.signOut();
         clearLegacyToken();
 
