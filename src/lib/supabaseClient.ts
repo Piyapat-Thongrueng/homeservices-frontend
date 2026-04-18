@@ -56,5 +56,9 @@ const createFallbackSupabaseClient = (): SupabaseClient => {
 
 export const supabase: SupabaseClient =
   supabaseUrl && supabaseAnonKey
-    ? createBrowserClient(supabaseUrl, supabaseAnonKey)
+    ? createBrowserClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          storageKey: "homeservice-frontend-auth",
+        },
+      })
     : createFallbackSupabaseClient();

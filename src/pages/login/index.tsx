@@ -4,7 +4,7 @@ import type { ChangeEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthenticationRoute from "@/features/auth/components/AuthenticationRoute";
 import LoginModal from "./LoginModal";
-import { Mail, Lock, Eye, EyeOff, Wrench, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "next-i18next";
 import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 
@@ -167,23 +167,20 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* FORGOT PASSWORD */}
-            <div className="text-right">
-              <Link
-                href="/forgot-password"
-                className="text-[13px] text-blue-600 hover:underline"
-              >
-                {t("auth.forgot_password", "ลืมรหัสผ่าน?")}
-              </Link>
-            </div>
-
             {/* SUBMIT */}
             <button
               type="submit"
               disabled={state.loading ?? false}
-              className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-md shadow-blue-100"
+              className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-md shadow-blue-100 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed mt-10"
             >
-              {state.loading ? t("auth.logging_in", "กำลังเข้าสู่ระบบ...") : t("auth.login", "เข้าสู่ระบบ")}
+              {state.loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t("auth.logging_in", "กำลังเข้าสู่ระบบ...")}
+                </>
+              ) : (
+                t("auth.login", "เข้าสู่ระบบ")
+              )}
             </button>
           </form>
 
@@ -208,20 +205,6 @@ export default function LoginPage() {
               className="w-4.5 h-4.5"
             />
             {t("auth.google_login", "เข้าสู่ระบบด้วยบัญชี Google")}
-          </button>
-
-          {/* FACEBOOK — disabled */}
-          <button
-            type="button"
-            disabled
-            className="w-full h-11 border border-gray-200 rounded-xl flex items-center justify-center gap-2.5 mt-3 opacity-40 cursor-not-allowed text-[14px] text-gray-600 font-medium"
-          >
-            <img
-              src="/icons/facebook_logos_.png"
-              alt="Facebook"
-              className="w-4.5 h-4.5"
-            />
-            {t("auth.facebook_login", "เข้าสู่ระบบด้วย Facebook")}
           </button>
 
           {/* REGISTER LINK + BACK TO HOME */}
