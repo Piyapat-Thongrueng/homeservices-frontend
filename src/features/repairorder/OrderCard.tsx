@@ -31,6 +31,32 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
     fetchDetail();
   }, [orderId]);
 
+  // 🔥 REALTIME: อัปเดตรายละเอียดทันทีเมื่อช่างรับงาน
+  React.useEffect(() => {
+    const { getSocket } = require("@/lib/socket");
+    const socket = getSocket();
+
+    if (socket) {
+      const handleAccepted = (data: { orderId: string }) => {
+        if (String(data.orderId) === String(orderId)) {
+          // โหลดข้อมูลใหม่เพื่อให้ปุ่มแชทขึ้น
+          const fetchDetail = async () => {
+            try {
+              const data = await getOrderDetail(orderId);
+              setDetail(data);
+            } catch {}
+          };
+          fetchDetail();
+        }
+      };
+
+      socket.on("order_accepted", handleAccepted);
+      return () => {
+        socket.off("order_accepted", handleAccepted);
+      };
+    }
+  }, [orderId]);
+
   const statusColor = () => {
     if (!detail) return 'bg-gray-100 text-gray-600';
     const s = detail.status;
