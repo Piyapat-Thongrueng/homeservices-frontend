@@ -31,6 +31,32 @@ function OrderDetailModal({ orderId, onClose }: { orderId: number; onClose: () =
     fetchDetail();
   }, [orderId]);
 
+  // 🔥 REALTIME: อัปเดตรายละเอียดทันทีเมื่อช่างรับงาน
+  React.useEffect(() => {
+    const { getSocket } = require("@/lib/socket");
+    const socket = getSocket();
+
+    if (socket) {
+      const handleAccepted = (data: { orderId: string }) => {
+        if (String(data.orderId) === String(orderId)) {
+          // โหลดข้อมูลใหม่เพื่อให้ปุ่มแชทขึ้น
+          const fetchDetail = async () => {
+            try {
+              const data = await getOrderDetail(orderId);
+              setDetail(data);
+            } catch {}
+          };
+          fetchDetail();
+        }
+      };
+
+      socket.on("order_accepted", handleAccepted);
+      return () => {
+        socket.off("order_accepted", handleAccepted);
+      };
+    }
+  }, [orderId]);
+
   const statusColor = () => {
     if (!detail) return 'bg-gray-100 text-gray-600';
     const s = detail.status;
@@ -263,7 +289,7 @@ export default function OrderCard({
   const userId = state.user?.id?.toString() || "";
 
   const isChatAvailable =
-    order.status === "กำลังดำเนินการ" || order.status === "ดำเนินการสำเร็จ";
+    order.status === "กำลังดำเนินการ" || (order.status as string) === "in_progress";
   const isCompleted = order.status === 'ดำเนินการสำเร็จ';
   const hasReviewed = Boolean(order.has_reviewed);
 
@@ -383,7 +409,7 @@ export default function OrderCard({
                   {t('order.review_rate_tech', 'ให้คะแนนช่าง')}
                 </button>
               )}
-              {userId && (
+              {userId && !isCompleted && order.status !== 'ยกเลิกคำสั่งซ่อม' && (order.status as string) !== 'cancelled' && (
                 <button
                   type="button"
                   onClick={() => {

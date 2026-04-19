@@ -103,11 +103,11 @@ export default function useChatSocket({
     }
 
     // =============================
-    // CHAT CLOSED
+    // CHAT CLOSED (เมื่อช่างปิดงาน)
     // =============================
     const chatClosed = () => {
-      alert("งานนี้ถูกปิดแล้ว แชทถูกปิด")
-      window.location.reload()
+      alert("ช่างได้ทำการปิดงานซ่อมเรียบร้อยแล้ว แชทจะถูกปิด และระบบจะนำคุณไปยังหน้าประวัติการสั่งซ่อม")
+      window.location.href = "/profile?tab=history"
     }
 
     // =============================
@@ -149,10 +149,13 @@ export default function useChatSocket({
       socket.off("stop_typing", handleStopTyping) // 🔥 เพิ่ม
       socket.off("chat_closed", chatClosed)
 
+      // 🔥 ไม่ต้องสั่ง leave_chat เพื่อให้ ChatBadge ยังได้รับข้อมูลอยู่
+      /*
       socket.emit("leave_chat", {
         order_id: String(orderId),
         user_id: String(userId)
       })
+      */
     }
 
   }, [
