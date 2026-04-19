@@ -60,6 +60,31 @@ export default function ProfilePage() {
     fetchOrders();
   }, [fetchOrders]);
 
+  // 🔥 REALTIME: ฟังข่าวเมื่อช่างรับงาน
+  useEffect(() => {
+    const { getSocket, connectSocket } = require("@/lib/socket");
+    connectSocket();
+    const socket = getSocket();
+
+    if (socket) {
+      const handleOrderAccepted = (data: { orderId: string }) => {
+        // เช็คว่า Order ที่ถูกรับ อยู่ในรายการที่หน้าจอกำลังแสดงอยู่ไหม
+        const hasOrder = orders.some(o => String(o.id) === String(data.orderId));
+        
+        if (hasOrder) {
+          // ถ้าเป็นงานของเรา ให้โหลดใหม่ทันที
+          fetchOrders();
+        }
+      };
+
+      socket.on("order_accepted", handleOrderAccepted);
+      
+      return () => {
+        socket.off("order_accepted", handleOrderAccepted);
+      };
+    }
+  }, [fetchOrders, orders]);
+
   // 🌟 กรองข้อมูลตามสถานะแท็บ
   // - หน้า "รายการคำสั่งซ่อม" (orders): โชว์แค่ที่ยังไม่เสร็จ (รอดำเนินการ, กำลังดำเนินการ)
   // - หน้า "ประวัติการซ่อม" (history): โชว์ที่เสร็จแล้วหรือยกเลิก

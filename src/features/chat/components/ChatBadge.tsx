@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { getSocket } from "@/lib/socket"
+import { getSocket, connectSocket } from "@/lib/socket"
 import {
   CHAT_MESSAGES_READ_EVENT,
   type ChatMessagesReadDetail,
@@ -88,6 +88,8 @@ export default function ChatBadge({ orderId, userId }: Props) {
 
     if (!orderId || !userId) return
 
+    connectSocket()
+
     const socket = getSocket()
 
     if (!socket) {
@@ -95,13 +97,20 @@ export default function ChatBadge({ orderId, userId }: Props) {
       return
     }
 
+    // 🔥 ต้อง Join Chat เพื่อให้ได้รับสัญญาณของ Order นี้
+    socket.emit("join_chat", {
+      order_id: String(orderId),
+      user_id: String(userId)
+    })
+
     const handleNewMessage = (msg: any) => {
 
       if (!msg) return
 
+      // ถ้าเป็น Order เดียวกัน และคนส่ง "ไม่ใช่ลูกค้า" (คือเป็นช่างนั่นเอง) ให้เพิ่มเลข
       if (
         String(msg.order_id) === String(orderId) &&
-        String(msg.sender_id) !== String(userId)
+        msg.sender_role !== "customer"
       ) {
         setCount(prev => prev + 1)
       }
