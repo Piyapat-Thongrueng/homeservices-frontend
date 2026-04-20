@@ -57,7 +57,7 @@ const ServiceHero: React.FC<ServiceHeroProps> = ({
       </div>
 
       <div className="relative max-w-6xl mx-auto px-4 md:px-8 -mt-10 md:-mt-46 pb-8 md:pb-12">
-        <div className="inline-flex items-center gap-3 bg-utility-white shadow px-4 md:px-8 py-2.5 mb-14 rounded-lg w-full md:w-auto">
+        <div className="flex flex-wrap items-start md:items-center gap-x-3 gap-y-1 bg-utility-white shadow px-4 md:px-8 py-2.5 mb-14 rounded-lg w-full md:w-auto">
           <button
             type="button"
             className="headline-5 text-gray-700 hover:text-blue-600 transition-colors duration-300 ease-out whitespace-nowrap"
@@ -65,7 +65,9 @@ const ServiceHero: React.FC<ServiceHeroProps> = ({
             {t("service_detail.breadcrumb")}
           </button>
           <span className="text-gray-400">{">"}</span>
-          <span className="headline-1 text-blue-600 whitespace-nowrap">{serviceName}</span>
+          <span className="headline-1 text-blue-600 min-w-0 wrap-break-word">
+            {serviceName}
+          </span>
         </div>
 
         <div className="card-box bg-utility-white border border-gray-200 rounded-[10px] min-h-[100px] md:min-h-[129px] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 px-6 md:px-10 py-4 md:py-5 relative">

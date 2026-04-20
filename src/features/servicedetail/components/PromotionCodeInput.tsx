@@ -51,13 +51,13 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
       <label className="block headline-5 text-gray-900 mb-2">
         {t("payment.promo_label")}
       </label>
-      <div className="flex gap-2">
+      <div className="flex items-stretch gap-2 min-w-0">
         {/* Promotion Code Input */}
         <input
           type="text"
           value={value || ""}
           onChange={(e) => onValueChange(e.target.value)}
-          className={`flex-1 px-4 py-3 border rounded-lg headline-5 focus:outline-none transition-colors ${
+          className={`flex-1 min-w-0 px-4 py-3 border rounded-lg headline-5 focus:outline-none transition-colors ${
             error
               ? "border-red-500 focus:border-red-500 bg-white"
               : hasDiscount
@@ -71,7 +71,7 @@ const PromotionCodeInput: React.FC<PromotionCodeInputProps> = ({
         {/* Apply Button */}
         <button
           type="button"
-          className={`px-6 rounded-lg font-medium transition-colors ${
+          className={`shrink-0 min-w-[96px] px-4 sm:px-6 rounded-lg font-medium transition-colors ${
             hasDiscount
               ? "bg-yellow-500 text-white hover:bg-yellow-400"
               : "btn-primary"

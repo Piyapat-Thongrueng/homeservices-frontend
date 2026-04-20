@@ -227,7 +227,7 @@ export default function Navbar() {
 
                     {/* Notification Dropdown */}
                     {notifOpen && (
-                      <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden">
+                      <div className="fixed left-2 right-2 top-16 mt-2 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden md:absolute md:left-auto md:right-0 md:top-auto md:w-80">
                         {/* Header */}
                         <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
                           <span className="text-[14px] font-semibold text-gray-800">

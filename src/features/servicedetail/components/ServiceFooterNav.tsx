@@ -31,13 +31,13 @@ const ServiceFooterNav: React.FC<ServiceFooterNavProps> = ({
   const displayNextText = nextText || t("service_detail.nav_continue");
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-utility-white border-t border-gray-200 z-1200 h-[92px]">
-      <div className="relative w-full h-full max-w-[1440px] mx-auto px-4 md:px-[160px]">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 h-full">
+    <footer className="fixed bottom-0 left-0 right-0 bg-utility-white border-t border-gray-200 z-1200 py-3 md:h-[92px] md:py-0">
+      <div className="relative w-full max-w-[1440px] mx-auto px-4 md:px-[160px] md:h-full">
+        <div className="flex items-center justify-between gap-3 md:h-full">
           <button
             type="button"
             onClick={onBack}
-            className="btn-secondary w-auto h-[44px] px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 sm:absolute sm:top-[24px] sm:left-0 cursor-pointer"
+            className="btn-secondary w-1/2 md:w-auto h-[44px] px-4 md:px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 md:absolute md:top-[24px] md:left-0 cursor-pointer"
           >
             <span>{"<"}</span>
             <span>{t("service_detail.nav_back")}</span>
@@ -47,7 +47,7 @@ const ServiceFooterNav: React.FC<ServiceFooterNavProps> = ({
             type="button"
             disabled={!canProceed}
             onClick={onNext}
-            className="btn-primary w-auto h-[44px] px-6 py-2.5 rounded-lg flex items-center justify-center gap-2.5 sm:absolute sm:top-[24px] sm:right-0 cursor-pointer"
+            className="btn-primary w-1/2 md:w-auto h-[44px] px-4 md:px-6 py-2.5 rounded-lg flex items-center justify-center gap-2.5 md:absolute md:top-[24px] md:right-0 cursor-pointer"
           >
             <span>{displayNextText}</span>
             <span>{">"}</span>

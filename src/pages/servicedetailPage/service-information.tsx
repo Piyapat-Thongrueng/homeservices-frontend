@@ -52,6 +52,12 @@ import {
   updateCart,
 } from "@/services/cartApi";
 import { getSavedAddresses, type SavedAddress } from "@/services/paymentApi";
+import {
+  getDistrictsByProvince,
+  getPostalCodeForLocation,
+  getProvinces,
+  getSubDistrictsByDistrict,
+} from "@/utils/thailand-locations";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 import { fetchServices } from "@/services/serviceListsApi/serviceApi";
@@ -731,6 +737,38 @@ export default function ServiceInformation() {
     })();
   };
 
+  const handleProvinceChange = (province: string) => {
+    updateFormField("province", province);
+    updateFormField("district", "");
+    updateFormField("subDistrict", "");
+    updateFormField("postalCode", "");
+  };
+
+  const handleDistrictChange = (district: string) => {
+    updateFormField("district", district);
+    updateFormField("subDistrict", "");
+    updateFormField("postalCode", "");
+  };
+
+  const handleSubDistrictChange = (subDistrict: string) => {
+    updateFormField("subDistrict", subDistrict);
+    const postalCode = getPostalCodeForLocation(
+      formData.province,
+      formData.district,
+      subDistrict,
+    );
+    updateFormField("postalCode", postalCode ?? "");
+  };
+
+  const provinces = getProvinces();
+  const districts = formData.province
+    ? getDistrictsByProvince(formData.province)
+    : [];
+  const subDistricts =
+    formData.province && formData.district
+      ? getSubDistrictsByDistrict(formData.province, formData.district)
+      : [];
+
   /**
    * Geocode map center from typed address and/or location selectors.
    */
@@ -922,6 +960,7 @@ export default function ServiceInformation() {
                         updateFormField("address", e.target.value)
                       }
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
+                      placeholder="กรุณากรอกที่อยู่"
                     />
                   </div>
 
@@ -930,43 +969,69 @@ export default function ServiceInformation() {
                       <label className="block headline-5 text-gray-800 font-medium mb-2">
                         แขวง / ตำบล<span className="text-red-500 ml-1">*</span>
                       </label>
-                      <input
-                        type="text"
-                        value={formData.subDistrict}
-                        onChange={(e) =>
-                          updateFormField("subDistrict", e.target.value)
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
-                      />
+                      <div className="relative">
+                        <select
+                          value={formData.subDistrict}
+                          onChange={(e) => handleSubDistrictChange(e.target.value)}
+                          disabled={!formData.district}
+                          className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                        >
+                          <option value="" className="text-gray-400">
+                            เลือกแขวง / ตำบล
+                          </option>
+                          {subDistricts.map((subDist) => (
+                            <option key={subDist} value={subDist} className="text-gray-900">
+                              {subDist}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                      </div>
                     </div>
                     <div>
                       <label className="block headline-5 text-gray-800 font-medium mb-2">
                         เขต / อำเภอ<span className="text-red-500 ml-1">*</span>
                       </label>
-                      <input
-                        type="text"
-                        value={formData.district}
-                        onChange={(e) =>
-                          updateFormField("district", e.target.value)
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
-                      />
+                      <div className="relative">
+                        <select
+                          value={formData.district}
+                          onChange={(e) => handleDistrictChange(e.target.value)}
+                          disabled={!formData.province}
+                          className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                        >
+                          <option value="" className="text-gray-400">
+                            เลือกเขต / อำเภอ
+                          </option>
+                          {districts.map((dist) => (
+                            <option key={dist} value={dist} className="text-gray-900">
+                              {dist}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block headline-5 text-gray-800 font-medium mb-2">
                         จังหวัด<span className="text-red-500 ml-1">*</span>
                       </label>
-                      <input
-                        type="text"
-                        value={formData.province}
-                        onChange={(e) =>
-                          updateFormField("province", e.target.value)
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors"
-                      />
+                      <div className="relative">
+                        <select
+                          value={formData.province}
+                          onChange={(e) => handleProvinceChange(e.target.value)}
+                          className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg headline-5 text-gray-900 bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 transition-colors cursor-pointer"
+                        >
+                          <option value="" className="text-gray-400">
+                            เลือกจังหวัด
+                          </option>
+                          {provinces.map((prov) => (
+                            <option key={prov} value={prov} className="text-gray-900">
+                              {prov}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                      </div>
                     </div>
                     <div>
                       <label className="block headline-5 text-gray-800 font-medium mb-2">
